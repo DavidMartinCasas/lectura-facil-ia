@@ -82,7 +82,7 @@ jobs:
 
       - name: gitleaks
         run: >
-          docker run --rm -v "${{ github.workspace }}:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1
+          docker run --rm -v "${{ github.workspace }}:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
           detect --source /repo --no-banner --redact
 
   containers:
@@ -100,3 +100,24 @@ jobs:
 
       - name: Construir imágenes
         run: docker compose -f deploy/docker-compose.yml build
+
+      # Criterio "Todo arranca con Docker Compose": /health a través de nginx y la página de inicio.
+      - name: Prueba de humo
+        run: |
+          docker compose -f deploy/docker-compose.yml up -d --wait
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8080/health > health.json && break
+            sleep 2
+          done
+          test "$(cat health.json)" = '{"status":"Healthy"}'
+          curl -fsS http://localhost:8080/ | grep -q "<title>Lectura Fácil IA</title>"
+          curl -fsSI http://localhost:8080/ | grep -qi "^content-security-policy: default-src 'self'"
+          curl -fsSI http://localhost:8080/ | grep -qi "^x-content-type-options: nosniff"
+
+      - name: Logs si falla
+        if: failure()
+        run: docker compose -f deploy/docker-compose.yml logs --no-color
+
+      - name: Parar
+        if: always()
+        run: docker compose -f deploy/docker-compose.yml down -v

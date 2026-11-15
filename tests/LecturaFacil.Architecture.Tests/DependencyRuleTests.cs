@@ -68,6 +68,17 @@ public sealed class DependencyRuleTests
         AssertSuccessful(result);
     }
 
+    [Fact]
+    public void Api_WhenInspected_DoesNotUseEntityFrameworkCoreDirectly()
+    {
+        var result = Types.InAssembly(typeof(Program).Assembly)
+            .ShouldNot()
+            .HaveDependencyOn("Microsoft.EntityFrameworkCore")
+            .GetResult();
+
+        AssertSuccessful(result);
+    }
+
     private static string[] ReferencedProjectAssemblies(Assembly assembly) =>
         [.. assembly.GetReferencedAssemblies()
             .Select(reference => reference.Name ?? string.Empty)

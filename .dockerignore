@@ -15,3 +15,5 @@ src/LecturaFacil.Web/
 **/.env
 **/.env.*
 **/*.user
+**/appsettings.*.local.json
+**/secrets*.json
