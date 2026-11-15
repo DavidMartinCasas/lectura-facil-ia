@@ -22,6 +22,18 @@ public sealed class LimitsOptionsTests
         options.MaxWordsPerSentence.ShouldBe(15);
         options.MaxOutputTokens.ShouldBe(4_096);
         options.LlmTimeoutSeconds.ShouldBe(120);
+        options.MinCharacters.ShouldBe(50);
+        options.MaxPdfPages.ShouldBe(100);
+        options.PdfExtractionTimeoutSeconds.ShouldBe(15);
+    }
+
+    [Fact]
+    public void TextLengthLimits_WhenCalled_UsesMinAndMaxCharacters()
+    {
+        var limits = new LimitsOptions { MinCharacters = 20, MaxCharacters = 300 }.TextLengthLimits;
+
+        limits.Minimum.ShouldBe(20);
+        limits.Maximum.ShouldBe(300);
     }
 
     [Theory]
@@ -35,6 +47,12 @@ public sealed class LimitsOptionsTests
     [InlineData(nameof(LimitsOptions.MaxOutputTokens), 1_000_000)]
     [InlineData(nameof(LimitsOptions.LlmTimeoutSeconds), 0)]
     [InlineData(nameof(LimitsOptions.LlmTimeoutSeconds), 3_600)]
+    [InlineData(nameof(LimitsOptions.MinCharacters), 0)]
+    [InlineData(nameof(LimitsOptions.MinCharacters), 101)]
+    [InlineData(nameof(LimitsOptions.MaxPdfPages), 0)]
+    [InlineData(nameof(LimitsOptions.MaxPdfPages), 5_000)]
+    [InlineData(nameof(LimitsOptions.PdfExtractionTimeoutSeconds), 0)]
+    [InlineData(nameof(LimitsOptions.PdfExtractionTimeoutSeconds), 600)]
     public void Validate_WhenValueIsOutOfRange_ReportsTheOption(string property, int value)
     {
         var options = new LimitsOptions();

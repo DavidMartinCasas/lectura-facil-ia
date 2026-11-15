@@ -1,0 +1,103 @@
+// SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Application.Common;
+using LecturaFacil.Application.Users;
+using LecturaFacil.Domain.Documents;
+using Microsoft.Extensions.Options;
+
+namespace LecturaFacil.Application.Documents;
+
+/// <summary>Recibe un texto pegado o un PDF digital y crea un documento en estado <see cref="DocumentStatus.Received"/>.</summary>
+public sealed class SubmitDocument(
+    ITextExtractor textExtractor,
+    IDocumentRepository repository,
+    ICurrentUser currentUser,
+    IOptions<LimitsOptions> limits,
+    TimeProvider timeProvider)
+{
+    // Tamaño del bloque de lectura: el mismo que usa Stream.CopyToAsync por defecto.
+    private const int ReadBufferSize = 81_920;
+
+    private readonly LimitsOptions _limits = limits.Value;
+
+    public Task<Result<SubmittedDocument>> SubmitTextAsync(SubmitTextCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        return StoreAsync(command.Text, DocumentTitle.Create(command.Title), pageCount: null, cancellationToken);
+    }
+
+    public async Task<Result<SubmittedDocument>> SubmitPdfAsync(SubmitPdfCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var content = await ReadWithinLimitAsync(command.Content, cancellationToken);
+        if (content is null)
+        {
+            return Result<SubmittedDocument>.Failure(DocumentErrors.FileTooLarge(_limits.MaxFileSizeBytes));
+        }
+
+        if (!PdfSignature.Matches(content))
+        {
+            return Result<SubmittedDocument>.Failure(DocumentErrors.InvalidFileType);
+        }
+
+        var extracted = await textExtractor.ExtractTextAsync(content, cancellationToken);
+        if (extracted.IsFailure)
+        {
+            return Result<SubmittedDocument>.Failure(extracted.Error!);
+        }
+
+        var title = DocumentTitle.FromFileName(command.FileName);
+        return await StoreAsync(extracted.Value.Text, title, extracted.Value.PageCount, cancellationToken);
+    }
+
+    private async Task<Result<SubmittedDocument>> StoreAsync(
+        string text,
+        DocumentTitle title,
+        int? pageCount,
+        CancellationToken cancellationToken)
+    {
+        var limits = _limits.TextLengthLimits;
+        switch (OriginalText.CheckLength(text, limits))
+        {
+            case TextLengthCheck.TooShort:
+                return Result<SubmittedDocument>.Failure(DocumentErrors.TextTooShort(limits.Minimum));
+            case TextLengthCheck.TooLong:
+                return Result<SubmittedDocument>.Failure(DocumentErrors.TextTooLong(limits.Maximum));
+            case TextLengthCheck.Valid:
+            default:
+                break;
+        }
+
+        var originalText = OriginalText.Create(text, limits);
+        var document = Document.Submit(currentUser.OwnerId, title, originalText, timeProvider.GetUtcNow());
+        await repository.AddAsync(document, cancellationToken);
+
+        return Result<SubmittedDocument>.Success(
+            new SubmittedDocument(document.Id, document.Status, originalText.Value.Length, pageCount));
+    }
+
+    /// <summary>Lee el fichero en memoria sin pasar del límite, aunque el tamaño declarado mienta. <c>null</c> si lo supera.</summary>
+    private async Task<byte[]?> ReadWithinLimitAsync(Stream content, CancellationToken cancellationToken)
+    {
+        var maxBytes = _limits.MaxFileSizeBytes;
+        if (content.CanSeek && content.Length > maxBytes)
+        {
+            return null;
+        }
+
+        using var buffer = new MemoryStream();
+        var chunk = new byte[ReadBufferSize];
+        int read;
+        while ((read = await content.ReadAsync(chunk, cancellationToken)) > 0)
+        {
+            if (buffer.Length + read > maxBytes)
+            {
+                return null;
+            }
+
+            buffer.Write(chunk, 0, read);
+        }
+
+        return buffer.ToArray();
+    }
+}
