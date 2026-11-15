@@ -14,6 +14,24 @@ public sealed class LlmOptionsTests
     }
 
     [Fact]
+    public void Temperature_ByDefault_IsZero()
+    {
+        new LlmProviderOptions().Temperature.ShouldBe(0);
+    }
+
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(2.1)]
+    [InlineData(double.NaN)]
+    public void Validate_WhenTemperatureIsOutOfRange_ReportsIt(double temperature)
+    {
+        var options = ValidOptions();
+        options.Primary.Temperature = temperature;
+
+        OptionsValidation.Validate(options).ShouldContain(error => error.Contains("Llm:Primary:Temperature", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Fallback_ByDefault_IsDisabled()
     {
         new LlmOptions().Fallback.Enabled.ShouldBeFalse();

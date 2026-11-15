@@ -8,6 +8,7 @@ namespace LecturaFacil.Infrastructure.Llm;
 public class LlmProviderOptions
 {
     public const int MaxDisplayNameLength = 60;
+    public const double MaxTemperature = 2;
 
     public LlmProviderType? Type { get; set; }
 
@@ -22,6 +23,9 @@ public class LlmProviderOptions
     public string AdapterModel { get; set; } = string.Empty;
 
     public string VerifierModel { get; set; } = string.Empty;
+
+    /// <summary>Temperatura de las respuestas. 0 por defecto: adaptar y verificar piden respuestas estables.</summary>
+    public double Temperature { get; set; }
 
     /// <summary>Valida el proveedor. Los mensajes nombran la opción, nunca su valor.</summary>
     internal IEnumerable<ValidationResult> Validate(string path)
@@ -46,6 +50,11 @@ public class LlmProviderOptions
                 path,
                 nameof(Endpoint),
                 "debe ser una URL absoluta https, sin credenciales (http solo hacia localhost o una red privada).");
+        }
+
+        if (Temperature is < 0 or > MaxTemperature || double.IsNaN(Temperature))
+        {
+            yield return Error(path, nameof(Temperature), $"debe estar entre 0 y {MaxTemperature}.");
         }
 
         foreach (var (name, value) in RequiredValues())
