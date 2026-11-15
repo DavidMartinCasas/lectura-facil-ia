@@ -209,3 +209,34 @@ Recetas y listas de comprobación para tareas que se repiten. Están en formato 
 | Revisor | [`experto-lectura-facil`](.claude/agents/experto-lectura-facil.md) | En US-05, 06, 07, 08, 11 y 18: fidelidad a la UNE 153101 EX |
 
 Este archivo sigue mandando: las skills y los revisores lo concretan, no lo cambian.
+
+---
+
+## Code Review Rules
+
+Reglas para los revisores automáticos de PRs (Codex en GitHub y cualquier otro). Comenta solo lo que rompa una de estas reglas o cause un fallo concreto; cita fichero y línea y propone la corrección. Las secciones 4 a 7 de este archivo son la referencia completa.
+
+### Seguridad y privacidad (siempre P0/P1)
+- Acceso a un documento sin filtrar por propietario, o que devuelve 403 en lugar de 404 (BOLA).
+- Endpoint que llama a un LLM sin autorización o sin límite de peticiones; entradas, ficheros o `max_tokens` sin límite.
+- Texto del usuario en un prompt sin delimitadores, o respuesta del LLM usada sin validarla contra su esquema JSON.
+- Cualquier camino que llame al proveedor de respaldo con `Fallback.Enabled = false`.
+- Contenido de documentos, correos o datos personales en logs, excepciones, ProblemDetails o Sentry.
+- Secretos, cadenas de conexión, IPs, dominios o infraestructura concreta en el código, tests o configuración de ejemplo.
+- `innerHTML` o `bypassSecurityTrust*` con contenido dinámico; Markdown, DOCX o PDF exportados sin escapar el texto.
+- SQL con `FromSqlRaw`/`ExecuteSqlRaw` concatenado; tipo de fichero comprobado por extensión en vez de por firma.
+
+### Producto
+- El resultado deja de marcarse como borrador pendiente de validación humana.
+- El verificador del significado puede quitar avisos que detecta el código (solo puede añadirlos).
+- Reglas de lectura fácil implementadas como prompt en lugar de código determinista en Domain.
+
+### Arquitectura, dependencias y tests
+- Domain o Application referenciando Infrastructure, ASP.NET Core o EF Core; lógica de negocio en endpoints.
+- MediatR, AutoMapper, FluentAssertions, QuestPDF o cualquier dependencia GPL, AGPL o comercial; versiones sin fijar.
+- Tests desactivados, saltados o borrados, umbrales de cobertura rebajados o tests que llaman a un LLM real.
+- Cambios en `.github/workflows` que usen acciones sin fijar por SHA, `pull_request_target` con el código de la PR o permisos amplios.
+
+### No comentes
+- Formato, estilo, orden de `using` o nombres: lo cubren `dotnet format` y ESLint.
+- Preferencias de diseño que no contradigan una regla de este archivo.
