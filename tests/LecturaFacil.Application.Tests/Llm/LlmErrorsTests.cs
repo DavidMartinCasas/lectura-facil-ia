@@ -10,6 +10,8 @@ public sealed class LlmErrorsTests
     {
         LlmErrors.InvalidProviderOutput.Code.ShouldBe("llm.invalid_provider_output");
         LlmErrors.ProviderUnavailable.Code.ShouldBe("llm.provider_unavailable");
+        LlmErrors.InputTooLong.Code.ShouldBe("llm.input_too_long");
+        LlmErrors.InputTooLong.Message.ShouldNotBeNullOrWhiteSpace();
         LlmErrors.InvalidProviderOutput.Message.ShouldNotBeNullOrWhiteSpace();
         LlmErrors.ProviderUnavailable.Message.ShouldNotBeNullOrWhiteSpace();
     }

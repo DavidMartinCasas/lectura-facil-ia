@@ -11,6 +11,13 @@ public sealed record LlmRequest
     /// </summary>
     public const string DocumentTagPlaceholder = "{{DOCUMENT_TAG}}";
 
+    private const string DocumentTagPrefix = "documento-";
+    private const int GuidLength = 32;
+    private const int DelimiterPunctuationLength = 7; // "<" ">" "\n" + "\n" "</" ">"
+
+    /// <summary>Caracteres que añaden los delimitadores de <see cref="ForDocument"/> alrededor del documento.</summary>
+    public static readonly int DocumentEnvelopeLength = (2 * (DocumentTagPrefix.Length + GuidLength)) + DelimiterPunctuationLength;
+
     public LlmRequest(LlmRole role, string systemPrompt, string userMessage, int maxOutputTokens)
     {
         if (!Enum.IsDefined(role))
@@ -52,7 +59,7 @@ public sealed record LlmRequest
                 nameof(systemPrompt));
         }
 
-        var tag = $"documento-{Guid.NewGuid():N}";
+        var tag = $"{DocumentTagPrefix}{Guid.NewGuid():N}";
         return new LlmRequest(
             role,
             systemPrompt.Text.Replace(DocumentTagPlaceholder, tag, StringComparison.Ordinal),

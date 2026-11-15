@@ -153,6 +153,44 @@ public sealed class OpenAICompatibleProviderTests
     }
 
     [Fact]
+    public async Task Complete_WhenTheProviderAnswers200WithSomethingThatIsNotAChatCompletion_ReturnsProviderUnavailable()
+    {
+        var handler = FakeHttpMessageHandler.Returning(HttpStatusCode.OK, "<html><body>Página del proxy</body></html>");
+
+        var result = await CompleteAsync(handler, Request(LlmRole.Adapter));
+
+        result.Error.ShouldBe(LlmErrors.ProviderUnavailable);
+    }
+
+    [Theory]
+    [InlineData("length")]
+    [InlineData("content_filter")]
+    public async Task Complete_WhenTheResponseDidNotFinishNormally_ReturnsInvalidProviderOutputEvenIfItIsValidJson(string finishReason)
+    {
+        var body = FakeHttpMessageHandler.ChatCompletion("""{"ok":true}""", "modelo").Replace("\"stop\"", $"\"{finishReason}\"", StringComparison.Ordinal);
+        var handler = FakeHttpMessageHandler.Returning(HttpStatusCode.OK, body);
+
+        var result = await CompleteAsync(handler, Request(LlmRole.Adapter));
+
+        result.Error.ShouldBe(LlmErrors.InvalidProviderOutput);
+    }
+
+    [Fact]
+    public async Task Complete_WhenTheDocumentExceedsTheCharacterLimit_ReturnsInputTooLongWithoutCallingTheProvider()
+    {
+        var handler = FakeHttpMessageHandler.ReturningCompletion("""{"ok":true}""");
+        var limits = new LimitsOptions { MaxCharacters = 100 };
+        var prompt = new Prompt("prueba.v1", $"Documento entre <{LlmRequest.DocumentTagPlaceholder}>.");
+
+        var atLimit = await CompleteAsync(handler, LlmRequest.ForDocument(LlmRole.Adapter, prompt, new string('a', 100), 200), limits: limits);
+        var overLimit = await CompleteAsync(handler, LlmRequest.ForDocument(LlmRole.Adapter, prompt, new string('a', 101), 200), limits: limits);
+
+        atLimit.IsSuccess.ShouldBeTrue();
+        overLimit.Error.ShouldBe(LlmErrors.InputTooLong);
+        handler.Requests.Count.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task Complete_WhenTheCallerCancels_Throws()
     {
         var handler = FakeHttpMessageHandler.ReturningCompletion("""{"ok":true}""");

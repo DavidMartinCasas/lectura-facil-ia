@@ -44,6 +44,12 @@ public abstract partial class ChatClientLlmProvider : ILlmProvider
         ArgumentNullException.ThrowIfNull(request);
 
         var model = ModelFor(request.Role);
+        if (request.UserMessage.Length > _limits.MaxCharacters + LlmRequest.DocumentEnvelopeLength)
+        {
+            LogInputTooLong(Name, request.Role, model, request.UserMessage.Length);
+            return Result<LlmResponse<T>>.Failure(LlmErrors.InputTooLong);
+        }
+
         var stopwatch = Stopwatch.StartNew();
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(Timeout);
@@ -70,6 +76,14 @@ public abstract partial class ChatClientLlmProvider : ILlmProvider
             return Result<LlmResponse<T>>.Failure(LlmErrors.ProviderUnavailable);
         }
 
+        // Cualquier otro fallo del SDK (p. ej. un 200 que no es una respuesta de chat) es un proveedor no disponible,
+        // nunca una excepción hacia el caso de uso. Solo se registra el tipo: el mensaje podría contener la respuesta.
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            LogUnavailable(Name, request.Role, model, exception.GetType().Name, null, stopwatch.ElapsedMilliseconds);
+            return Result<LlmResponse<T>>.Failure(LlmErrors.ProviderUnavailable);
+        }
+
         return ToResult<T>(request.Role, model, response, stopwatch.Elapsed);
     }
 
@@ -90,7 +104,10 @@ public abstract partial class ChatClientLlmProvider : ILlmProvider
     {
         var inputTokens = response.Usage?.InputTokenCount ?? 0;
         var outputTokens = response.Usage?.OutputTokenCount ?? 0;
-        var validation = JsonSchemaValidator.Validate<T>(response.Text);
+        // Una respuesta cortada por longitud o por un filtro no se acepta aunque sea JSON válido.
+        var validation = response.FinishReason == ChatFinishReason.Stop
+            ? JsonSchemaValidator.Validate<T>(response.Text)
+            : Result<T>.Failure(LlmErrors.InvalidProviderOutput);
         if (validation.IsFailure)
         {
             LogInvalidOutput(Name, role, model, outputTokens, (long)duration.TotalMilliseconds);
@@ -134,6 +151,11 @@ public abstract partial class ChatClientLlmProvider : ILlmProvider
         Message = "LLM output does not match its schema. Provider: {Provider}; role: {Role}; model: {Model}; output tokens: {OutputTokens}; duration: {DurationMs} ms")]
     private partial void LogInvalidOutput(string provider, LlmRole role, string model, long outputTokens, long durationMs);
 
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "LLM input exceeds the character limit; not sent. Provider: {Provider}; role: {Role}; model: {Model}; characters: {Characters}")]
+    private partial void LogInputTooLong(string provider, LlmRole role, string model, int characters);
 
     [LoggerMessage(
         Level = LogLevel.Warning,

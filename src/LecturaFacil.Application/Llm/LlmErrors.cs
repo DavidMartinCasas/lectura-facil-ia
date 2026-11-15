@@ -13,4 +13,8 @@ public static class LlmErrors
     public static readonly Error ProviderUnavailable = new(
         "llm.provider_unavailable",
         "El servicio de IA no está disponible en este momento. Inténtalo más tarde.");
+
+    public static readonly Error InputTooLong = new(
+        "llm.input_too_long",
+        "El texto es demasiado largo para procesarlo.");
 }

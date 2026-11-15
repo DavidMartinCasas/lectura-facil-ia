@@ -51,6 +51,14 @@ public sealed class LlmRequestTests
     }
 
     [Fact]
+    public void ForDocument_EnvelopeAddsExactlyTheDocumentedNumberOfCharacters()
+    {
+        var request = LlmRequest.ForDocument(LlmRole.Adapter, DocumentPrompt, "abc", 200);
+
+        request.UserMessage.Length.ShouldBe(3 + LlmRequest.DocumentEnvelopeLength);
+    }
+
+    [Fact]
     public void ForDocument_UsesADifferentTagInEachRequest()
     {
         var first = LlmRequest.ForDocument(LlmRole.Adapter, DocumentPrompt, "texto", 200);
