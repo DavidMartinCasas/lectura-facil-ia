@@ -214,7 +214,11 @@ Este archivo sigue mandando: las skills y los revisores lo concretan, no lo camb
 
 ## Code Review Rules
 
-Reglas para los revisores automáticos de PRs (Codex en GitHub y cualquier otro). Comenta solo lo que rompa una de estas reglas o cause un fallo concreto; cita fichero y línea y propone la corrección. Las secciones 4 a 7 de este archivo son la referencia completa.
+Reglas para los revisores automáticos de PRs (Codex en GitHub y cualquier otro).
+
+**Idioma: escribe siempre la revisión, los comentarios y los resúmenes en español de España.** Deja en inglés solo el código, los identificadores y los mensajes de error literales.
+
+Comenta solo lo que rompa una de estas reglas o cause un fallo concreto; cita fichero y línea y propone la corrección. Las secciones 4 a 7 de este archivo son la referencia completa.
 
 ### Seguridad y privacidad (siempre P0/P1)
 - Acceso a un documento sin filtrar por propietario, o que devuelve 403 en lugar de 404 (BOLA).
