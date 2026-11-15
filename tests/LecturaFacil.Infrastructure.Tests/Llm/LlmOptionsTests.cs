@@ -83,6 +83,33 @@ public sealed class LlmOptionsTests
     }
 
     [Fact]
+    public void Validate_WhenPrimaryTypeIsNotDefined_ReportsWhichOption()
+    {
+        var options = ValidOptions();
+        options.Primary.Type = (LlmProviderType)999;
+
+        OptionsValidation.Validate(options).ShouldHaveSingleItem().ShouldContain("Llm:Primary:Type");
+    }
+
+    [Fact]
+    public void Validate_WhenEnabledFallbackTypeIsNotDefined_ReportsWhichOption()
+    {
+        var options = ValidOptions();
+        options.Fallback = new FallbackLlmProviderOptions
+        {
+            Enabled = true,
+            Type = (LlmProviderType)999,
+            DisplayName = "Nube",
+            Endpoint = "https://proveedor.example.com/",
+            ApiKey = SecretValue,
+            AdapterModel = "modelo-a",
+            VerifierModel = "modelo-b",
+        };
+
+        OptionsValidation.Validate(options).ShouldHaveSingleItem().ShouldContain("Llm:Fallback:Type");
+    }
+
+    [Fact]
     public void Validate_WhenDisplayNameIsTooLong_ReportsWhichOption()
     {
         var options = ValidOptions();

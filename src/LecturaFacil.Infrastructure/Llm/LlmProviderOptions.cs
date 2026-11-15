@@ -26,7 +26,7 @@ public class LlmProviderOptions
     /// <summary>Valida el proveedor. Los mensajes nombran la opción, nunca su valor.</summary>
     internal IEnumerable<ValidationResult> Validate(string path)
     {
-        if (Type is null)
+        if (Type is not { } type || !Enum.IsDefined(type))
         {
             yield return Error(path, nameof(Type), "es obligatorio (OpenAICompatible o AzureFoundry).");
         }

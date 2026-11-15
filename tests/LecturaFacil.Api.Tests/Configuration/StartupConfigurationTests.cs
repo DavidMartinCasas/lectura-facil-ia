@@ -104,6 +104,7 @@ public sealed class StartupConfigurationTests
 
     [Theory]
     [InlineData("Limits:MaxWordsPerSentence", "0")]
+    [InlineData("Llm:Primary:Type", "999")]
     [InlineData("Ui:Notice", "x")]
     public async Task Start_WhenOptionIsOutOfRange_DoesNotStart(string key, string value)
     {
