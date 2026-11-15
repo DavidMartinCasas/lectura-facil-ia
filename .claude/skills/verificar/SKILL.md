@@ -10,20 +10,20 @@ Ejecuta los comandos de la sección 8 de `AGENTS.md` **en este orden** y **sin d
 | # | Comprobación | Comando | Aplica si existe |
 |---|---|---|---|
 | 1 | Compilación sin avisos | `dotnet build -warnaserror` | `*.sln` / `*.slnx` |
-| 2 | Tests y cobertura | `dotnet test --collect:"XPlat Code Coverage"` | proyectos en `tests/` |
+| 2 | Tests y cobertura | `dotnet test` (Microsoft.Testing.Platform; la cobertura de Domain y Application se mide sola) | proyectos en `tests/` |
 | 3 | Formato | `dotnet format --verify-no-changes` | `*.sln` / `*.slnx` |
 | 4 | Paquetes vulnerables | `dotnet list package --vulnerable --include-transitive` | `*.sln` / `*.slnx` |
 | 5 | Frontend | `cd src/LecturaFacil.Web && npm ci && npm run lint && npm test -- --watch=false && npm run build` | `src/LecturaFacil.Web/package.json` |
 | 6 | Auditoría npm | `npm audit --omit=dev --audit-level=high` (en la carpeta del frontend) | idem |
 | 7 | Secretos | `gitleaks detect --no-banner` | siempre |
-| 8 | Compose | `docker compose -f deploy/docker-compose.yml config --quiet` | `deploy/docker-compose.yml` |
+| 8 | Compose | `docker compose -f deploy/docker-compose.yml config --quiet` (necesita `deploy/.env`; si no existe, cópialo de `deploy/.env.example`) | `deploy/docker-compose.yml` |
 | 9 | Cabeceras SPDX | ficheros `.cs`, `.ts`, `.html` y `.scss` propios sin `SPDX-License-Identifier` (excluye `bin/`, `obj/`, `node_modules/`, `dist/`, código generado y migraciones) | siempre |
-| 10 | Librerías prohibidas | ninguna referencia a `MediatR`, `AutoMapper`, `FluentAssertions` ni `QuestPDF` en `*.csproj` ni `Directory.Packages.props` | siempre |
+| 10 | Librerías prohibidas | ninguna referencia a `MediatR`, `AutoMapper`, `FluentAssertions` ni `QuestPDF` en `*.csproj` ni `Directory.Packages.props`, ni a `primeng` en `package.json` | siempre |
 
 Si una herramienta no está instalada (por ejemplo `gitleaks` o `docker`), **no la instales sin permiso**: indícalo como "no ejecutado" en el informe.
 
 ## Cobertura
-Si hay informe de cobertura, comprueba que **Domain y Application ≥ 80 %**. No bajes el umbral para que pase.
+`tests/Directory.Build.targets` activa coverlet.MTP con un umbral del **80 % (líneas y ramas)** en los proyectos de tests que declaran `CoverageAssembly` (Domain y Application): si no se llega, `dotnet test` termina con código 14. Los informes Cobertura quedan en `TestResults/`. No bajes el umbral para que pase.
 
 ## Informe
 Termina con una tabla:
