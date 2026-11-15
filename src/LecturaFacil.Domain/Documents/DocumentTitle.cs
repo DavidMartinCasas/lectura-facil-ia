@@ -36,5 +36,12 @@ public sealed record DocumentTitle
         return Create(withoutExtension);
     }
 
+    /// <summary>Reconstruye un título ya guardado tal cual, sin volver a sanearlo.</summary>
+    public static DocumentTitle Restore(string storedTitle)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(storedTitle);
+        return new DocumentTitle(storedTitle);
+    }
+
     public override string ToString() => Value;
 }

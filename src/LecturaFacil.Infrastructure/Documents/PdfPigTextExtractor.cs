@@ -13,16 +13,21 @@ namespace LecturaFacil.Infrastructure.Documents;
 /// <summary>
 /// Extrae el texto de un PDF digital con PdfPig, en memoria. Contra PDFs que agotan CPU o memoria: límite de páginas
 /// y tiempo máximo (<see cref="LimitsOptions.MaxPdfPages"/>, <see cref="LimitsOptions.PdfExtractionTimeoutSeconds"/>).
+/// Además, como mucho <see cref="LimitsOptions.MaxConcurrentPdfExtractions"/> extracciones a la vez: una extracción
+/// que vence su tiempo sigue ocupando su hueco hasta que termina de verdad.
 /// Nunca registra el texto: solo tamaño, páginas y tiempo.
 /// </summary>
 public sealed partial class PdfPigTextExtractor(
     IOptions<LimitsOptions> limits,
     TimeProvider timeProvider,
-    ILogger<PdfPigTextExtractor> logger) : ITextExtractor
+    ILogger<PdfPigTextExtractor> logger) : ITextExtractor, IDisposable
 {
     private const string ParagraphSeparator = "\n\n";
 
     private readonly LimitsOptions _limits = limits.Value;
+    private readonly SemaphoreSlim _slots = new(limits.Value.MaxConcurrentPdfExtractions);
+
+    public void Dispose() => _slots.Dispose();
 
     public async Task<Result<ExtractedText>> ExtractTextAsync(byte[] pdf, CancellationToken cancellationToken)
     {
@@ -33,11 +38,19 @@ public sealed partial class PdfPigTextExtractor(
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var started = timeProvider.GetTimestamp();
 
+        if (!await _slots.WaitAsync(timeout, cancellationToken))
+        {
+            var busy = Result<ExtractedText>.Failure(DocumentErrors.Busy);
+            Log(pdf.Length, busy, timeProvider.GetElapsedTime(started));
+            return busy;
+        }
+
         Result<ExtractedText> result;
         try
         {
-            result = await Task.Run(() => Extract(pdf, started, timeout, deadline.Token), deadline.Token)
-                .WaitAsync(timeout, timeProvider, cancellationToken);
+            var extraction = Task.Run(() => Extract(pdf, started, timeout, deadline.Token), deadline.Token);
+            _ = extraction.ContinueWith(_ => _slots.Release(), CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
+            result = await extraction.WaitAsync(timeout, timeProvider, cancellationToken);
         }
         catch (TimeoutException)
         {
@@ -64,12 +77,21 @@ public sealed partial class PdfPigTextExtractor(
             }
 
             var pages = new List<string>(document.NumberOfPages);
+            var letters = 0;
             foreach (var page in document.GetPages())
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (timeProvider.GetElapsedTime(started) > timeout)
                 {
                     return Result<ExtractedText>.Failure(DocumentErrors.PdfTooComplex);
+                }
+
+                // Las letras no incluyen espacios: si ya superan el máximo, el texto también. Se corta antes del
+                // análisis de párrafos, que es lo más costoso con páginas de muchísimas palabras.
+                letters += page.Letters.Count;
+                if (letters > _limits.MaxCharacters)
+                {
+                    return Result<ExtractedText>.Failure(DocumentErrors.TextTooLong(_limits.MaxCharacters));
                 }
 
                 pages.Add(ReadParagraphs(page));

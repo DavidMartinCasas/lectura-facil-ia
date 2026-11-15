@@ -26,7 +26,7 @@ internal sealed class DocumentConfiguration : IEntityTypeConfiguration<Document>
 
         builder.Property(document => document.Title)
             .HasColumnName("title")
-            .HasConversion(title => title.Value, value => DocumentTitle.Create(value))
+            .HasConversion(title => title.Value, value => DocumentTitle.Restore(value))
             .HasMaxLength(DocumentTitle.MaxLength)
             .IsRequired();
 

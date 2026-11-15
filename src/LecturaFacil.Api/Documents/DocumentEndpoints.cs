@@ -29,11 +29,14 @@ internal static partial class DocumentEndpoints
         [DocumentErrors.ScannedPdf.Code] = StatusCodes.Status422UnprocessableEntity,
         [DocumentErrors.UnreadablePdf.Code] = StatusCodes.Status422UnprocessableEntity,
         [DocumentErrors.PdfTooComplex.Code] = StatusCodes.Status422UnprocessableEntity,
+        [DocumentErrors.Busy.Code] = StatusCodes.Status503ServiceUnavailable,
     };
 
     public static IEndpointRouteBuilder MapDocumentEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        // TODO(US-15): RequireAuthorization() y antiforgery cuando haya usuarios y cookies.
+        // TODO(US-15): RequireAuthorization() y antiforgery cuando haya usuarios y cookies. El formulario se lee a mano,
+        // así que Minimal APIs no añade la validación sola: hace falta .WithMetadata(new RequireAntiforgeryTokenAttribute()).
+        // TODO(US-16): límite de peticiones.
         var group = endpoints.MapGroup(Path).WithTags("Documentos");
 
         group.MapPost("/", SubmitAsync)
@@ -45,6 +48,7 @@ internal static partial class DocumentEndpoints
             .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
             .ProducesProblem(StatusCodes.Status415UnsupportedMediaType)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
             .WithName("SubmitDocument")
             .WithSummary("Sube un texto pegado o un PDF digital y crea un documento en estado Received.")
             .WithDescription(

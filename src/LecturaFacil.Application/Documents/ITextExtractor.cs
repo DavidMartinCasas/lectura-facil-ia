@@ -8,7 +8,8 @@ public interface ITextExtractor
 {
     /// <returns>
     /// El texto con los párrafos separados por una línea en blanco, o <see cref="DocumentErrors.ScannedPdf"/>,
-    /// <see cref="DocumentErrors.UnreadablePdf"/> o <see cref="DocumentErrors.PdfTooComplex"/>.
+    /// <see cref="DocumentErrors.UnreadablePdf"/>, <see cref="DocumentErrors.PdfTooComplex"/>,
+    /// <see cref="DocumentErrors.TextTooLong"/> o <see cref="DocumentErrors.Busy"/>.
     /// </returns>
     Task<Result<ExtractedText>> ExtractTextAsync(byte[] pdf, CancellationToken cancellationToken);
 }

@@ -62,6 +62,13 @@ public sealed class DocumentTitleTests
         DocumentTitle.FromFileName(fileName).Value.ShouldBe(expected);
     }
 
+    [Fact]
+    public void Restore_WhenTitleWasStored_KeepsItAsIs()
+    {
+        DocumentTitle.Restore("Bases  2026").Value.ShouldBe("Bases  2026");
+        Should.Throw<ArgumentException>(() => DocumentTitle.Restore(" "));
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData(".pdf")]

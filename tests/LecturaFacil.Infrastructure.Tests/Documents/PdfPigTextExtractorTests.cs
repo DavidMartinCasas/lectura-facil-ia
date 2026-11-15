@@ -77,6 +77,25 @@ public sealed class PdfPigTextExtractorTests
     }
 
     [Fact]
+    public async Task ExtractText_WhenPagesHaveMoreLettersThanMaxCharacters_ReturnsTextTooLongBeforeReadingParagraphs()
+    {
+        var result = await CreateExtractor(maxCharacters: 20).ExtractTextAsync(BuildPdf(pages: 2), Token);
+
+        result.Error!.Code.ShouldBe(DocumentErrors.TextTooLongCode);
+    }
+
+    [Fact]
+    public async Task ExtractText_WhenCalledManyTimesAtOnce_ReleasesEverySlot()
+    {
+        using var extractor = CreateExtractor(maxConcurrent: 1);
+        var pdf = PdfFixtures.Read(PdfFixtures.Normal);
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => extractor.ExtractTextAsync(pdf, Token)));
+
+        results.ShouldAllBe(result => result.IsSuccess);
+    }
+
+    [Fact]
     public async Task ExtractText_WhenRequestIsCancelled_Throws()
     {
         using var cancellation = new CancellationTokenSource();
@@ -86,9 +105,19 @@ public sealed class PdfPigTextExtractorTests
             () => CreateExtractor().ExtractTextAsync(PdfFixtures.Read(PdfFixtures.Normal), cancellation.Token));
     }
 
-    private static PdfPigTextExtractor CreateExtractor(int maxPages = 100, TimeProvider? timeProvider = null) =>
+    private static PdfPigTextExtractor CreateExtractor(
+        int maxPages = 100,
+        TimeProvider? timeProvider = null,
+        int maxCharacters = 20_000,
+        int maxConcurrent = 2) =>
         new(
-            Options.Create(new LimitsOptions { MaxPdfPages = maxPages, PdfExtractionTimeoutSeconds = 5 }),
+            Options.Create(new LimitsOptions
+            {
+                MaxPdfPages = maxPages,
+                PdfExtractionTimeoutSeconds = 5,
+                MaxCharacters = maxCharacters,
+                MaxConcurrentPdfExtractions = maxConcurrent,
+            }),
             timeProvider ?? TimeProvider.System,
             NullLogger<PdfPigTextExtractor>.Instance);
 

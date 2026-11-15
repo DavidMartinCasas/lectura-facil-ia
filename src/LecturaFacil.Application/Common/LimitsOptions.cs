@@ -25,6 +25,9 @@ public sealed class LimitsOptions
     [Range(1, 120, ErrorMessage = "Limits:PdfExtractionTimeoutSeconds debe estar entre {1} y {2}.")]
     public int PdfExtractionTimeoutSeconds { get; set; } = 15;
 
+    [Range(1, 64, ErrorMessage = "Limits:MaxConcurrentPdfExtractions debe estar entre {1} y {2}.")]
+    public int MaxConcurrentPdfExtractions { get; set; } = 2;
+
     [Range(5, 50, ErrorMessage = "Limits:MaxWordsPerSentence debe estar entre {1} y {2}.")]
     public int MaxWordsPerSentence { get; set; } = 15;
 

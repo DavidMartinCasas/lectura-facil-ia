@@ -7,7 +7,6 @@ using LecturaFacil.Infrastructure.Llm;
 using LecturaFacil.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace LecturaFacil.Infrastructure;
@@ -28,7 +27,6 @@ public static class DependencyInjection
             options.UseNpgsql(provider.GetRequiredService<IOptions<DatabaseOptions>>().Value.BuildConnectionString()));
         services.AddHealthChecks().AddDbContextCheck<AppDbContext>(DatabaseHealthCheckName);
         services.AddScoped<IDocumentRepository, EfDocumentRepository>();
-        services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<ITextExtractor, PdfPigTextExtractor>();
 
         return services.AddLlm();

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 using FluentValidation;
 using LecturaFacil.Application.Common;
+using LecturaFacil.Application.Documents;
 using LecturaFacil.Domain.Documents;
 using Microsoft.Extensions.Options;
 
@@ -15,7 +16,7 @@ internal sealed class SubmitTextRequestValidator : AbstractValidator<SubmitTextR
 
         RuleFor(request => request.Text)
             .NotEmpty().WithMessage("Escribe o pega el texto que quieres adaptar.")
-            .MaximumLength(options.MaxCharacters).WithMessage($"El texto no puede superar {options.MaxCharacters} caracteres.");
+            .MaximumLength(options.MaxCharacters).WithMessage(DocumentErrors.TextTooLong(options.MaxCharacters).Message);
 
         RuleFor(request => request.Title)
             .MaximumLength(DocumentTitle.MaxLength).WithMessage($"El título no puede superar {DocumentTitle.MaxLength} caracteres.");

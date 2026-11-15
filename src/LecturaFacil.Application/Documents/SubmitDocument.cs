@@ -46,6 +46,12 @@ public sealed class SubmitDocument(
             return Result<SubmittedDocument>.Failure(extracted.Error!);
         }
 
+        // Un escaneado puede traer algo de texto (número de página, pie): si no llega al mínimo, se trata como escaneado.
+        if (OriginalText.CheckLength(extracted.Value.Text, _limits.TextLengthLimits) == TextLengthCheck.TooShort)
+        {
+            return Result<SubmittedDocument>.Failure(DocumentErrors.ScannedPdf);
+        }
+
         var title = DocumentTitle.FromFileName(command.FileName);
         return await StoreAsync(extracted.Value.Text, title, extracted.Value.PageCount, cancellationToken);
     }
@@ -85,7 +91,7 @@ public sealed class SubmitDocument(
             return null;
         }
 
-        using var buffer = new MemoryStream();
+        using var buffer = content.CanSeek ? new MemoryStream((int)content.Length) : new MemoryStream();
         var chunk = new byte[ReadBufferSize];
         int read;
         while ((read = await content.ReadAsync(chunk, cancellationToken)) > 0)
@@ -98,6 +104,7 @@ public sealed class SubmitDocument(
             buffer.Write(chunk, 0, read);
         }
 
-        return buffer.ToArray();
+        // Si la capacidad coincide con lo leído, se usa el mismo array y no se hace otra copia.
+        return buffer.Capacity == buffer.Length ? buffer.GetBuffer() : buffer.ToArray();
     }
 }

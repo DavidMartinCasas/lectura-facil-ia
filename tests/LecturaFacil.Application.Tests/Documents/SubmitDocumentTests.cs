@@ -135,6 +135,17 @@ public sealed class SubmitDocumentTests
     }
 
     [Fact]
+    public async Task SubmitPdf_WhenExtractedTextIsShorterThanTheMinimum_ReturnsScannedPdf()
+    {
+        var extractor = StubTextExtractor.Returning("Página 1");
+
+        var result = await CreateUseCase(extractor).SubmitPdfAsync(PdfCommand("escaneado-con-pie.pdf"), Token);
+
+        result.Error.ShouldBe(DocumentErrors.ScannedPdf);
+        _repository.Added.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task SubmitPdf_WhenExtractedTextIsTooLong_ReturnsTextTooLong()
     {
         var extractor = StubTextExtractor.Returning(new string('a', 500));
@@ -157,6 +168,7 @@ public sealed class SubmitDocumentTests
     {
         DocumentErrors.FileTooLarge(5 * 1024 * 1024).Message.ShouldContain("5 MB");
         DocumentErrors.FileTooLarge(2_048).Message.ShouldContain("2 KB");
+        DocumentErrors.FileTooLarge(5_767_168).Message.ShouldContain("5,5 MB");
     }
 
     private static SubmitPdfCommand PdfCommand(string fileName) => new(new MemoryStream(PdfBytes()), fileName);

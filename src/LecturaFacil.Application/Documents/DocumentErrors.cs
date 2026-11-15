@@ -14,6 +14,8 @@ public static class DocumentErrors
     private const int BytesPerKilobyte = 1024;
     private const int BytesPerMegabyte = BytesPerKilobyte * BytesPerKilobyte;
 
+    private static readonly CultureInfo Spanish = CultureInfo.GetCultureInfo("es-ES");
+
     public static readonly Error InvalidFileType = new(
         "document.invalid_file_type",
         "El fichero no es un PDF. Solo se admiten ficheros PDF con texto.");
@@ -30,6 +32,10 @@ public static class DocumentErrors
         "document.pdf_too_complex",
         "El PDF tiene demasiadas páginas o tarda demasiado en leerse. Prueba con un documento más corto.");
 
+    public static readonly Error Busy = new(
+        "document.busy",
+        "Ahora mismo se están leyendo muchos documentos. Inténtalo de nuevo en unos minutos.");
+
     public static Error FileTooLarge(int maxBytes) => new(
         FileTooLargeCode,
         $"El fichero supera el tamaño máximo de {FormatSize(maxBytes)}.");
@@ -43,6 +49,6 @@ public static class DocumentErrors
         string.Create(CultureInfo.InvariantCulture, $"El texto no puede superar {maxCharacters} caracteres."));
 
     private static string FormatSize(int bytes) => bytes >= BytesPerMegabyte
-        ? string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)BytesPerMegabyte:0.#} MB")
-        : string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)BytesPerKilobyte:0.#} KB");
+        ? string.Create(Spanish, $"{bytes / (double)BytesPerMegabyte:0.#} MB")
+        : string.Create(Spanish, $"{bytes / (double)BytesPerKilobyte:0.#} KB");
 }

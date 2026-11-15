@@ -25,6 +25,7 @@ public sealed class LimitsOptionsTests
         options.MinCharacters.ShouldBe(50);
         options.MaxPdfPages.ShouldBe(100);
         options.PdfExtractionTimeoutSeconds.ShouldBe(15);
+        options.MaxConcurrentPdfExtractions.ShouldBe(2);
     }
 
     [Fact]
@@ -53,6 +54,8 @@ public sealed class LimitsOptionsTests
     [InlineData(nameof(LimitsOptions.MaxPdfPages), 5_000)]
     [InlineData(nameof(LimitsOptions.PdfExtractionTimeoutSeconds), 0)]
     [InlineData(nameof(LimitsOptions.PdfExtractionTimeoutSeconds), 600)]
+    [InlineData(nameof(LimitsOptions.MaxConcurrentPdfExtractions), 0)]
+    [InlineData(nameof(LimitsOptions.MaxConcurrentPdfExtractions), 100)]
     public void Validate_WhenValueIsOutOfRange_ReportsTheOption(string property, int value)
     {
         var options = new LimitsOptions();
