@@ -96,6 +96,8 @@ jobs:
       - name: Validar docker-compose
         run: |
           cp deploy/.env.example deploy/.env
+          # Contraseña con separadores: la API debe arrancar igual (credenciales escapadas).
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci;con=separadores/' deploy/.env
           docker compose -f deploy/docker-compose.yml config --quiet
 
       - name: Construir imágenes

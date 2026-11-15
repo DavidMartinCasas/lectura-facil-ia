@@ -17,11 +17,13 @@ public static class DependencyInjection
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
-        var connectionString = configuration.GetConnectionString(ConnectionStringName);
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new InvalidOperationException($"Missing connection string 'ConnectionStrings:{ConnectionStringName}'.");
-        }
+        // Las credenciales pueden llegar aparte (Database:Name, Database:Username, Database:Password)
+        // para no tener que escaparlas a mano dentro de la cadena.
+        var connectionString = DatabaseConnectionString.Build(
+            configuration.GetConnectionString(ConnectionStringName),
+            configuration["Database:Name"],
+            configuration["Database:Username"],
+            configuration["Database:Password"]);
 
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
         services.AddHealthChecks().AddDbContextCheck<AppDbContext>(DatabaseHealthCheckName);

@@ -32,7 +32,11 @@ services:
       dockerfile: src/LecturaFacil.Api/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__Database: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-lecturafacil};Username=${POSTGRES_USER:-lecturafacil};Password=${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en deploy/.env}"
+      # Las credenciales van aparte: la API las escapa al construir la cadena (una contraseña con ";" no la rompe).
+      ConnectionStrings__Database: "Host=postgres;Port=5432"
+      Database__Name: ${POSTGRES_DB:-lecturafacil}
+      Database__Username: ${POSTGRES_USER:-lecturafacil}
+      Database__Password: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en deploy/.env}
       Database__ApplyMigrationsOnStartup: "true"
     depends_on:
       postgres:
