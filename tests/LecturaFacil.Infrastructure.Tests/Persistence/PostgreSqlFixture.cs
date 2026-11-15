@@ -5,7 +5,7 @@ namespace LecturaFacil.Infrastructure.Tests.Persistence;
 
 public sealed class PostgreSqlFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:18-alpine").Build();
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:18.4-alpine").Build();
 
     public string ConnectionString => _container.GetConnectionString();
 

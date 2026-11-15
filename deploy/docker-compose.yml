@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: Apache-2.0
+# Entorno local completo: PostgreSQL, API y frontend.
+#   cp deploy/.env.example deploy/.env   (y cambia los valores)
+#   docker compose -f deploy/docker-compose.yml up --build
+# Solo se publica el frontend (en 127.0.0.1); nginx reenvía /api y /health a la API.
+
+name: lectura-facil
+
+services:
+  postgres:
+    image: postgres:18.4-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lecturafacil}
+      POSTGRES_USER: ${POSTGRES_USER:-lecturafacil}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en deploy/.env}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ..
+      dockerfile: src/LecturaFacil.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Database: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-lecturafacil};Username=${POSTGRES_USER:-lecturafacil};Password=${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en deploy/.env}"
+      Database__ApplyMigrationsOnStartup: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+      - frontend
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../src/LecturaFacil.Web
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:8080"
+    depends_on:
+      - api
+    networks:
+      - frontend
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+networks:
+  backend:
+  frontend:
+
+volumes:
+  postgres-data:

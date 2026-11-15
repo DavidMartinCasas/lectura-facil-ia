@@ -13,7 +13,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string ThrowingPath = "/__tests/throw";
 
-    private readonly PostgreSqlContainer _database = new PostgreSqlBuilder("postgres:18-alpine").Build();
+    private readonly PostgreSqlContainer _database = new PostgreSqlBuilder("postgres:18.4-alpine").Build();
 
     protected virtual string Environment => "Production";
 
