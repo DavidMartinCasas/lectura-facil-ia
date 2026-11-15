@@ -5,8 +5,6 @@ namespace LecturaFacil.Api;
 
 internal static class ApiConfiguration
 {
-    public const string ApplyMigrationsOnStartupKey = "Database:ApplyMigrationsOnStartup";
-
     public static IServiceCollection AddApi(this IServiceCollection services)
     {
         services.AddProblemDetails();

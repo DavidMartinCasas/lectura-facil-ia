@@ -31,7 +31,12 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(Environment);
-        builder.UseSetting("ConnectionStrings:Database", ConnectionString);
+        builder.UseSetting("Database:ConnectionString", ConnectionString);
+        foreach (var (key, value) in TestConfiguration.ValidLlmSettings)
+        {
+            builder.UseSetting(key, value);
+        }
+
         builder.ConfigureServices(services => services.AddSingleton<IStartupFilter, ThrowingEndpointStartupFilter>());
     }
 
@@ -50,7 +55,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 /// <summary>Igual, pero sin base de datos disponible.</summary>
 public sealed class ApiWithoutDatabaseFactory : ApiFactory
 {
-    protected override string ConnectionString => "Host=127.0.0.1;Port=1;Database=none;Username=none;Timeout=2";
+    protected override string ConnectionString => TestConfiguration.UnreachableDatabase;
 
     public override ValueTask InitializeAsync() => ValueTask.CompletedTask;
 }
