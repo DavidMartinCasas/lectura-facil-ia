@@ -1,0 +1,7 @@
+{
+  "model": "modelo-falso",
+  "content": "{\"ok\": true}",
+  "inputTokens": 42,
+  "outputTokens": 6,
+  "durationMs": 120
+}

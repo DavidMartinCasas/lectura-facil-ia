@@ -63,6 +63,7 @@ El doble guion bajo separa niveles y no importan las mayúsculas: `LLM__PRIMARY_
 | `LLM__PRIMARY__APIKEY` 🔒 | Sí | — | Clave del proveedor. |
 | `LLM__PRIMARY__ADAPTERMODEL` | Sí | — | Modelo o despliegue que adapta el texto. |
 | `LLM__PRIMARY__VERIFIERMODEL` | Sí | — | Modelo o despliegue que verifica el significado. |
+| `LLM__PRIMARY__TEMPERATURE` | No | `0` | Temperatura de las respuestas (0 – 2). Súbela solo si tu modelo no admite 0. |
 | `LLM__FALLBACK__ENABLED` | No | `false` | Habilita el proveedor de respaldo. Si es `false`, ningún documento sale del principal. |
 | `LLM__FALLBACK__*` | Solo si está habilitado | — | Las mismas opciones que `LLM__PRIMARY__*` (la clave 🔒). |
 | `LIMITS__MAXFILESIZEBYTES` | No | `5242880` (5 MB) | Tamaño máximo de fichero (1 KB – 50 MB). |
@@ -71,6 +72,55 @@ El doble guion bajo separa niveles y no importan las mayúsculas: `LLM__PRIMARY_
 | `LIMITS__MAXOUTPUTTOKENS` | No | `4096` | Tokens máximos por respuesta del modelo (256 – 32 768). |
 | `LIMITS__LLMTIMEOUTSECONDS` | No | `120` | Tiempo máximo por llamada al modelo, en segundos (5 – 600). |
 | `UI__NOTICE` | No | vacío | Aviso que se muestra en la interfaz (máx. 500 caracteres). |
+
+## Proveedores de IA
+
+La aplicación habla con los modelos a través de un único puerto (`ILlmProvider`); cambiar de proveedor es cambiar la configuración, no el código. Hay dos tipos, y cualquiera puede ser principal o respaldo:
+
+- **`OpenAICompatible`**: cualquier servidor con la API de chat de OpenAI. `ENDPOINT` es la URL base de la API (la que acaba en `/v1`) y la clave se envía en la cabecera `Authorization`.
+- **`AzureFoundry`**: Azure AI Foundry con su API v1 compatible con OpenAI. `ENDPOINT` es la URL del recurso (la aplicación añade `/openai/v1`) y los "modelos" son los **nombres de los despliegues**.
+
+Cada llamada pide la respuesta en JSON con esquema, sin herramientas, con `LIMITS__MAXOUTPUTTOKENS` y `LIMITS__LLMTIMEOUTSECONDS` como tope, sin reintentos ni redirecciones. La respuesta se valida contra el esquema antes de usarse.
+
+**Ollama** (en otra máquina de tu red; dentro de Docker `localhost` es el contenedor de la API):
+
+```bash
+LLM__PRIMARY__TYPE=OpenAICompatible
+LLM__PRIMARY__DISPLAYNAME="Servidor propio"
+LLM__PRIMARY__ENDPOINT=http://192.168.1.50:11434/v1
+LLM__PRIMARY__APIKEY=ollama            # Ollama no comprueba la clave, pero la opción es obligatoria
+LLM__PRIMARY__ADAPTERMODEL=nombre-del-modelo-adaptador
+LLM__PRIMARY__VERIFIERMODEL=nombre-del-modelo-verificador
+```
+
+**llama-swap** (o vLLM, LM Studio…) con clave, detrás de https:
+
+```bash
+LLM__PRIMARY__TYPE=OpenAICompatible
+LLM__PRIMARY__DISPLAYNAME="Servidor propio"
+LLM__PRIMARY__ENDPOINT=https://llm.example.com/v1
+LLM__PRIMARY__APIKEY=<tu clave>
+LLM__PRIMARY__ADAPTERMODEL=<modelo tal y como aparece en la configuración de llama-swap>
+LLM__PRIMARY__VERIFIERMODEL=<otro modelo, de otra familia>
+```
+
+**Azure AI Foundry** (aquí como respaldo; crea antes un despliegue por rol):
+
+```bash
+LLM__FALLBACK__ENABLED=true
+LLM__FALLBACK__TYPE=AzureFoundry
+LLM__FALLBACK__DISPLAYNAME=Nube
+LLM__FALLBACK__ENDPOINT=https://<tu-recurso>.services.ai.azure.com/   # o https://<tu-recurso>.openai.azure.com/
+LLM__FALLBACK__APIKEY=<clave del recurso>
+LLM__FALLBACK__ADAPTERMODEL=<nombre del despliegue adaptador>
+LLM__FALLBACK__VERIFIERMODEL=<nombre del despliegue verificador>
+```
+
+Para comprobar la configuración, arranca la API en `Development` y llama a `GET /dev/llm/ping`: hace una llamada mínima (sin ningún documento) a cada proveedor configurado y a cada rol, y devuelve proveedor, modelo, tokens, duración o el código de error. Esa ruta **no existe** en ningún otro entorno.
+
+```bash
+curl -s http://localhost:5125/dev/llm/ping   # dotnet run, perfil http
+```
 
 ## Documentación
 

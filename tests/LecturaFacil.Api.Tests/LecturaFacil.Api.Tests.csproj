@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="..\Shared\Shared.props" />
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\LecturaFacil.Api\LecturaFacil.Api.csproj" />
   </ItemGroup>

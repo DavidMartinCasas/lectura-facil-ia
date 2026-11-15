@@ -1,0 +1,7 @@
+<Project>
+  <!-- FakeLlmProvider y las respuestas grabadas de tests/fixtures/llm, para los proyectos de tests que los usan. -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)FakeLlmProvider.cs" Link="Shared\FakeLlmProvider.cs" />
+    <None Include="$(MSBuildThisFileDirectory)..\fixtures\llm\**\*.json" LinkBase="fixtures\llm" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

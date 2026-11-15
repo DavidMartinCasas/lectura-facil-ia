@@ -45,7 +45,9 @@ public sealed class DependencyRuleTests
                 InfrastructureNamespace,
                 ApiNamespace,
                 "Microsoft.AspNetCore",
-                "Microsoft.EntityFrameworkCore")
+                "Microsoft.EntityFrameworkCore",
+                "Microsoft.Extensions.AI",
+                "OpenAI")
             .GetResult();
 
         AssertSuccessful(result);
