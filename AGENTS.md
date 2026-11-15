@@ -191,3 +191,21 @@ docker compose -f deploy/docker-compose.yml config --quiet
 
 ### Si te bloqueas
 Para, explica qué falta (una clave, una decisión de diseño, una URL) y propón opciones. No improvises una solución insegura para seguir avanzando.
+
+---
+
+## 10. Skills y revisores
+
+Recetas y listas de comprobación para tareas que se repiten. Están en formato de Claude Code (`.claude/skills/` y `.claude/agents/`). **Si tu herramienta no las carga sola, abre el fichero y síguelo** cuando la tarea encaje.
+
+| Tipo | Nombre | Cuándo usarlo |
+|---|---|---|
+| Skill | [`implementar-historia`](.claude/skills/implementar-historia/SKILL.md) | Al implementar cualquier US: orden de los pasos y plantilla de PR |
+| Skill | [`verificar`](.claude/skills/verificar/SKILL.md) | Antes de abrir o actualizar una PR |
+| Skill | [`nuevo-endpoint`](.claude/skills/nuevo-endpoint/SKILL.md) | Al crear o cambiar un endpoint de la API |
+| Skill | [`prompt-llm`](.claude/skills/prompt-llm/SKILL.md) | Al tocar prompts, `ILlmProvider` o respuestas de modelos |
+| Revisor | [`revisor-seguridad`](.claude/agents/revisor-seguridad.md) | Antes de cada PR: OWASP Top 10, API Top 10 y LLM Top 10 |
+| Revisor | [`revisor-arquitectura`](.claude/agents/revisor-arquitectura.md) | Antes de cada PR: capas, clean code, tests y licencias |
+| Revisor | [`experto-lectura-facil`](.claude/agents/experto-lectura-facil.md) | En US-05, 06, 07, 08, 11 y 18: fidelidad a la UNE 153101 EX |
+
+Este archivo sigue mandando: las skills y los revisores lo concretan, no lo cambian.
