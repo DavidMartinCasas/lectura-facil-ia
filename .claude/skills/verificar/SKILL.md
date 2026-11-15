@@ -10,7 +10,7 @@ Ejecuta los comandos de la sección 8 de `AGENTS.md` **en este orden** y **sin d
 | # | Comprobación | Comando | Aplica si existe |
 |---|---|---|---|
 | 1 | Compilación sin avisos | `dotnet build -warnaserror` | `*.sln` / `*.slnx` |
-| 2 | Tests y cobertura | `dotnet test` (Microsoft.Testing.Platform; la cobertura de Domain y Application se mide sola) | proyectos en `tests/` |
+| 2 | Tests y cobertura | `dotnet test` (Microsoft.Testing.Platform; la cobertura de Domain y Application se mide sola). Los tests con Testcontainers necesitan Docker: si no hay Docker, márcalos como "no ejecutado" y confía en la CI de la PR | proyectos en `tests/` |
 | 3 | Formato | `dotnet format --verify-no-changes` | `*.sln` / `*.slnx` |
 | 4 | Paquetes vulnerables | `dotnet list package --vulnerable --include-transitive` | `*.sln` / `*.slnx` |
 | 5 | Frontend | `cd src/LecturaFacil.Web && npm ci && npm run lint && npm test -- --watch=false && npm run build` | `src/LecturaFacil.Web/package.json` |
