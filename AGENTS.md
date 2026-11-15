@@ -32,7 +32,7 @@ Diseño completo: `docs/TFM-Lectura-Facil.md`. Backlog: `docs/backlog/`.
 | Capa | Tecnología |
 |---|---|
 | Backend | **.NET 10 (LTS)**, ASP.NET Core Minimal APIs, C# con `nullable` activado |
-| Frontend | **Angular** (versión estable actual) con componentes *standalone*, *signals* y TypeScript `strict`; **PrimeNG** |
+| Frontend | **Angular** (versión estable actual) con componentes *standalone*, *signals* y TypeScript `strict`; **Angular Material** (MIT) |
 | Base de datos | PostgreSQL + EF Core (Npgsql) |
 | LLM | Puerto propio `ILlmProvider`; adaptadores con `Microsoft.Extensions.AI`: **`OpenAICompatible`** (Ollama, LM Studio, vLLM, llama-swap…) y **`AzureFoundry`**. Cualquiera puede ser principal o respaldo |
 | Resiliencia | `Microsoft.Extensions.Http.Resilience` (Polly v8) |
@@ -43,7 +43,7 @@ Diseño completo: `docs/TFM-Lectura-Facil.md`. Backlog: `docs/backlog/`.
 | Observabilidad | Serilog (JSON) + Sentry |
 | Contenedores | Docker y Docker Compose |
 
-**Librerías prohibidas** (licencias comerciales o con restricciones para quien use el proyecto): **MediatR** (v13+), **AutoMapper** (v15+), **FluentAssertions** (v8+), **QuestPDF**. Los casos de uso son clases simples inyectadas y el mapeo se hace a mano.
+**Librerías prohibidas** (licencias comerciales o con restricciones para quien use el proyecto): **MediatR** (v13+), **AutoMapper** (v15+), **FluentAssertions** (v8+), **QuestPDF**, **PrimeNG** (v22+, licencia comercial PrimeUI). Los casos de uso son clases simples inyectadas y el mapeo se hace a mano.
 
 **Nueva dependencia = justificación.** No añadas paquetes que no pida la historia. Si crees que hace falta uno, explícalo en el plan y espera confirmación.
 

@@ -47,7 +47,7 @@ Escenario: Navegación con teclado
 - **Angular:** rutas `/nuevo`, `/documentos`, `/documentos/:id` (esta última solo con el estado y un marcador de la US-13).
 - `DocumentsApiService` (HTTP) y `DocumentEventsService` (SSE con `EventSource` y reconexión).
 - Componentes *standalone* con `OnPush` y *signals*: `UploadFormComponent`, `ProgressStepsComponent`, `DocumentListComponent`.
-- Componentes de PrimeNG (FileUpload, Steps o Timeline, Table) con tema claro y oscuro.
+- Componentes de Angular Material (Stepper o lista de progreso, Table; subida con `<input type="file">` accesible) con tema claro y oscuro.
 - Interceptor HTTP para errores que traduce ProblemDetails a mensajes de usuario.
 
 ## Seguridad
@@ -85,7 +85,7 @@ npx playwright test
 ```text
 Lee AGENTS.md y docs/backlog/historias/US-12-subida-y-progreso-ui.md.
 Crea la rama feat/US-12-subida-ui, preséntame un plan breve y espera mi confirmación.
-Comprueba la versión de Angular y PrimeNG del proyecto antes de usar sus APIs.
+Comprueba la versión de Angular y Angular Material del proyecto antes de usar sus APIs.
 Implementa con tests, incluido el de accesibilidad, ejecuta todos los comandos de verificación y termina
 con un resumen de lo hecho, cómo probarlo, lo pendiente y los riesgos. No hagas push ni merge.
 ```
