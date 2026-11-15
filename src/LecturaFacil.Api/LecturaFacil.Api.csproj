@@ -1,5 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
+  <PropertyGroup>
+    <!-- Solo en Development: dotnet user-secrets para los secretos locales. -->
+    <UserSecretsId>lectura-facil-ia-api</UserSecretsId>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\LecturaFacil.Application\LecturaFacil.Application.csproj" />
     <ProjectReference Include="..\LecturaFacil.Infrastructure\LecturaFacil.Infrastructure.csproj" />

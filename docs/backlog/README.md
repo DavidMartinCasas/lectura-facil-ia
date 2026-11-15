@@ -72,7 +72,7 @@ Las historias que se lanzan el mismo día no dependen entre sí y pueden hacerse
 | ID | Historia | Épica | Prioridad | Puntos | Día | Depende de | Humano | Estado |
 |---|---|---|---|---|---|---|---|---|
 | [US-01](historias/US-01-esqueleto-solucion.md) | Esqueleto de la solución | EP-01 | Must | 5 | Lun 16 | — | No | 🔍 |
-| [US-02](historias/US-02-configuracion-y-secretos.md) | Configuración y secretos validados | EP-01 | Must | 2 | Mar 17 | US-01 | No | ⬜ |
+| [US-02](historias/US-02-configuracion-y-secretos.md) | Configuración y secretos validados | EP-01 | Must | 2 | Mar 17 | US-01 | No | 🔍 |
 | [US-03](historias/US-03-proveedores-llm.md) | Proveedores LLM (local y Azure) | EP-01 | Must | 5 | Mié 18 | US-02 | Sí: endpoints y claves | ⬜ |
 | [US-04](historias/US-04-subida-y-extraccion.md) | Subir texto o PDF y extraer el texto | EP-02 | Must | 3 | Mié 18 | US-01 | No | ⬜ |
 | [US-05](historias/US-05-deteccion-de-problemas.md) | Detectar problemas del original | EP-02 | Must | 3 | Mié 18 | US-01 | No | ⬜ |
