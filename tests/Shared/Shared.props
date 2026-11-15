@@ -1,7 +1,9 @@
 <Project>
-  <!-- FakeLlmProvider y las respuestas grabadas de tests/fixtures/llm, para los proyectos de tests que los usan. -->
+  <!-- FakeLlmProvider, las respuestas grabadas de tests/fixtures/llm y los PDFs de tests/fixtures/pdf, para los proyectos de tests que los usan. -->
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)FakeLlmProvider.cs" Link="Shared\FakeLlmProvider.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)PdfFixtures.cs" Link="Shared\PdfFixtures.cs" />
     <None Include="$(MSBuildThisFileDirectory)..\fixtures\llm\**\*.json" LinkBase="fixtures\llm" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(MSBuildThisFileDirectory)..\fixtures\pdf\*.pdf" LinkBase="fixtures\pdf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
