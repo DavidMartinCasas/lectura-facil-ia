@@ -16,7 +16,6 @@ public sealed class ProviderEndpointTests
     [InlineData("http://172.31.255.255/v1")]
     [InlineData("http://192.168.1.10:1234/v1")]
     [InlineData("http://[fd00::1]:8080/v1")]
-    [InlineData("http://ollama:11434/v1")]
     public void IsAllowed_WhenHttpsOrHttpToLocalNetwork_ReturnsTrue(string endpoint)
     {
         ProviderEndpoint.IsAllowed(endpoint).ShouldBeTrue();
@@ -29,6 +28,7 @@ public sealed class ProviderEndpointTests
     [InlineData("no es una url")]
     [InlineData("/v1/chat")]
     [InlineData("http://proveedor.example.com/v1")]
+    [InlineData("http://ollama:11434/v1")]
     [InlineData("http://8.8.8.8/v1")]
     [InlineData("http://172.32.0.1/v1")]
     [InlineData("http://169.254.169.254/latest")]

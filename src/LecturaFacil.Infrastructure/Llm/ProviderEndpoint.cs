@@ -5,8 +5,9 @@ using System.Net.Sockets;
 namespace LecturaFacil.Infrastructure.Llm;
 
 /// <summary>
-/// Reglas para la URL de un proveedor: https siempre; http solo hacia localhost, una IP privada o un nombre
-/// de una sola etiqueta (un servicio de Docker Compose, por ejemplo), para proveedores locales.
+/// Reglas para la URL de un proveedor: https siempre; http solo hacia localhost o una IP privada, para proveedores
+/// locales. Un nombre de host con http no se admite aunque no tenga puntos: el DNS podría resolverlo a una IP pública
+/// (dominios de búsqueda) y la clave y los documentos viajarían sin cifrar.
 /// </summary>
 public static class ProviderEndpoint
 {
@@ -30,7 +31,6 @@ public static class ProviderEndpoint
 
         return uri.HostNameType switch
         {
-            UriHostNameType.Dns => !uri.DnsSafeHost.Contains('.', StringComparison.Ordinal),
             UriHostNameType.IPv4 or UriHostNameType.IPv6 => IsPrivate(IPAddress.Parse(uri.DnsSafeHost)),
             _ => false,
         };

@@ -59,7 +59,7 @@ El doble guion bajo separa niveles y no importan las mayúsculas: `LLM__PRIMARY_
 | `DATABASE__APPLYMIGRATIONSONSTARTUP` | No | `false` | Aplica las migraciones al arrancar. |
 | `LLM__PRIMARY__TYPE` | Sí | — | `OpenAICompatible` (Ollama, LM Studio, vLLM, llama-swap…) o `AzureFoundry`. |
 | `LLM__PRIMARY__DISPLAYNAME` | Sí | — | Nombre visible del proveedor (máx. 60 caracteres). |
-| `LLM__PRIMARY__ENDPOINT` | Sí | — | URL absoluta `https`, sin credenciales. Se admite `http` solo hacia `localhost`, una IP privada o un nombre sin puntos (un servicio de Compose). |
+| `LLM__PRIMARY__ENDPOINT` | Sí | — | URL absoluta `https`, sin credenciales. Se admite `http` solo hacia `localhost` o una IP privada, nunca hacia un nombre (el DNS podría resolverlo a una IP pública). |
 | `LLM__PRIMARY__APIKEY` 🔒 | Sí | — | Clave del proveedor. |
 | `LLM__PRIMARY__ADAPTERMODEL` | Sí | — | Modelo o despliegue que adapta el texto. |
 | `LLM__PRIMARY__VERIFIERMODEL` | Sí | — | Modelo o despliegue que verifica el significado. |

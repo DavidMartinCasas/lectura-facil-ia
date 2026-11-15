@@ -30,6 +30,38 @@ public sealed class StartupConfigurationTests
     }
 
     [Fact]
+    public async Task Start_WithTheValuesOfEnvExample_Starts()
+    {
+        var settings = EnvExample.ReadApiSettings();
+        settings["Database:ConnectionString"] = TestConfiguration.UnreachableDatabase;
+        await using var factory = new ConfiguredApiFactory(settings);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync(new Uri("/no-existe", UriKind.Relative), TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        settings.Keys.ShouldContain("Llm:Primary:ApiKey");
+    }
+
+    [Theory]
+    [InlineData("Llm:Primary:Type", "TipoDesconocido")]
+    [InlineData("Limits:MaxCharacters", "muchos")]
+    public async Task Start_WhenValueCannotBeConverted_DoesNotStartAndLogsTheOption(string key, string value)
+    {
+        var settings = CompleteSettings();
+        settings[key] = value;
+        var logs = new CapturingLoggerProvider();
+        await using var factory = new ConfiguredApiFactory(settings, logs);
+
+        var exception = Should.Throw<OptionsValidationException>(() => factory.CreateClient());
+
+        exception.Message.ShouldContain(key);
+        exception.Message.ShouldNotContain(value);
+        logs.Messages.ShouldContain(message => message.Contains(key, StringComparison.Ordinal));
+        logs.Messages.ShouldAllBe(message => !message.Contains(value, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Start_WhenNothingOptionalIsConfigured_UsesSafeDefaults()
     {
         await using var factory = new ConfiguredApiFactory(CompleteSettings());
