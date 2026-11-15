@@ -57,6 +57,7 @@ Escenario: Guía de despliegue
 - Imágenes con versión fijada (no `latest`).
 - Contenedores con `read_only: true` donde sea posible, `no-new-privileges` y `cap_drop: [ALL]`.
 - La guía incluye las **pruebas negativas**: desde el VPS, cualquier IP del homelab distinta de llama-swap debe fallar.
+- **Mínimo privilegio en PostgreSQL** (pendiente de la revisión de seguridad de la US-01): el usuario de `POSTGRES_USER` es superusuario. Separar un rol **propietario** (solo para aplicar migraciones) y un rol **`app`** para la API, con solo `SELECT/INSERT/UPDATE/DELETE`, creado con un script en `/docker-entrypoint-initdb.d`; cada uno con su contraseña en `.env.prod.example`. Test o comprobación de que la cuenta de la API no es superusuaria.
 
 ## Calidad y clean code
 - Un solo compose base y un *override* de producción, sin duplicar definiciones.

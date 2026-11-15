@@ -260,7 +260,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph cliente["Navegador"]
-        web["Angular + PrimeNG<br/>Editor lado a lado"]
+        web["Angular + Angular Material<br/>Editor lado a lado"]
     end
 
     subgraph backend["Backend · .NET 10 · Clean Architecture"]
@@ -681,7 +681,7 @@ flowchart TB
 | **Gasto inesperado en Azure** | Alerta de presupuesto en Cost Management; Azure solo como respaldo |
 | **Uso por terceros (open source)** | Licencia Apache 2.0 "tal cual"; el README explica las configuraciones y que quien despliega es responsable de los datos; aviso configurable en la interfaz; `SECURITY.md` para reportar vulnerabilidades |
 | **Enlaces o imágenes maliciosos en las exportaciones** (OWASP LLM05) | Escapado por formato; en Markdown se neutralizan enlaces, imágenes y HTML |
-| **Dependencias con licencias restrictivas** | Solo licencias permisivas (MIT, Apache 2.0, BSD); QuestPDF, MediatR, AutoMapper y FluentAssertions v8 descartados |
+| **Dependencias con licencias restrictivas** | Solo licencias permisivas (MIT, Apache 2.0, BSD); QuestPDF, MediatR, AutoMapper, FluentAssertions v8 y PrimeNG v22+ descartados |
 
 ---
 
@@ -827,7 +827,7 @@ flowchart LR
 
 | Capa | Tecnología |
 |---|---|
-| Frontend | Angular + PrimeNG |
+| Frontend | Angular + Angular Material |
 | Backend | .NET 10 (LTS; el soporte de .NET 8 termina en noviembre de 2026), ASP.NET Core, Clean Architecture |
 | Cola y procesos en segundo plano | `BackgroundService` + `Channel<T>` (o Hangfire) |
 | Base de datos | PostgreSQL + Entity Framework Core |

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LecturaFacil.Api\LecturaFacil.Api.csproj" />
+    <ProjectReference Include="..\..\src\LecturaFacil.Application\LecturaFacil.Application.csproj" />
+    <ProjectReference Include="..\..\src\LecturaFacil.Domain\LecturaFacil.Domain.csproj" />
+    <ProjectReference Include="..\..\src\LecturaFacil.Infrastructure\LecturaFacil.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetArchTest.Rules" />
+  </ItemGroup>
+
+</Project>

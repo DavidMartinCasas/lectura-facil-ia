@@ -51,7 +51,7 @@ Escenario: CI básico
 - `.editorconfig` con estilo de C# (namespaces de archivo, `var` donde sea evidente, etc.).
 - `LecturaFacil.Api`: Minimal API con `/health` (health checks, incluida la base de datos), OpenAPI integrado, ProblemDetails, cabeceras de seguridad.
 - `LecturaFacil.Infrastructure`: `AppDbContext` vacío con Npgsql y primera migración.
-- `src/LecturaFacil.Web`: Angular *standalone* + PrimeNG, ESLint, página de inicio.
+- `src/LecturaFacil.Web`: Angular *standalone* + Angular Material, ESLint, página de inicio. (PrimeNG v22+ dejó de ser MIT; ver PR de la US-01.)
 - `tests/LecturaFacil.Architecture.Tests` con NetArchTest para la regla de dependencias.
 - `deploy/docker-compose.yml`, `deploy/.env.example`, `Dockerfile` de API (multi-stage, usuario no root) y de Web (nginx sin root, sirve Angular y hace de proxy a `/api`).
 - `.github/workflows/ci.yml`: build, tests, lint, gitleaks.

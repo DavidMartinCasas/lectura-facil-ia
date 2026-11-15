@@ -1,0 +1,125 @@
+# SPDX-License-Identifier: Apache-2.0
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (.NET)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      - name: Restaurar
+        run: dotnet restore
+
+      - name: Compilar sin avisos
+        run: dotnet build --no-restore -warnaserror
+
+      - name: Formato
+        run: dotnet format --no-restore --verify-no-changes
+
+      # Incluye Testcontainers (PostgreSQL) y el umbral de cobertura del 80 % en Domain y Application.
+      - name: Tests
+        run: dotnet test --no-build
+
+      - name: Paquetes vulnerables
+        run: |
+          dotnet list package --vulnerable --include-transitive | tee vulnerable.txt
+          if grep -q "has the following vulnerable packages" vulnerable.txt; then
+            echo "::error::Hay paquetes NuGet con vulnerabilidades conocidas."
+            exit 1
+          fi
+
+  frontend:
+    name: Frontend (Angular)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: src/LecturaFacil.Web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: src/LecturaFacil.Web/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test -- --watch=false
+      - run: npm run build
+      - name: Auditoría de dependencias
+        run: npm audit --omit=dev --audit-level=high
+
+  secrets:
+    name: Secretos (gitleaks)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: gitleaks
+        run: >
+          docker run --rm -v "${{ github.workspace }}:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+          detect --source /repo --no-banner --redact
+
+  containers:
+    name: Contenedores
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validar docker-compose
+        run: |
+          cp deploy/.env.example deploy/.env
+          # Contraseña con separadores: la API debe arrancar igual (credenciales escapadas).
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci;con=separadores/' deploy/.env
+          docker compose -f deploy/docker-compose.yml config --quiet
+
+      - name: Construir imágenes
+        run: docker compose -f deploy/docker-compose.yml build
+
+      # Criterio "Todo arranca con Docker Compose": /health a través de nginx y la página de inicio.
+      - name: Prueba de humo
+        run: |
+          docker compose -f deploy/docker-compose.yml up -d --wait
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8080/health > health.json && break
+            sleep 2
+          done
+          test "$(cat health.json)" = '{"status":"Healthy"}'
+          curl -fsS http://localhost:8080/ | grep -q "<title>Lectura Fácil IA</title>"
+          curl -fsSI http://localhost:8080/ | grep -qi "^content-security-policy: default-src 'self'"
+          curl -fsSI http://localhost:8080/ | grep -qi "^x-content-type-options: nosniff"
+
+      - name: Logs si falla
+        if: failure()
+        run: docker compose -f deploy/docker-compose.yml logs --no-color
+
+      - name: Parar
+        if: always()
+        run: docker compose -f deploy/docker-compose.yml down -v
