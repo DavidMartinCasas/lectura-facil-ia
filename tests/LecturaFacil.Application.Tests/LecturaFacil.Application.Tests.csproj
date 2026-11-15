@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <CoverageAssembly>LecturaFacil.Application</CoverageAssembly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LecturaFacil.Application\LecturaFacil.Application.csproj" />
+  </ItemGroup>
+
+</Project>

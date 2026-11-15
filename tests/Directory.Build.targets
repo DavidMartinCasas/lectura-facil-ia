@@ -1,0 +1,9 @@
+<Project>
+  <!--
+    Umbral de cobertura del 80 % (líneas y ramas) para Domain y Application (AGENTS.md, sección 7).
+    Cada proyecto de tests que lo necesite declara la propiedad CoverageAssembly.
+  -->
+  <PropertyGroup Condition="'$(CoverageAssembly)' != ''">
+    <RunArguments>$(RunArguments) --coverlet --coverlet-include "[$(CoverageAssembly)]*" --coverlet-output-format cobertura --coverlet-threshold 80 --coverlet-threshold-type line --coverlet-threshold-type branch</RunArguments>
+  </PropertyGroup>
+</Project>

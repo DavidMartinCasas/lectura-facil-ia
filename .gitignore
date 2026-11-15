@@ -1,0 +1,29 @@
+# Secretos y configuración local
+.env
+.env.*
+!.env.example
+*.user
+appsettings.*.local.json
+
+# .NET
+bin/
+obj/
+TestResults/
+coverage*.json
+coverage*.xml
+*.coverage
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+coverage/
+
+# IDE y sistema
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+Thumbs.db
+.DS_Store
