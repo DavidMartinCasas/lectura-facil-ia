@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Api.Llm;
 using LecturaFacil.Api.Security;
 
 namespace LecturaFacil.Api;
@@ -9,6 +10,11 @@ internal static class ApiConfiguration
     {
         services.AddProblemDetails();
         services.AddOpenApi();
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddLlmDiagnosticsRateLimit();
+        });
         return services;
     }
 
@@ -17,6 +23,7 @@ internal static class ApiConfiguration
         app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseExceptionHandler();
         app.UseStatusCodePages();
+        app.UseRateLimiter();
 
         if (app.Environment.IsDevelopment())
         {

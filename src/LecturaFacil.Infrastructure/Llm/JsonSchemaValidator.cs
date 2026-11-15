@@ -10,8 +10,9 @@ namespace LecturaFacil.Infrastructure.Llm;
 
 /// <summary>
 /// El esquema de la respuesta es el del tipo C# que espera el caso de uso: se envía al modelo y la respuesta se
-/// valida deserializando en modo estricto (campos obligatorios, tipos exactos, sin nulos inesperados ni campos
-/// desconocidos). La salida del modelo no se usa hasta pasar esta validación (OWASP LLM05).
+/// valida primero contra ese esquema (<see cref="JsonSchemaConformance"/>) y después deserializando en modo estricto
+/// (campos obligatorios, tipos exactos, nombres exactos, sin nulos inesperados ni campos desconocidos). La salida del
+/// modelo no se usa hasta pasar las dos comprobaciones (OWASP LLM05).
 /// </summary>
 public static class JsonSchemaValidator
 {
@@ -30,7 +31,13 @@ public static class JsonSchemaValidator
 
         try
         {
-            return JsonSerializer.Deserialize<T>(json, Options) is { } value
+            using var document = JsonDocument.Parse(json);
+            if (!JsonSchemaConformance.Conforms(document.RootElement, SchemaFor<T>()))
+            {
+                return Result<T>.Failure(LlmErrors.InvalidProviderOutput);
+            }
+
+            return document.RootElement.Deserialize<T>(Options) is { } value
                 ? Result<T>.Success(value)
                 : Result<T>.Failure(LlmErrors.InvalidProviderOutput);
         }
@@ -45,6 +52,7 @@ public static class JsonSchemaValidator
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
             NumberHandling = JsonNumberHandling.Strict,
+            PropertyNameCaseInsensitive = false,
             RespectNullableAnnotations = true,
             RespectRequiredConstructorParameters = true,
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,

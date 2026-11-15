@@ -53,10 +53,34 @@ public sealed class JsonSchemaValidatorTests
         JsonSchemaValidator.Validate<Sample>(json).Error.ShouldBe(LlmErrors.InvalidProviderOutput);
     }
 
+    [Theory]
+    [InlineData("""{"Title":"Plazo","days":15,"tags":[],"note":null}""")]
+    [InlineData("""{"TITLE":"Plazo","days":15,"tags":[],"note":null}""")]
+    public void Validate_WhenAPropertyNameDiffersInCase_ReturnsInvalidProviderOutput(string json)
+    {
+        JsonSchemaValidator.Validate<Sample>(json).Error.ShouldBe(LlmErrors.InvalidProviderOutput);
+    }
+
+    [Fact]
+    public void Validate_WhenACollectionContainsANullItemOfANonNullableType_ReturnsInvalidProviderOutput()
+    {
+        JsonSchemaValidator.Validate<Sample>("""{"title":"Plazo","days":15,"tags":["a",null],"note":null}""").Error
+            .ShouldBe(LlmErrors.InvalidProviderOutput);
+    }
+
+    [Fact]
+    public void Validate_WhenANestedObjectBreaksTheSchema_ReturnsInvalidProviderOutput()
+    {
+        JsonSchemaValidator.Validate<Nested>("""{"items":[{"title":"a","days":1,"tags":[],"note":null,"extra":1}]}""").Error
+            .ShouldBe(LlmErrors.InvalidProviderOutput);
+        JsonSchemaValidator.Validate<Nested>("""{"items":[{"title":"a","days":1,"tags":[],"note":null}]}""").IsSuccess
+            .ShouldBeTrue();
+    }
+
     [Fact]
     public void Validate_WhenThereAreUnknownFields_ReturnsInvalidProviderOutput()
     {
-        var result = JsonSchemaValidator.Validate<Sample>("""{"title":"Plazo","days":15,"tags":[],"comando":"borrar"}""");
+        var result = JsonSchemaValidator.Validate<Sample>("""{"title":"Plazo","days":15,"tags":[],"note":null,"comando":"borrar"}""");
 
         result.Error.ShouldBe(LlmErrors.InvalidProviderOutput);
     }
@@ -72,6 +96,8 @@ public sealed class JsonSchemaValidatorTests
             .ShouldBe(["title", "days", "tags", "note"], ignoreOrder: true);
         schema.GetProperty("properties").GetProperty("days").GetProperty("type").GetString().ShouldBe("integer");
     }
+
+    private sealed record Nested(IReadOnlyList<Sample> Items);
 
     private sealed record Sample(string Title, int Days, IReadOnlyList<string> Tags, string? Note);
 
