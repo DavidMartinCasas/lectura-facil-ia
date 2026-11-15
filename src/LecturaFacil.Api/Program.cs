@@ -2,6 +2,7 @@
 using LecturaFacil.Api;
 using LecturaFacil.Api.Configuration;
 using LecturaFacil.Api.Health;
+using LecturaFacil.Api.Llm;
 using LecturaFacil.Application;
 using LecturaFacil.Infrastructure;
 using LecturaFacil.Infrastructure.Persistence;
@@ -22,6 +23,7 @@ var app = builder.Build();
 app.ValidateOptionsOrStop();
 app.UseApi();
 app.MapHealthEndpoints();
+app.MapLlmDiagnosticsEndpoints(app.Environment);
 
 if (app.Services.GetRequiredService<IOptions<DatabaseOptions>>().Value.ApplyMigrationsOnStartup)
 {
