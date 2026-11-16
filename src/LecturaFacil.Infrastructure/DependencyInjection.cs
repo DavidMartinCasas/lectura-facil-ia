@@ -3,6 +3,7 @@ using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Llm;
 using LecturaFacil.Infrastructure.Documents;
+using LecturaFacil.Infrastructure.Guidelines;
 using LecturaFacil.Infrastructure.Llm;
 using LecturaFacil.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +17,7 @@ public static class DependencyInjection
     public const string DatabaseHealthCheckName = "database";
 
     /// <summary>
-    /// Registra los adaptadores: base de datos y su comprobación de salud, documentos y proveedores de LLM.
+    /// Registra los adaptadores: base de datos y su comprobación de salud, documentos, pautas y proveedores de LLM.
     /// Las opciones (<see cref="DatabaseOptions"/>, <see cref="LlmOptions"/>…) las registra y valida la composición de la API.
     /// </summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
@@ -28,6 +29,7 @@ public static class DependencyInjection
         services.AddHealthChecks().AddDbContextCheck<AppDbContext>(DatabaseHealthCheckName);
         services.AddScoped<IDocumentRepository, EfDocumentRepository>();
         services.AddSingleton<ITextExtractor, PdfPigTextExtractor>();
+        services.AddSingleton<IGuidelineChecker, GuidelineChecker>();
 
         return services.AddLlm();
     }

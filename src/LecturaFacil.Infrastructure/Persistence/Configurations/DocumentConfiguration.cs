@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using LecturaFacil.Domain.Documents;
+using LecturaFacil.Domain.Guidelines;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -46,5 +47,36 @@ internal sealed class DocumentConfiguration : IEntityTypeConfiguration<Document>
 
         // Todas las consultas de documentos filtran por propietario (autorización por objeto).
         builder.HasIndex(document => new { document.OwnerId, document.CreatedAt });
+
+        builder.OwnsMany(document => document.OriginalFindings, ConfigureFindings);
+        builder.Navigation(document => document.OriginalFindings).HasField("_originalFindings");
+    }
+
+    /// <summary>Hallazgos del texto original (<c>HALLAZGO</c> del modelo de datos). Se borran con su documento.</summary>
+    private static void ConfigureFindings(OwnedNavigationBuilder<Document, Finding> findings)
+    {
+        findings.ToTable("findings");
+        findings.WithOwner().HasForeignKey("DocumentId");
+        findings.Property<DocumentId>("DocumentId")
+            .HasColumnName("document_id")
+            .HasConversion(id => id.Value, value => DocumentId.From(value));
+        findings.Property<Guid>("Id").HasColumnName("id").ValueGeneratedOnAdd();
+        findings.HasKey("Id");
+
+        findings.Property(finding => finding.GuidelineCode)
+            .HasColumnName("guideline_code")
+            .HasMaxLength(Guideline.CodeMaxLength)
+            .IsRequired();
+        findings.HasOne<Guideline>().WithMany().HasForeignKey(finding => finding.GuidelineCode).OnDelete(DeleteBehavior.Restrict);
+
+        findings.Property(finding => finding.Fragment).HasColumnName("fragment").IsRequired();
+        findings.Property(finding => finding.Start).HasColumnName("start_position");
+        findings.Property(finding => finding.End).HasColumnName("end_position");
+        findings.Property(finding => finding.Severity)
+            .HasColumnName("severity")
+            .HasConversion<string>()
+            .HasMaxLength(GuidelineConfiguration.SeverityMaxLength)
+            .IsRequired();
+        findings.Property(finding => finding.Suggestion).HasColumnName("suggestion").IsRequired();
     }
 }

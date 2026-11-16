@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using LecturaFacil.Domain.Documents;
+using LecturaFacil.Domain.Guidelines;
 using LecturaFacil.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -43,6 +44,34 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
         stored.Status.ShouldBe(DocumentStatus.Received);
         stored.CreatedAt.ShouldBe(createdAt);
         stored.UpdatedAt.ShouldBe(createdAt);
+    }
+
+    [Fact]
+    public async Task Add_WhenDocumentHasFindings_PersistsThemWithTheDocument()
+    {
+        var text = OriginalText.Create("Se publica en el BOP el día 15/12/2026.", Limits);
+        var document = Document.Submit(OwnerId.From(Guid.NewGuid()), DocumentTitle.Default, text, DateTimeOffset.UtcNow);
+        var finding = Finding.At(GuidelineCatalog.Find(GuidelineCodes.Acronyms), text.Value, 17, 20, "Explica la sigla.");
+        document.RecordOriginalFindings([finding]);
+
+        await using (var context = CreateContext())
+        {
+            await new EfDocumentRepository(context).AddAsync(document, Token);
+        }
+
+        await using var readContext = CreateContext();
+        var stored = await readContext.Set<Document>().SingleAsync(saved => saved.Id == document.Id, Token);
+        stored.OriginalFindings.ShouldBe([finding]);
+    }
+
+    [Fact]
+    public async Task Migrations_SeedTheWholeGuidelineCatalog()
+    {
+        await using var context = CreateContext();
+
+        var stored = await context.Set<Guideline>().AsNoTracking().ToListAsync(Token);
+
+        stored.ShouldBe(GuidelineCatalog.All, ignoreOrder: true);
     }
 
     private AppDbContext CreateContext() =>

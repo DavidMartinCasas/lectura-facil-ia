@@ -63,6 +63,162 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
 
                     b.ToTable("documents", (string)null);
                 });
+
+            modelBuilder.Entity("LecturaFacil.Domain.Guidelines.Guideline", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("code");
+
+                    b.Property<string>("DefaultSeverity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("default_severity");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("description");
+
+                    b.HasKey("Code");
+
+                    b.ToTable("guidelines", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Code = "FRASES_CORTAS",
+                            DefaultSeverity = "Medium",
+                            Description = "Frases cortas"
+                        },
+                        new
+                        {
+                            Code = "UNA_IDEA_POR_FRASE",
+                            DefaultSeverity = "Low",
+                            Description = "Una idea por frase"
+                        },
+                        new
+                        {
+                            Code = "SIN_SIGLAS",
+                            DefaultSeverity = "High",
+                            Description = "Sin siglas sin explicar"
+                        },
+                        new
+                        {
+                            Code = "SIN_PORCENTAJES",
+                            DefaultSeverity = "Medium",
+                            Description = "Sin porcentajes"
+                        },
+                        new
+                        {
+                            Code = "NUMEROS_EN_CIFRAS",
+                            DefaultSeverity = "Low",
+                            Description = "Números escritos con cifras"
+                        },
+                        new
+                        {
+                            Code = "SIN_VOZ_PASIVA",
+                            DefaultSeverity = "Medium",
+                            Description = "Sin voz pasiva"
+                        },
+                        new
+                        {
+                            Code = "SIN_NEGACIONES_DOBLES",
+                            DefaultSeverity = "High",
+                            Description = "Sin negaciones dobles"
+                        },
+                        new
+                        {
+                            Code = "SIN_NUMEROS_ROMANOS",
+                            DefaultSeverity = "Medium",
+                            Description = "Sin números romanos"
+                        },
+                        new
+                        {
+                            Code = "PALABRAS_DIFICILES",
+                            DefaultSeverity = "Medium",
+                            Description = "Palabras difíciles explicadas"
+                        },
+                        new
+                        {
+                            Code = "SIN_EXPRESIONES_JURIDICAS",
+                            DefaultSeverity = "High",
+                            Description = "Sin expresiones jurídicas complejas"
+                        },
+                        new
+                        {
+                            Code = "FECHAS_COMPLETAS",
+                            DefaultSeverity = "Low",
+                            Description = "Fechas completas"
+                        });
+                });
+
+            modelBuilder.Entity("LecturaFacil.Domain.Documents.Document", b =>
+                {
+                    b.OwnsMany("LecturaFacil.Domain.Guidelines.Finding", "OriginalFindings", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<Guid>("DocumentId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("document_id");
+
+                            b1.Property<int>("End")
+                                .HasColumnType("integer")
+                                .HasColumnName("end_position");
+
+                            b1.Property<string>("Fragment")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("fragment");
+
+                            b1.Property<string>("GuidelineCode")
+                                .IsRequired()
+                                .HasMaxLength(64)
+                                .HasColumnType("character varying(64)")
+                                .HasColumnName("guideline_code");
+
+                            b1.Property<string>("Severity")
+                                .IsRequired()
+                                .HasMaxLength(16)
+                                .HasColumnType("character varying(16)")
+                                .HasColumnName("severity");
+
+                            b1.Property<int>("Start")
+                                .HasColumnType("integer")
+                                .HasColumnName("start_position");
+
+                            b1.Property<string>("Suggestion")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("suggestion");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("DocumentId");
+
+                            b1.HasIndex("GuidelineCode");
+
+                            b1.ToTable("findings", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("DocumentId");
+
+                            b1.HasOne("LecturaFacil.Domain.Guidelines.Guideline", null)
+                                .WithMany()
+                                .HasForeignKey("GuidelineCode")
+                                .OnDelete(DeleteBehavior.Restrict)
+                                .IsRequired();
+                        });
+
+                    b.Navigation("OriginalFindings");
+                });
 #pragma warning restore 612, 618
         }
     }
