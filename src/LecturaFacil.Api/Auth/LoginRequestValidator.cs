@@ -11,9 +11,9 @@ internal sealed class LoginRequestValidator : AbstractValidator<LoginRequest>
     {
         RuleFor(request => request.Email)
             .NotEmpty().WithMessage("Escribe tu correo.")
-            .MaximumLength(TestUserOptions.MaxEmailLength).WithMessage("El correo es demasiado largo.");
+            .MaximumLength(UserAccountLimits.MaxEmailLength).WithMessage("El correo es demasiado largo.");
         RuleFor(request => request.Password)
             .NotEmpty().WithMessage("Escribe tu contraseña.")
-            .MaximumLength(TestUserOptions.MaxPasswordLength).WithMessage("La contraseña es demasiado larga.");
+            .MaximumLength(UserAccountLimits.MaxPasswordLength).WithMessage("La contraseña es demasiado larga.");
     }
 }

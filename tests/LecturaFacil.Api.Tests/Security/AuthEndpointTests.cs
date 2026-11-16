@@ -44,6 +44,39 @@ public sealed class AuthEndpointTests
     }
 
     [Fact]
+    public async Task Antiforgery_BehindAProxyThatSpeaksHttp_StillWorks()
+    {
+        await using var factory = new DocumentsApiFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("http://localhost") });
+        client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserHeader, TestAuthenticationHandler.Anonymous);
+        await client.RefreshAntiforgeryTokenAsync();
+
+        using var response = await client.PostAsJsonAsync(LoginUri, new { email = string.Empty, password = string.Empty }, Token);
+
+        // Llega a la validación del cuerpo: el token antiforgery se ha aceptado.
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        var body = await response.Content.ReadAsStringAsync(Token);
+        body.ShouldContain("errors");
+        body.ShouldNotContain(AntiforgeryMiddleware.InvalidTokenCode);
+    }
+
+    [Fact]
+    public async Task AnonymousRequests_DoNotUseUpTheSubmitLimitOfUsersWithASession()
+    {
+        await using var baseFactory = new DocumentsApiFactory();
+        await using var factory = baseFactory.WithWebHostBuilder(builder => builder.UseSetting("Limits:DocumentSubmissionsPerMinute", "1"));
+        using var anonymous = await factory.CreateAnonymousClientAsync();
+        using var client = await factory.CreateApiClientAsync();
+        var text = new { text = new string('a', 100) };
+
+        using var rejected = await anonymous.PostAsJsonAsync(new Uri("/api/documents", UriKind.Relative), text, Token);
+        using var accepted = await client.PostAsJsonAsync(new Uri("/api/documents", UriKind.Relative), text, Token);
+
+        rejected.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        accepted.StatusCode.ShouldBe(HttpStatusCode.Accepted);
+    }
+
+    [Fact]
     public async Task Login_WithoutTheAntiforgeryToken_Returns400()
     {
         await using var factory = new DocumentsApiFactory();

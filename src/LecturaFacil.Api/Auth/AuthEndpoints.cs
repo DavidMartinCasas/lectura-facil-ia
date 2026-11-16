@@ -70,7 +70,8 @@ internal static partial class AuthEndpoints
         var email = request.Email!.Trim();
         var result = await signInManager.PasswordSignInAsync(email, request.Password!, isPersistent: false, lockoutOnFailure: true);
         var logger = loggerFactory.CreateLogger(typeof(AuthEndpoints).FullName!);
-        if (!result.Succeeded)
+        var user = result.Succeeded ? await signInManager.UserManager.FindByNameAsync(email) : null;
+        if (user is null)
         {
             // Ni el correo ni la contraseña en el log: solo si la cuenta ha quedado bloqueada.
             LoginFailed(logger, result.IsLockedOut);
@@ -80,11 +81,10 @@ internal static partial class AuthEndpoints
                 extensions: new Dictionary<string, object?> { ["code"] = InvalidCredentialsCode });
         }
 
-        var user = await signInManager.UserManager.FindByNameAsync(email);
-        context.User = await signInManager.CreateUserPrincipalAsync(user!);
+        context.User = await signInManager.CreateUserPrincipalAsync(user);
         AntiforgeryMiddleware.IssueToken(context);
-        LoginSucceeded(logger, user!.Id);
-        return TypedResults.Ok(new CurrentUserResponse(user.Email!));
+        LoginSucceeded(logger, user.Id);
+        return TypedResults.Ok(new CurrentUserResponse(user.Email ?? email));
     }
 
     private static async Task<IResult> LogoutAsync(SignInManager<ApplicationUser> signInManager, HttpContext context)

@@ -17,7 +17,8 @@ namespace LecturaFacil.Api.Security;
 internal static class AuthenticationConfiguration
 {
     public const string SessionCookieName = "__Host-lf-session";
-    public const string AntiforgeryCookieName = "__Host-lf-antiforgery";
+    /// <summary>Sin prefijo "__Host-": ese prefijo exige Secure y detrás de un proxy HTTP el navegador la descartaría.</summary>
+    public const string AntiforgeryCookieName = "lf-antiforgery";
 
     public static IServiceCollection AddCookieAuthentication(this IServiceCollection services)
     {

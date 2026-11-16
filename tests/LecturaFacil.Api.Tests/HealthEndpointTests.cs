@@ -8,7 +8,7 @@ public sealed class HealthEndpointTests(ApiFactory factory) : IClassFixture<ApiF
     [Fact]
     public async Task Health_WhenDatabaseIsAvailable_Returns200WithHealthyStatus()
     {
-        using var client = await factory.CreateApiClientAsync();
+        using var client = await factory.CreateAnonymousClientAsync();
 
         using var response = await client.GetAsync(new Uri("/health", UriKind.Relative), TestContext.Current.CancellationToken);
 
@@ -22,7 +22,7 @@ public sealed class HealthEndpointWithoutDatabaseTests(ApiWithoutDatabaseFactory
     [Fact]
     public async Task Health_WhenDatabaseIsUnavailable_Returns503WithoutInternalDetails()
     {
-        using var client = await factory.CreateApiClientAsync();
+        using var client = await factory.CreateAnonymousClientAsync();
 
         using var response = await client.GetAsync(new Uri("/health", UriKind.Relative), TestContext.Current.CancellationToken);
 
@@ -36,7 +36,7 @@ public sealed class HealthEndpointWithPrimaryLlmDownTests(ApiWithPrimaryLlmDownF
     [Fact]
     public async Task Health_WhenPrimaryLlmIsDown_StaysHealthyBecauseTheApiAndDatabaseWork()
     {
-        using var client = await factory.CreateApiClientAsync();
+        using var client = await factory.CreateAnonymousClientAsync();
 
         using var response = await client.GetAsync(new Uri("/health", UriKind.Relative), TestContext.Current.CancellationToken);
 

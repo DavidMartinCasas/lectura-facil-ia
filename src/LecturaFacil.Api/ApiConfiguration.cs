@@ -38,11 +38,13 @@ internal static class ApiConfiguration
         app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseExceptionHandler();
         app.UseStatusCodePages();
-        app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAntiforgeryTokenCookie();
         app.UseAuthorization();
         app.UseAntiforgeryValidation();
+
+        // Después de la autorización: una petición sin sesión (401) no gasta el cupo de los usuarios con sesión.
+        app.UseRateLimiter();
 
         if (app.Environment.IsDevelopment())
         {

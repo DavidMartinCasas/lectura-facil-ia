@@ -13,11 +13,6 @@ public sealed class TestUserOptions : IValidatableObject
 {
     public const string SectionName = "Seed:TestUser";
 
-    /// <summary>Longitud máxima de un correo (RFC 5321) y de la columna de Identity.</summary>
-    public const int MaxEmailLength = 256;
-
-    public const int MaxPasswordLength = 128;
-
     public string? Email { get; set; }
 
     [Secret]
@@ -44,15 +39,15 @@ public sealed class TestUserOptions : IValidatableObject
             yield break;
         }
 
-        if (Email!.Length > MaxEmailLength || !new EmailAddressAttribute().IsValid(Email))
+        if (Email!.Length > UserAccountLimits.MaxEmailLength || !new EmailAddressAttribute().IsValid(Email))
         {
             yield return new ValidationResult("Seed:TestUser:Email no es un correo válido.", [nameof(Email)]);
         }
 
-        if (Password!.Length > MaxPasswordLength)
+        if (Password!.Length > UserAccountLimits.MaxPasswordLength)
         {
             yield return new ValidationResult(
-                $"Seed:TestUser:Password no puede tener más de {MaxPasswordLength} caracteres.",
+                $"Seed:TestUser:Password no puede tener más de {UserAccountLimits.MaxPasswordLength} caracteres.",
                 [nameof(Password)]);
         }
     }

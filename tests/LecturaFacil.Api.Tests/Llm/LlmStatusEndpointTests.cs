@@ -57,7 +57,7 @@ public sealed class LlmStatusEndpointTests
         var availability = new LlmAvailability(fallbackEnabled: false);
         availability.Update(new LlmAvailabilityStatus(primaryAvailable, null));
         await using var factory = new StatusApiFactory(availability);
-        using var client = await factory.CreateApiClientAsync();
+        using var client = await factory.CreateAnonymousClientAsync();
 
         using var response = await client.GetAsync(new Uri("/health/llm", UriKind.Relative), TestContext.Current.CancellationToken);
 

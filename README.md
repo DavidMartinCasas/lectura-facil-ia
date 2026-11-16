@@ -94,7 +94,7 @@ No hay registro de usuarios: las cuentas se crean desde la configuración. Para 
 - **Correo del usuario de prueba del TFM:** _pendiente: lo añade la persona responsable al desplegar_. La contraseña se entrega en el formulario del TFM; nunca está en el repositorio.
 - Cada persona ve solo sus documentos. Un documento de otra persona responde igual que uno que no existe (404).
 - Tras 5 intentos fallidos seguidos la cuenta queda bloqueada 15 minutos. El mensaje de error es siempre el mismo: «Correo o contraseña incorrectos».
-- La sesión es una cookie `HttpOnly`, `Secure` y `SameSite=Strict` del propio backend; el navegador no guarda ningún token. Caduca tras 8 horas sin uso y «Salir» la invalida también en el servidor.
+- La sesión es una cookie `HttpOnly`, `Secure` y `SameSite=Strict` del propio backend; el navegador no guarda ningún token. Caduca tras 8 horas sin uso y «Salir» la invalida también en el servidor (cierra la sesión en todos los dispositivos de esa persona).
 - Las peticiones que cambian algo llevan la cabecera `X-XSRF-TOKEN` con el valor de la cookie `XSRF-TOKEN` (Angular lo hace solo).
 - La cookie de sesión es `Secure`: abre la aplicación por HTTPS o en `http://localhost` (los navegadores lo tratan como seguro).
 
