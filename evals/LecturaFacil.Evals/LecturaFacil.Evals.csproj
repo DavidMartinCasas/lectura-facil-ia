@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Herramienta de consola de evaluación de modelos (US-18). Reutiliza los casos de uso de Application y los adaptadores
+    de Infrastructure: no hay lógica de evaluación dentro de la aplicación web.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LecturaFacil.Application\LecturaFacil.Application.csproj" />
+    <ProjectReference Include="..\..\src\LecturaFacil.Infrastructure\LecturaFacil.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- El mismo proveedor falso que los tests: con dry-run nunca se llama a un modelo real. -->
+    <Compile Include="..\..\tests\Shared\FakeLlmProvider.cs" Link="DryRun\FakeLlmProvider.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LecturaFacil.Evals.Tests" />
+  </ItemGroup>
+
+</Project>

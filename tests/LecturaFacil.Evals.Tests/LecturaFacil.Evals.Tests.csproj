@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\evals\LecturaFacil.Evals\LecturaFacil.Evals.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Los textos de ejemplo del dataset, para la ejecución completa en dry-run. -->
+    <None Include="..\..\evals\datasets\ejemplos\*.json" LinkBase="datasets" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

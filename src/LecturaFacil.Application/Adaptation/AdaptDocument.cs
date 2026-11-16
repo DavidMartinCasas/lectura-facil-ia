@@ -57,7 +57,7 @@ public sealed class AdaptDocument(
     public const string NoFindingsLine = "- No se ha detectado ningún problema concreto. Aplica igualmente todas las pautas.";
 
     /// <summary>Un intento y un solo reintento si la respuesta no es válida (US-06, OWASP LLM10).</summary>
-    private const int MaxAttemptsPerChunk = 2;
+    public const int MaxAttemptsPerChunk = 2;
 
     private readonly LimitsOptions _limits = limits.Value;
 

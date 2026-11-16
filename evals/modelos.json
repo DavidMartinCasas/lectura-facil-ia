@@ -1,0 +1,44 @@
+{
+  "currency": "USD",
+  "embeddings": {
+    "type": "OpenAICompatible",
+    "endpointVariable": "EVALS_EMBEDDINGS_ENDPOINT",
+    "apiKeyVariable": "EVALS_EMBEDDINGS_API_KEY",
+    "model": "bge-m3"
+  },
+  "models": {
+    "gemma": {
+      "type": "OpenAICompatible",
+      "displayName": "Servidor propio",
+      "endpointVariable": "EVALS_LOCAL_ENDPOINT",
+      "apiKeyVariable": "EVALS_LOCAL_API_KEY",
+      "adapterModel": "gemma-4-26b-a4b",
+      "verifierModel": "qwen3.5-9b",
+      "temperature": 0,
+      "inputPricePerMillion": 0,
+      "outputPricePerMillion": 0
+    },
+    "qwen": {
+      "type": "OpenAICompatible",
+      "displayName": "Servidor propio",
+      "endpointVariable": "EVALS_LOCAL_ENDPOINT",
+      "apiKeyVariable": "EVALS_LOCAL_API_KEY",
+      "adapterModel": "qwen3.6-35b-a3b",
+      "verifierModel": "gemma-4-26b-a4b",
+      "temperature": 0,
+      "inputPricePerMillion": 0,
+      "outputPricePerMillion": 0
+    },
+    "azure-mini": {
+      "type": "AzureFoundry",
+      "displayName": "Azure (UE)",
+      "endpointVariable": "EVALS_AZURE_ENDPOINT",
+      "apiKeyVariable": "EVALS_AZURE_API_KEY",
+      "adapterModel": "gpt-4.1-mini",
+      "verifierModel": "mistral-medium-3-5",
+      "temperature": 0,
+      "inputPricePerMillion": 0.44,
+      "outputPricePerMillion": 1.76
+    }
+  }
+}
