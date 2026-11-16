@@ -55,5 +55,12 @@ public sealed class RecordingDocumentRepository : IDocumentRepository
         Task.FromResult<IReadOnlyList<DocumentId>>(
             [.. _added.Where(document => DocumentStatusTransitions.IsAwaitingAdaptation(document.Status)).Select(document => document.Id)]);
 
+    public Task<IReadOnlyList<DocumentSummary>> ListForOwnerAsync(OwnerId ownerId, int maxCount, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<DocumentSummary>>(
+            [.. _added.Where(document => document.OwnerId == ownerId)
+                .OrderByDescending(document => document.CreatedAt)
+                .Take(maxCount)
+                .Select(DocumentSummary.From)]);
+
     public Task SaveAsync(Document document, CancellationToken cancellationToken) => Task.CompletedTask;
 }

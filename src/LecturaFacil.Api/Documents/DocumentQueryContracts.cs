@@ -33,6 +33,32 @@ public sealed record DocumentResponse(
     }
 }
 
+/// <summary>Un documento de la lista "Mis documentos".</summary>
+/// <param name="Provider">
+/// Nombre visible del proveedor que hizo la última adaptación (el que configura quien despliega); <c>null</c> si aún no
+/// hay ninguna. El modelo no se expone.
+/// </param>
+public sealed record DocumentListItemResponse(
+    Guid Id,
+    string Title,
+    string Status,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    string? Provider)
+{
+    public static DocumentListItemResponse From(DocumentSummary summary)
+    {
+        ArgumentNullException.ThrowIfNull(summary);
+        return new DocumentListItemResponse(
+            summary.Id.Value,
+            summary.Title,
+            summary.Status.ToString(),
+            summary.CreatedAt,
+            summary.UpdatedAt,
+            summary.Provider);
+    }
+}
+
 public sealed record DocumentErrorResponse(string Code, string Message);
 
 /// <param name="PendingHumanValidation">Siempre <c>true</c> hasta que una persona la valide: es un borrador.</param>

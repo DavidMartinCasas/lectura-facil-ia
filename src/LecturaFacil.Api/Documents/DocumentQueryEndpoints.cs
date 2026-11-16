@@ -7,7 +7,7 @@ using LecturaFacil.Domain.Documents;
 namespace LecturaFacil.Api.Documents;
 
 /// <summary>
-/// <c>GET /api/documents/{id}</c> y <c>GET /api/documents/{id}/events</c> (SSE). Un documento que no existe y uno de otro
+/// <c>GET /api/documents</c> (lista del usuario), <c>GET /api/documents/{id}</c> y <c>GET /api/documents/{id}/events</c> (SSE). Un documento que no existe y uno de otro
 /// usuario responden igual, 404, para no revelar que existe (OWASP API1 · BOLA).
 /// </summary>
 internal static class DocumentQueryEndpoints
@@ -17,6 +17,11 @@ internal static class DocumentQueryEndpoints
     public static RouteGroupBuilder MapDocumentQueries(this RouteGroupBuilder group)
     {
         // TODO(US-15): RequireAuthorization() en el grupo cuando haya usuarios.
+        group.MapGet("/", ListAsync)
+            .Produces<IReadOnlyList<DocumentListItemResponse>>()
+            .WithName("ListDocuments")
+            .WithSummary("Documentos del usuario, del más nuevo al más antiguo: título, fecha, estado y proveedor.");
+
         group.MapGet("/{id:guid}", GetAsync)
             .Produces<DocumentResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -30,6 +35,12 @@ internal static class DocumentQueryEndpoints
             .WithSummary("Cambios de estado del documento por Server-Sent Events, hasta que termina la adaptación.");
 
         return group;
+    }
+
+    private static async Task<IResult> ListAsync(ListDocuments listDocuments, CancellationToken cancellationToken)
+    {
+        var documents = await listDocuments.ExecuteAsync(cancellationToken);
+        return TypedResults.Ok(documents.Select(DocumentListItemResponse.From).ToList());
     }
 
     private static async Task<IResult> GetAsync(Guid id, GetDocument getDocument, CancellationToken cancellationToken)

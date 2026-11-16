@@ -36,6 +36,30 @@ public sealed class EfDocumentRepository(AppDbContext context) : IDocumentReposi
             .Select(document => document.Id)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<DocumentSummary>> ListForOwnerAsync(OwnerId ownerId, int maxCount, CancellationToken cancellationToken)
+    {
+        // Solo las columnas de la lista: ni el texto original ni el contenido de las versiones.
+        var rows = await Documents.AsNoTracking()
+            .Where(document => document.OwnerId == ownerId)
+            .OrderByDescending(document => document.CreatedAt)
+            .Take(maxCount)
+            .Select(document => new
+            {
+                document.Id,
+                document.Title,
+                document.Status,
+                document.CreatedAt,
+                document.UpdatedAt,
+                Provider = document.AdaptedVersions
+                    .OrderByDescending(version => version.Number)
+                    .Select(version => version.Metadata.Provider)
+                    .FirstOrDefault(),
+            })
+            .ToListAsync(cancellationToken);
+
+        return [.. rows.Select(row => new DocumentSummary(row.Id, row.Title.Value, row.Status, row.CreatedAt, row.UpdatedAt, row.Provider))];
+    }
+
     public async Task SaveAsync(Document document, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(document);

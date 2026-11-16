@@ -162,13 +162,41 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
         awaiting.ShouldNotContain(failed.Id);
     }
 
-    private async Task<Document> StoreAsync(OwnerId owner, Action<Document>? prepare = null)
+    [Fact]
+    public async Task ListForOwner_ReturnsOnlyTheOwnerDocuments_NewestFirst_WithTheProviderOfTheLatestVersion()
+    {
+        var owner = OwnerId.From(Guid.NewGuid());
+        var createdAt = new DateTimeOffset(2026, 11, 16, 9, 0, 0, TimeSpan.Zero);
+        var received = await StoreAsync(owner, createdAt: createdAt);
+        var adapted = await StoreAsync(owner, document =>
+        {
+            document.StartProcessing(createdAt.AddMinutes(1));
+            document.CompleteAdaptation(
+                AdaptedContent.TryCreate("Ayudas", [new AdaptedSectionDraft("¿Quién?", ["Una frase."])], [])!,
+                new AdaptationMetadata("Servidor local", "modelo", "adapter.v1", 1, 1, TimeSpan.FromSeconds(1)),
+                GuidelineReport.Create(new GuidelineAnalysis([], []), [], 10),
+                createdAt.AddMinutes(2));
+        }, createdAt.AddMinutes(1));
+        await StoreAsync(OwnerId.From(Guid.NewGuid()), createdAt: createdAt.AddMinutes(5));
+        await using var context = CreateContext();
+
+        var summaries = await new EfDocumentRepository(context).ListForOwnerAsync(owner, 10, Token);
+
+        summaries.Select(summary => summary.Id).ShouldBe([adapted.Id, received.Id]);
+        summaries[0].Status.ShouldBe(DocumentStatus.Draft);
+        summaries[0].Provider.ShouldBe("Servidor local");
+        summaries[0].Title.ShouldBe(DocumentTitle.Default.Value);
+        summaries[1].Provider.ShouldBeNull();
+        (await new EfDocumentRepository(context).ListForOwnerAsync(owner, 1, Token)).ShouldHaveSingleItem().Id.ShouldBe(adapted.Id);
+    }
+
+    private async Task<Document> StoreAsync(OwnerId owner, Action<Document>? prepare = null, DateTimeOffset? createdAt = null)
     {
         var document = Document.Submit(
             owner,
             DocumentTitle.Default,
             OriginalText.Create("Texto de prueba del documento.", Limits),
-            DateTimeOffset.UtcNow);
+            createdAt ?? DateTimeOffset.UtcNow);
         prepare?.Invoke(document);
         await using var context = CreateContext();
         await new EfDocumentRepository(context).AddAsync(document, Token);
