@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: Apache-2.0
+:host {
+  display: block;
+}
+
+h2 {
+  font: var(--mat-sys-title-large);
+  margin: 0 0 0.5rem;
+}
+
+h3 {
+  font: var(--mat-sys-title-medium);
+  margin: 0 0 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  margin: 0 0 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+
+.mark {
+  display: inline;
+  font: inherit;
+  line-height: inherit;
+  white-space: inherit;
+  color: inherit;
+  text-align: inherit;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: var(--mat-sys-tertiary-container);
+  text-decoration: underline wavy var(--mat-sys-error);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.mark--selected {
+  background: var(--mat-sys-primary-container);
+  outline: 2px solid var(--mat-sys-primary);
+}
+
+.detail:not(:empty) {
+  margin-block-start: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--mat-sys-corner-small);
+  border: 1px solid var(--mat-sys-outline-variant);
+}
+
+ul {
+  margin: 0 0 0.5rem;
+  padding-inline-start: 1.25rem;
+}
+
+p {
+  margin: 0.25rem 0 0;
+}
+
+.severity {
+  margin-inline-start: 0.25rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.close {
+  font: inherit;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--mat-sys-corner-small);
+  border: 1px solid var(--mat-sys-outline);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}

@@ -7,17 +7,10 @@ import { DocumentEventsService } from './document-events.service';
 import { DocumentViewStore } from './document-view.store';
 import { DocumentDetails, DocumentStatus } from './document.models';
 import { DocumentsApiService } from './documents-api.service';
+import { documentFixture } from '../../testing/document-fixtures';
 
 function documentWith(status: DocumentStatus): DocumentDetails {
-  return {
-    id: 'doc-1',
-    title: 'Bases',
-    status,
-    createdAt: '2026-11-16T10:00:00Z',
-    updatedAt: '2026-11-16T10:00:00Z',
-    error: null,
-    adaptation: status === 'Draft' ? { version: 1, pendingHumanValidation: true } : null,
-  };
+  return documentFixture(status, { title: 'Bases' });
 }
 
 describe('DocumentViewStore', () => {

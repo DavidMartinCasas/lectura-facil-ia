@@ -1,0 +1,29 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<section aria-labelledby="readability-title">
+  <h2 id="readability-title">{{ texts.readabilityTitle }}</h2>
+  @if (readability(); as readability) {
+    <dl class="scores">
+      <div>
+        <dt>{{ texts.readabilityBefore }}</dt>
+        <dd>
+          <span class="value">{{ readability.original.value | number: '1.0-0' }}</span>
+          {{ readability.original.gradeLabel }}
+        </dd>
+      </div>
+      <div>
+        <dt>{{ texts.readabilityAfter }}</dt>
+        <dd>
+          <span class="value">{{ readability.adapted.value | number: '1.0-0' }}</span>
+          {{ readability.adapted.gradeLabel }}
+        </dd>
+      </div>
+    </dl>
+    <p>
+      {{ texts.improvement }} {{ readability.improvement > 0 ? '+' : ''
+      }}{{ readability.improvement | number: '1.0-0' }} {{ texts.points }}
+    </p>
+    <p class="hint">{{ texts.readabilityHint }}</p>
+  } @else {
+    <p class="hint">{{ texts.readabilityUnavailable }}</p>
+  }
+</section>

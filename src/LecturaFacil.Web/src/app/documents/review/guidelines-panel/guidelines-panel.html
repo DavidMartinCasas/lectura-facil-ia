@@ -1,0 +1,25 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<section aria-labelledby="guidelines-title">
+  <h2 id="guidelines-title">{{ texts.guidelinesTitle }}</h2>
+  @if (report(); as report) {
+    <p class="summary">{{ report.summary }}</p>
+    <ul>
+      @for (item of report.items; track item.code) {
+        <li class="item" [class.item--warning]="item.status === 'NotCompliant'">
+          <span class="status">{{ statusLabels[item.status] }}</span>
+          · {{ item.description }}
+          @if (item.status === 'NotCompliant') {
+            ({{ item.findingCount }})
+            <ul class="findings">
+              @for (finding of item.findings; track $index) {
+                <li>«{{ finding.fragment }}»: {{ finding.suggestion }}</li>
+              }
+            </ul>
+          }
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="hint">{{ texts.guidelinesUnavailable }}</p>
+  }
+</section>

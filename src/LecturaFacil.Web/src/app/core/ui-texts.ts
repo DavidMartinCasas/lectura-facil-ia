@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Todos los textos de la interfaz, en español claro, en un único sitio.
-import { DocumentStatus } from './documents/document.models';
+import {
+  DocumentStatus,
+  GuidelineStatus,
+  KeyFactStatus,
+  KeyFactType,
+  Severity,
+} from './documents/document.models';
 
 export const APP_TEXTS = {
   name: 'Lectura Fácil IA',
@@ -70,13 +76,94 @@ export const LIST_TEXTS = {
 export const DOCUMENT_TEXTS = {
   loading: 'Cargando documento…',
   statusLabel: 'Estado:',
-  adaptationComing:
-    'Aquí verás el texto original y la adaptación lado a lado. Esta vista estará disponible próximamente.',
   adaptationFailed:
     'No se ha podido adaptar el documento. Vuelve a enviarlo desde «Nuevo documento».',
   backToList: 'Volver a Mis documentos',
   retry: 'Reintentar',
 } as const;
+
+export const REVIEW_TEXTS = {
+  draftLabel: 'Borrador · pendiente de validación',
+  processedBy: 'Procesado por:',
+  version: 'Versión',
+  originalTitle: 'Texto original',
+  originalHint:
+    'Los fragmentos marcados incumplen alguna pauta. Selecciónalos para ver cuál y qué hacer.',
+  noOriginalFindings: 'No se ha detectado ningún problema en el texto original.',
+  problemsIn: 'problemas de lectura fácil en',
+  selectedTitle: 'Fragmento seleccionado',
+  suggestion: 'Sugerencia:',
+  severity: 'Gravedad:',
+  closeSelection: 'Cerrar',
+  adaptedTitle: 'Adaptación',
+  tabsLabel: 'Original y adaptación',
+  glossaryTitle: 'Glosario',
+  editSection: 'Editar sección',
+  questionLabel: 'Pregunta',
+  sentencesLabel: 'Frases (una por línea)',
+  sentencesHint:
+    'Escribe cada frase en su propia línea. Al guardar se vuelven a revisar las pautas y la legibilidad.',
+  save: 'Guardar',
+  saving: 'Guardando…',
+  cancel: 'Cancelar',
+  emptySection: 'La sección necesita una pregunta y al menos una frase.',
+  guidelinesTitle: 'Pautas',
+  guidelinesUnavailable: 'Esta versión no tiene informe de pautas.',
+  readabilityTitle: 'Legibilidad (INFLESZ)',
+  readabilityBefore: 'Original',
+  readabilityAfter: 'Adaptación',
+  readabilityHint: 'Es un valor aproximado. Cuanto más alto, más fácil de leer.',
+  readabilityUnavailable: 'No se ha podido calcular la legibilidad.',
+  improvement: 'Diferencia:',
+  points: 'puntos',
+  keyFactsTitle: 'Datos clave',
+  keyFactsHint:
+    'Los avisos se quedan a la vista. Márcalos como revisados cuando los hayas comprobado.',
+  noKeyFacts: 'No hay datos clave que comprobar.',
+  notVerified: 'No se ha podido verificar el significado: revisa las cifras con el original.',
+  original: 'Original:',
+  adapted: 'En la adaptación:',
+  notInAdaptation: 'No aparece',
+  acknowledge: 'Marcar como revisado',
+  acknowledged: 'Revisado',
+  exportBlocked: (count: number) =>
+    count === 1
+      ? 'Para exportar, marca como revisado el dato clave con aviso.'
+      : `Para exportar, marca como revisados los ${count} datos clave con aviso.`,
+  exportReady: 'Todos los avisos de datos clave están revisados.',
+  saved: 'Cambios guardados. Se han vuelto a revisar las pautas y la legibilidad.',
+  acknowledgedAnnouncement: 'Dato marcado como revisado.',
+} as const;
+
+export const GUIDELINE_STATUS_LABELS: Readonly<Record<GuidelineStatus, string>> = {
+  Compliant: 'Cumple',
+  NotCompliant: 'No cumple',
+  NotChecked: 'Sin comprobar',
+};
+
+export const SEVERITY_LABELS: Readonly<Record<Severity, string>> = {
+  High: 'alta',
+  Medium: 'media',
+  Low: 'baja',
+};
+
+export const KEY_FACT_STATUS_LABELS: Readonly<Record<KeyFactStatus, string>> = {
+  Conserved: 'Conservado',
+  Review: 'Revisar',
+  Omitted: 'Omitido',
+};
+
+export const KEY_FACT_TYPE_LABELS: Readonly<Record<KeyFactType, string>> = {
+  Deadline: 'Plazo',
+  Amount: 'Importe',
+  Requirement: 'Requisito',
+  Date: 'Fecha',
+  Place: 'Lugar',
+  Document: 'Documento',
+  Reference: 'Referencia',
+  Figure: 'Cifra',
+  Other: 'Otro dato',
+};
 
 export const STATUS_LABELS: Readonly<Record<DocumentStatus, string>> = {
   Received: 'Recibido',
@@ -109,4 +196,11 @@ export const ERROR_TEXTS = {
   textTooShort: 'El texto es demasiado corto para adaptarlo. Escribe al menos unas frases.',
   textTooLong: 'El texto es demasiado largo. Prueba a adaptarlo por partes.',
   progressLost: 'Se ha perdido la conexión con el servidor y no se puede seguir el progreso.',
+  conflict:
+    'El documento ha cambiado mientras lo revisabas. Vuelve a cargarlo para ver la última versión.',
+  notEditable: 'Solo se puede modificar un documento que está en borrador.',
+  incompleteEdit:
+    'La adaptación necesita un título y, en cada sección, una pregunta y al menos una frase.',
+  editTooLong: 'La adaptación es demasiado larga. Acorta el texto e inténtalo de nuevo.',
+  keyFactNotFound: 'No se ha encontrado ese dato clave. Vuelve a cargar el documento.',
 } as const;

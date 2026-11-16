@@ -1,0 +1,26 @@
+// SPDX-License-Identifier: Apache-2.0
+.scores {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+
+  div {
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--mat-sys-corner-small);
+    background: var(--mat-sys-surface);
+  }
+
+  dt {
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+.value {
+  display: block;
+  font: var(--mat-sys-headline-medium);
+}

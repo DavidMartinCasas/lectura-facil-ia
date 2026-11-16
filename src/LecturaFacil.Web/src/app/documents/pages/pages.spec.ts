@@ -12,20 +12,13 @@ import {
 } from '../../core/documents/document.models';
 import { DocumentsApiService } from '../../core/documents/documents-api.service';
 import { ApiError } from '../../core/errors/api-error';
-import { DOCUMENT_TEXTS, ERROR_TEXTS, PROGRESS_TEXTS } from '../../core/ui-texts';
+import { ERROR_TEXTS, PROGRESS_TEXTS, REVIEW_TEXTS } from '../../core/ui-texts';
+import { documentFixture } from '../../testing/document-fixtures';
 import { DocumentPage } from './document-page';
 import { DocumentsPage } from './documents-page';
 import { NewDocumentPage } from './new-document-page';
 
-const details = (status: DocumentStatus): DocumentDetails => ({
-  id: 'doc-1',
-  title: 'Bases de la convocatoria',
-  status,
-  createdAt: '2026-11-16T10:00:00Z',
-  updatedAt: '2026-11-16T10:00:00Z',
-  error: null,
-  adaptation: null,
-});
+const details = (status: DocumentStatus): DocumentDetails => documentFixture(status);
 
 describe('pages', () => {
   let statuses: Subject<DocumentStatus>;
@@ -161,14 +154,22 @@ describe('pages', () => {
   });
 
   describe('DocumentPage', () => {
-    it('shows the title, the status and the placeholder for the side-by-side view', async () => {
+    it('shows the title, the status and the side-by-side review of a draft', async () => {
       const { element } = await render(DocumentPage, { id: 'doc-1' });
 
       expect(api.get).toHaveBeenCalledWith('doc-1');
       expect(element.querySelector('h1')?.textContent).toBe('Bases de la convocatoria');
-      expect(element.textContent).toContain('Borrador');
-      expect(element.textContent).toContain(DOCUMENT_TEXTS.adaptationComing);
+      expect(element.textContent).toContain(REVIEW_TEXTS.draftLabel);
+      expect(element.querySelector('app-document-review')).not.toBeNull();
       expect(element.querySelector('app-progress-steps')).toBeNull();
+    });
+
+    it('does not show the review while the document has no adaptation', async () => {
+      api.get.mockReturnValueOnce(of(details('Processing')));
+
+      const { element } = await render(DocumentPage, { id: 'doc-1' });
+
+      expect(element.querySelector('app-document-review')).toBeNull();
     });
 
     it('shows the progress while the document is being adapted', async () => {

@@ -1,0 +1,29 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<section class="panel" [attr.aria-labelledby]="headingId()">
+  <h2 [id]="headingId()">{{ texts.originalTitle }}</h2>
+  @if (findings().length > 0) {
+    <p class="hint">{{ texts.originalHint }}</p>
+  } @else {
+    <p class="hint">{{ texts.noOriginalFindings }}</p>
+  }
+  <!-- prettier-ignore -->
+  <div class="text" lang="es">@for (segment of segments(); track segment.start) {@if (segment.ranges.length > 0) {<button type="button" class="mark" [class.mark--selected]="selected() === segment" [attr.aria-pressed]="selected() === segment" [attr.aria-label]="label(segment)" (click)="select(segment)">{{ segment.text }}</button>} @else {<span>{{ segment.text }}</span>}}</div>
+
+  <div class="detail" aria-live="polite">
+    @if (selected(); as segment) {
+      <h3>{{ texts.selectedTitle }}: «{{ segment.text }}»</h3>
+      <ul>
+        @for (finding of selectedFindings(); track $index) {
+          <li>
+            <strong>{{ finding.guideline }}</strong>
+            <span class="severity"
+              >({{ texts.severity }} {{ severityLabels[finding.severity] }})</span
+            >
+            <p>{{ texts.suggestion }} {{ finding.suggestion }}</p>
+          </li>
+        }
+      </ul>
+      <button type="button" class="close" (click)="clear()">{{ texts.closeSelection }}</button>
+    }
+  </div>
+</section>

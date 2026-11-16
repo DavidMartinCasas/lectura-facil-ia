@@ -67,4 +67,29 @@ describe('DocumentsApiService', () => {
     controller.expectOne('/api/documents/a%2Fb').flush({ id: 'a/b' });
     expect(await response).toEqual({ id: 'a/b' });
   });
+
+  it('saves an edit of the latest version with PUT', async () => {
+    const edit = {
+      title: 'Ayudas',
+      sections: [{ question: '¿Qué?', sentences: ['Una.'] }],
+      glossary: [],
+    };
+    const response = firstValueFrom(service.saveEdit('doc-1', 2, edit));
+
+    const request = controller.expectOne('/api/documents/doc-1/versions/2');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual(edit);
+    request.flush({ id: 'doc-1' });
+    expect(await response).toEqual({ id: 'doc-1' });
+  });
+
+  it('acknowledges a key fact of a version with POST', async () => {
+    const response = firstValueFrom(service.acknowledgeKeyFact('doc-1', 2, 3));
+
+    const request = controller.expectOne('/api/documents/doc-1/key-facts/3/acknowledge');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ version: 2 });
+    request.flush({ id: 'doc-1' });
+    await response;
+  });
 });

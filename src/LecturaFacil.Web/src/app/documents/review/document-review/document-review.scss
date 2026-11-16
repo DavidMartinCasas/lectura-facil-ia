@@ -1,0 +1,52 @@
+// SPDX-License-Identifier: Apache-2.0
+:host {
+  display: block;
+}
+
+.review {
+  display: grid;
+  gap: 1.5rem;
+}
+
+// La etiqueta de borrador se queda siempre a la vista al desplazarse.
+.banner {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--mat-sys-corner-small);
+  border: 2px solid var(--mat-sys-tertiary);
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+}
+
+.draft {
+  font: var(--mat-sys-title-medium);
+}
+
+.export--blocked {
+  font-weight: 600;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem;
+  align-items: start;
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+app-original-text,
+app-adapted-text {
+  padding-block-start: 0.5rem;
+}

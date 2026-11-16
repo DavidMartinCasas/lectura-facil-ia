@@ -1,0 +1,72 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<section class="panel" [attr.aria-labelledby]="headingId()">
+  <h2 [id]="headingId()">{{ texts.adaptedTitle }}</h2>
+  <article lang="es">
+    <h3 class="title">{{ adaptation().title }}</h3>
+    @for (section of adaptation().sections; track $index; let index = $index) {
+      <section class="section">
+        @if (editing() === index) {
+          <form class="editor" (submit)="$event.preventDefault(); submit(index)">
+            <label [for]="headingId() + '-question-' + index">{{ texts.questionLabel }}</label>
+            <input
+              [id]="headingId() + '-question-' + index"
+              type="text"
+              [value]="draftQuestion()"
+              (input)="onQuestionInput($event)"
+            />
+            <label [for]="headingId() + '-sentences-' + index">{{ texts.sentencesLabel }}</label>
+            <textarea
+              [id]="headingId() + '-sentences-' + index"
+              rows="6"
+              [attr.aria-describedby]="headingId() + '-hint-' + index"
+              [value]="draftSentences()"
+              (input)="onSentencesInput($event)"
+            ></textarea>
+            <p class="hint" [id]="headingId() + '-hint-' + index">{{ texts.sentencesHint }}</p>
+            @if (!draftValid()) {
+              <p class="invalid" role="alert">{{ texts.emptySection }}</p>
+            }
+            <div class="actions">
+              <button mat-flat-button type="submit" [disabled]="saving() || !draftValid()">
+                {{ saving() ? texts.saving : texts.save }}
+              </button>
+              <button mat-stroked-button type="button" (click)="cancel()">
+                {{ texts.cancel }}
+              </button>
+            </div>
+          </form>
+        } @else {
+          <h4>{{ section.question }}</h4>
+          <ul>
+            @for (sentence of section.sentences; track $index) {
+              <li>{{ sentence }}</li>
+            }
+          </ul>
+          @if (editable()) {
+            <button
+              mat-stroked-button
+              type="button"
+              [attr.aria-label]="texts.editSection + ' «' + section.question + '»'"
+              [disabled]="saving()"
+              (click)="edit(index)"
+            >
+              {{ texts.editSection }}
+            </button>
+          }
+        }
+      </section>
+    }
+
+    @if (adaptation().glossary.length > 0) {
+      <h4>{{ texts.glossaryTitle }}</h4>
+      <dl class="glossary">
+        @for (term of adaptation().glossary; track $index) {
+          <div>
+            <dt>{{ term.term }}</dt>
+            <dd>{{ term.definition }}</dd>
+          </div>
+        }
+      </dl>
+    }
+  </article>
+</section>

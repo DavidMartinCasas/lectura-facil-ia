@@ -3,6 +3,7 @@
 // respuestas fijas (como haría el backend con FakeLlmProvider); el E2E contra el backend real queda para la CI (US-19).
 import { Page, Route, expect, test } from '@playwright/test';
 import path from 'node:path';
+import { documentFixture } from '../src/app/testing/document-fixtures';
 
 const AXE_PATH = path.join(__dirname, '..', 'node_modules', 'axe-core', 'axe.min.js');
 
@@ -61,15 +62,7 @@ async function mockApi(
 
   await page.route(`**/api/documents/${DOCUMENT_ID}`, (route) =>
     route.fulfill({
-      json: {
-        id: DOCUMENT_ID,
-        title: 'Bases de la convocatoria',
-        status: 'Draft',
-        createdAt: NOW,
-        updatedAt: NOW,
-        error: null,
-        adaptation: { version: 1, pendingHumanValidation: true },
-      },
+      json: documentFixture('Draft', { id: DOCUMENT_ID, createdAt: NOW, updatedAt: NOW }),
     }),
   );
 

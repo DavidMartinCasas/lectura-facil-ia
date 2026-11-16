@@ -6,6 +6,7 @@ import {
   DocumentDetails,
   DocumentListItem,
   DocumentSubmission,
+  ManualEdit,
   SubmitDocumentResponse,
 } from './document.models';
 
@@ -35,6 +36,22 @@ export class DocumentsApiService {
   }
 
   get(id: string): Observable<DocumentDetails> {
-    return this.http.get<DocumentDetails>(`${DOCUMENTS_PATH}/${encodeURIComponent(id)}`);
+    return this.http.get<DocumentDetails>(documentPath(id));
   }
+
+  /** Guarda la edición de la versión `version` (la última) como una versión nueva. Devuelve el documento actualizado. */
+  saveEdit(id: string, version: number, edit: ManualEdit): Observable<DocumentDetails> {
+    return this.http.put<DocumentDetails>(`${documentPath(id)}/versions/${version}`, edit);
+  }
+
+  /** Marca como revisado el aviso del dato clave `factId` de la versión `version`. */
+  acknowledgeKeyFact(id: string, version: number, factId: number): Observable<DocumentDetails> {
+    return this.http.post<DocumentDetails>(`${documentPath(id)}/key-facts/${factId}/acknowledge`, {
+      version,
+    });
+  }
+}
+
+function documentPath(id: string): string {
+  return `${DOCUMENTS_PATH}/${encodeURIComponent(id)}`;
 }
