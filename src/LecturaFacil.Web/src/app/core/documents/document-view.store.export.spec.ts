@@ -17,15 +17,20 @@ describe('DocumentViewStore (exportación)', () => {
     typeof vi.fn<(id: string, format: ExportFormat) => Observable<DownloadedFile>>
   >;
   let save: ReturnType<typeof vi.fn<(blob: Blob, fileName: string) => void>>;
+  let saveEdit: ReturnType<typeof vi.fn<() => Observable<DocumentDetails>>>;
   let store: DocumentViewStore;
 
   function setUp(document: DocumentDetails) {
     exportDocument = vi.fn(() => of(file));
+    saveEdit = vi.fn(() => new Subject<DocumentDetails>());
     save = vi.fn();
     TestBed.configureTestingModule({
       providers: [
         DocumentViewStore,
-        { provide: DocumentsApiService, useValue: { get: () => of(document), exportDocument } },
+        {
+          provide: DocumentsApiService,
+          useValue: { get: () => of(document), exportDocument, saveEdit },
+        },
         { provide: DocumentEventsService, useValue: { watch: () => NEVER } },
         { provide: FileDownloadService, useValue: { save } },
       ],
@@ -67,6 +72,16 @@ describe('DocumentViewStore (exportación)', () => {
 
     expect(store.exporting()).toBe(true);
     expect(exportDocument).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits until a pending edit is saved before exporting', () => {
+    setUp(exportable());
+    store.saveEdit({ title: 'Ayudas', sections: [], glossary: [] });
+
+    store.exportAdaptation('docx');
+
+    expect(store.saving()).toBe(true);
+    expect(exportDocument).not.toHaveBeenCalled();
   });
 
   it('shows the message of the server when the export is refused', () => {

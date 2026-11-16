@@ -98,7 +98,8 @@ export class DocumentViewStore {
   /** Descarga la última versión en el formato elegido. Solo se ofrece cuando la adaptación se puede exportar. */
   exportAdaptation(format: ExportFormat): void {
     const document = this._document();
-    if (!document?.adaptation?.canExport || this._exporting()) {
+    // Mientras se guarda una edición, se exportaría la versión anterior: se espera a que termine.
+    if (!document?.adaptation?.canExport || this._exporting() || this._saving()) {
       return;
     }
     this._exporting.set(true);
