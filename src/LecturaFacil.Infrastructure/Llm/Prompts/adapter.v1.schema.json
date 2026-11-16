@@ -1,0 +1,55 @@
+{
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string"
+    },
+    "secciones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "pregunta": {
+            "type": "string"
+          },
+          "frases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "pregunta",
+          "frases"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "glosario": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "termino": {
+            "type": "string"
+          },
+          "definicion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "termino",
+          "definicion"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "titulo",
+    "secciones",
+    "glosario"
+  ],
+  "additionalProperties": false
+}
