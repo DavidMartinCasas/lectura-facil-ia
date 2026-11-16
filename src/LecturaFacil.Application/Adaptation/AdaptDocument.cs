@@ -74,7 +74,8 @@ public sealed class AdaptDocument(
             usage.InputTokens,
             usage.OutputTokens,
             timeProvider.GetElapsedTime(started),
-            result.IsSuccess ? AdaptationOutcome.SuccessResult : result.Error!.Code));
+            result.IsSuccess ? AdaptationOutcome.SuccessResult : result.Error!.Code,
+            usage.TokensByRole));
         return result;
     }
 
@@ -306,6 +307,10 @@ public sealed class AdaptDocument(
 
         public LlmProviderRole? Role { get; private set; }
 
+        public IReadOnlyList<RoleTokens> TokensByRole => [.. _byRole.Select(pair => new RoleTokens(pair.Key, pair.Value.Input, pair.Value.Output))];
+
+        private readonly SortedDictionary<LlmProviderRole, (long Input, long Output)> _byRole = [];
+
         public long InputTokens { get; private set; }
 
         public long OutputTokens { get; private set; }
@@ -316,6 +321,8 @@ public sealed class AdaptDocument(
         {
             parent?.Add(response);
             Role = response.Role;
+            var (input, output) = _byRole.GetValueOrDefault(response.Role);
+            _byRole[response.Role] = (input + response.InputTokens, output + response.OutputTokens);
             Provider = response.Provider;
             Model = response.Model;
             InputTokens += response.InputTokens;

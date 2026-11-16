@@ -571,6 +571,7 @@ public sealed class AdaptDocumentTests
         var outcome = _telemetry.Outcomes.ShouldHaveSingleItem();
         outcome.ProviderRole.ShouldBe(LlmProviderRole.Fallback);
         outcome.Provider.ShouldBe("Respaldo");
+        outcome.Tokens.ShouldBe([new RoleTokens(LlmProviderRole.Fallback, 1200, 900)]);
     }
 
     [Fact]
@@ -585,6 +586,7 @@ public sealed class AdaptDocumentTests
         outcome.Result.ShouldBe(LlmErrors.ProviderUnavailable.Code);
         outcome.ProviderRole.ShouldBeNull();
         outcome.InputTokens.ShouldBe(0);
+        outcome.Tokens.ShouldBeEmpty();
     }
 
     [Fact]

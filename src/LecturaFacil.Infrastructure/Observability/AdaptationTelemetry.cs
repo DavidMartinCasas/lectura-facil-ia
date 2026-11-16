@@ -54,8 +54,14 @@ public sealed partial class AdaptationTelemetry : IAdaptationTelemetry
         var roleTag = new KeyValuePair<string, object?>("provider_role", role);
         _adaptations.Add(1, roleTag, new KeyValuePair<string, object?>("result", result));
         _duration.Record(outcome.Duration.TotalSeconds, roleTag, new KeyValuePair<string, object?>("result", result));
-        _tokens.Add(outcome.InputTokens, roleTag, new KeyValuePair<string, object?>("direction", "input"));
-        _tokens.Add(outcome.OutputTokens, roleTag, new KeyValuePair<string, object?>("direction", "output"));
+
+        // Cada proveedor cuenta los tokens que consumió, aunque la adaptación la terminara otro.
+        foreach (var tokens in outcome.Tokens)
+        {
+            var tokensRole = new KeyValuePair<string, object?>("provider_role", RoleLabel(tokens.Role));
+            _tokens.Add(tokens.InputTokens, tokensRole, new KeyValuePair<string, object?>("direction", "input"));
+            _tokens.Add(tokens.OutputTokens, tokensRole, new KeyValuePair<string, object?>("direction", "output"));
+        }
     }
 
     private static string RoleLabel(LlmProviderRole? role) => role switch

@@ -86,6 +86,27 @@ public sealed class AdaptationTelemetryTests : IDisposable
         metrics.ShouldNotContain("DocumentId", Case.Insensitive);
     }
 
+    [Fact]
+    public void Record_WhenTheFallbackTookOverHalfway_CountsEachProvidersTokensUnderItsOwnRole()
+    {
+        Telemetry.Record(new AdaptationOutcome(
+            DocumentId.New(),
+            LlmProviderRole.Fallback,
+            "Nube",
+            "modelo-x",
+            300,
+            30,
+            TimeSpan.FromSeconds(1),
+            AdaptationOutcome.SuccessResult,
+            [new RoleTokens(LlmProviderRole.Primary, 100, 10), new RoleTokens(LlmProviderRole.Fallback, 200, 20)]));
+
+        var metrics = Exporter.Render();
+
+        metrics.ShouldContain("""lecturafacil_adaptation_tokens_total{direction="input",provider_role="primary"} 100""");
+        metrics.ShouldContain("""lecturafacil_adaptation_tokens_total{direction="input",provider_role="fallback"} 200""");
+        metrics.ShouldContain("""lecturafacil_adaptation_tokens_total{direction="output",provider_role="fallback"} 20""");
+    }
+
     private static AdaptationOutcome Success(DocumentId id, LlmProviderRole role) =>
-        new(id, role, role == LlmProviderRole.Primary ? "Servidor propio" : "Nube", "modelo-x", 1200, 900, TimeSpan.FromMilliseconds(2500), AdaptationOutcome.SuccessResult);
+        new(id, role, role == LlmProviderRole.Primary ? "Servidor propio" : "Nube", "modelo-x", 1200, 900, TimeSpan.FromMilliseconds(2500), AdaptationOutcome.SuccessResult, [new RoleTokens(role, 1200, 900)]);
 }
