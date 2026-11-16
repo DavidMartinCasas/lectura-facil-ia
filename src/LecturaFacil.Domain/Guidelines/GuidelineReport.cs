@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 using System.Globalization;
+using LecturaFacil.Domain.Documents;
+using LecturaFacil.Domain.Guidelines.Rules;
 
 namespace LecturaFacil.Domain.Guidelines;
 
@@ -35,10 +37,36 @@ public sealed class GuidelineReport
         .ToList()
         .AsReadOnly();
 
-    /// <summary>Por ejemplo, "11 de 11 pautas cumplidas".</summary>
+    /// <summary>Por ejemplo, "12 de 12 pautas cumplidas".</summary>
     public string Summary => string.Create(CultureInfo.InvariantCulture, $"{CompliantCount} de {TotalCount} pautas cumplidas");
 
-    /// <param name="analysis">Análisis del texto adaptado.</param>
+    /// <summary>
+    /// Informe de una adaptación: los hallazgos de las reglas de texto sobre su <see cref="AdaptedContent.PlainText"/>,
+    /// más los de <see cref="ClearHeadingsRule"/>, que necesita la estructura de secciones. El glosario explica términos.
+    /// </summary>
+    /// <param name="textAnalysis">Análisis de <see cref="AdaptedContent.PlainText"/> con las reglas de texto.</param>
+    public static GuidelineReport ForAdaptation(
+        AdaptedContent content,
+        GuidelineAnalysis textAnalysis,
+        int maxWordsPerHeading,
+        int maxStoredFindings)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        ArgumentNullException.ThrowIfNull(textAnalysis);
+
+        var findings = textAnalysis.Findings
+            .Concat(new ClearHeadingsRule(maxWordsPerHeading).Check(content))
+            .OrderBy(finding => finding.Start)
+            .ThenBy(finding => finding.End)
+            .ThenBy(finding => finding.GuidelineCode, StringComparer.Ordinal)
+            .ToList();
+        return Create(
+            textAnalysis with { Findings = findings },
+            content.Glossary.Select(term => term.Term),
+            maxStoredFindings);
+    }
+
+    /// <param name="analysis">Análisis del texto. Las pautas sin hallazgos se dan por cumplidas.</param>
     /// <param name="glossaryTerms">Términos del glosario de la adaptación.</param>
     /// <param name="maxStoredFindings">Hallazgos que se guardan como máximo (los primeros del texto); los recuentos son siempre reales.</param>
     public static GuidelineReport Create(GuidelineAnalysis analysis, IEnumerable<string> glossaryTerms, int maxStoredFindings)

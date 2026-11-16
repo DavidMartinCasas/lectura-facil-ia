@@ -57,6 +57,13 @@ public sealed class LimitsOptions
     public int MaxAdaptationChunksPerDocument { get; set; } = 10;
 
     /// <summary>
+    /// Nuevas adaptaciones que se piden como mucho cuando la adaptación incumple pautas de gravedad alta (US-07). Cada
+    /// una vuelve a adaptar el documento entero y se guarda la mejor versión. 0 desactiva el reintento (OWASP LLM10).
+    /// </summary>
+    [Range(0, 3, ErrorMessage = "Limits:MaxAdaptationRetries debe estar entre {1} y {2}.")]
+    public int MaxAdaptationRetries { get; set; } = 1;
+
+    /// <summary>
     /// Documentos que se aceptan por minuto en <c>POST /api/documents</c>, en total: cada uno genera llamadas al modelo
     /// (OWASP LLM10). El límite por usuario llegará con la autenticación (US-15, US-16).
     /// </summary>

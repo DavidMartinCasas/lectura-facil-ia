@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 using System.Text.Json;
 using LecturaFacil.Domain.Documents;
+using LecturaFacil.Domain.Guidelines;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -9,8 +10,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LecturaFacil.Infrastructure.Persistence.Configurations;
 
 /// <summary>
-/// Versiones adaptadas (<c>VERSION_ADAPTADA</c> del modelo de datos), una fila por versión. Las secciones y el glosario
-/// se guardan como <c>jsonb</c>: son texto plano estructurado que siempre se lee y escribe junto a su versión.
+/// Versiones adaptadas (<c>VERSION_ADAPTADA</c> del modelo de datos), una fila por versión. Las secciones, el glosario
+/// y el informe de pautas se guardan como <c>jsonb</c>: no cambian y siempre se leen y escriben junto a su versión.
 /// </summary>
 internal static class AdaptedVersionConfiguration
 {
@@ -39,6 +40,17 @@ internal static class AdaptedVersionConfiguration
             .HasColumnType("jsonb")
             .HasConversion(JsonConverter<GlossaryTerm>(), JsonComparer<GlossaryTerm>())
             .IsRequired();
+        versions.Property(version => version.GuidelineReport)
+            .HasColumnName("guideline_report")
+            .HasColumnType("jsonb")
+            .HasConversion(
+                new ValueConverter<GuidelineReport?, string>(report => SerializeReport(report!), json => DeserializeReport(json)),
+                new ValueComparer<GuidelineReport?>(
+                    (left, right) => ReferenceEquals(left, right)
+                        || (left != null && right != null && SerializeReport(left) == SerializeReport(right)),
+                    report => report == null ? 0 : SerializeReport(report).GetHashCode(StringComparison.Ordinal),
+                    report => report))
+            .IsRequired(false);
         versions.Property(version => version.CreatedAt).HasColumnName("created_at");
 
         versions.OwnsOne(version => version.Metadata, ConfigureMetadata);
@@ -69,4 +81,29 @@ internal static class AdaptedVersionConfiguration
 
     private static IReadOnlyList<T> Deserialize<T>(string json) =>
         (JsonSerializer.Deserialize<List<T>>(json, Json) ?? []).AsReadOnly();
+
+    private static string SerializeReport(GuidelineReport report) =>
+        JsonSerializer.Serialize(report.Results.Select(StoredGuidelineResult.From), Json);
+
+    private static GuidelineReport DeserializeReport(string json) =>
+        GuidelineReport.Restore(Deserialize<StoredGuidelineResult>(json).Select(result => result.ToResult()));
+
+    /// <summary>Forma guardada de cada pauta del informe. Los enumerados van como texto para que el JSON sea legible.</summary>
+    private sealed record StoredGuidelineResult(string Code, string Status, int FindingCount, IReadOnlyList<StoredFinding> Findings)
+    {
+        public static StoredGuidelineResult From(GuidelineResult result) =>
+            new(result.GuidelineCode, result.Status.ToString(), result.FindingCount, [.. result.Findings.Select(StoredFinding.From)]);
+
+        public GuidelineResult ToResult() =>
+            new(Code, Enum.Parse<GuidelineStatus>(Status), FindingCount, [.. Findings.Select(finding => finding.ToFinding(Code))]);
+    }
+
+    private sealed record StoredFinding(string Fragment, int Start, int End, string Severity, string Suggestion)
+    {
+        public static StoredFinding From(Finding finding) =>
+            new(finding.Fragment, finding.Start, finding.End, finding.Severity.ToString(), finding.Suggestion);
+
+        public Finding ToFinding(string guidelineCode) =>
+            Finding.Restore(guidelineCode, Fragment, Start, End, Enum.Parse<Severity>(Severity), Suggestion);
+    }
 }

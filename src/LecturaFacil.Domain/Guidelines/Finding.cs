@@ -42,4 +42,8 @@ public sealed record Finding
 
         return new Finding(guideline.Code, text[start..end], start, end, guideline.DefaultSeverity, suggestion);
     }
+
+    /// <summary>Reconstruye un hallazgo ya guardado, sin volver a comprobarlo contra el texto.</summary>
+    public static Finding Restore(string guidelineCode, string fragment, int start, int end, Severity severity, string suggestion) =>
+        new(guidelineCode, fragment, start, end, severity, suggestion);
 }

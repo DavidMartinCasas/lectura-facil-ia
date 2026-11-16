@@ -22,12 +22,12 @@ El catálogo (código, descripción y gravedad por defecto) está en `GuidelineC
 | `PALABRAS_DIFICILES` | Palabras difíciles explicadas | Media | Palabras de una lista inicial, pequeña y ampliable, con su alternativa ("sufragar" → "pagar", "arrendamiento" → "alquiler", "días hábiles" → "días de lunes a viernes que no son festivos") |
 | `SIN_EXPRESIONES_JURIDICAS` | Sin expresiones jurídicas complejas | Alta | Expresiones de una lista configurable con su alternativa ("en virtud de" → "según", "a contar desde" → "desde"). Si dos se solapan, gana la más larga |
 | `FECHAS_COMPLETAS` | Fechas completas | Baja | Fechas en cifras: `dd/mm/aaaa`, `d-m-aa`, `dd.mm.aaaa` y `aaaa-mm-dd`, con día y mes válidos. Con puntos se exige el año con cuatro cifras para no confundir una fecha con un apartado ("3.2.10"). Se sugiere la fecha completa ("15 de diciembre de 2026") |
+| `TITULOS_CLAROS` | Títulos claros | Baja | **Solo en la adaptación** (US-07): necesita saber qué líneas son títulos. Cada sección tiene siempre una pregunta que hace de título (lo exige el esquema); la regla avisa si el título tiene más palabras que `Limits:MaxWordsPerSentence`. Está en `ClearHeadingsRule` y no implementa `IGuidelineRule` porque trabaja sobre la estructura, no sobre el texto |
 
 ### Pautas de la sección 10 que no detecta el código (todavía)
 
 | Pauta | Motivo |
 |---|---|
-| Títulos claros | Tiene sentido en la versión adaptada, no en el original: lo comprobará el revisor de pautas (US-07) |
 | Símbolos ("€", "%") en lugar de palabras | No está en la sección 10. El "%" lo cubre `SIN_PORCENTAJES`; el resto queda para una regla futura |
 | Palabras fuera del vocabulario frecuente | De momento se usa una lista de palabras difíciles conocidas; el vocabulario frecuente completo está fuera del alcance de US-05 |
 
@@ -60,6 +60,29 @@ con editar el fichero y volver a compilar:
 
 Son pistas para un borrador. **Que no haya hallazgos no significa que el texto sea lectura fácil**: la validación con
 personas lectoras sigue siendo obligatoria.
+
+## Revisor de pautas de la adaptación (US-07)
+
+Después de adaptar, `ReviewAdaptation` aplica **las mismas reglas** (`IGuidelineChecker`) al texto adaptado y añade
+`TITULOS_CLAROS`. El resultado es un `GuidelineReport` que se guarda con la versión (columna `guideline_report`,
+`jsonb`, de `adapted_versions`) y que devuelve `GET /api/documents/{id}` en `adaptation.guidelines`:
+
+- **Una entrada por pauta del catálogo**, con su estado: `Compliant`, `NotCompliant` o `NotChecked` (una búsqueda agotó
+  su tiempo; no se da por cumplida). El resumen dice, por ejemplo, "11 de 12 pautas cumplidas".
+- **Texto revisado:** el título, y cada pregunta y cada frase en su propia línea (separadas por `\n`), sin el glosario.
+  Las posiciones de los hallazgos se refieren a ese texto (`AdaptedContent.PlainText`).
+- **Glosario:** una sigla o una palabra difícil que aparece en un término del glosario, como palabra completa y sin
+  distinguir mayúsculas, cuenta como explicada ("BOP" la explican "BOP" y "Boletín Oficial de la Provincia (BOP)", pero
+  no "BOPA"). Solo afecta a `SIN_SIGLAS` y `PALABRAS_DIFICILES`.
+- **Recuentos y límite:** cada pauta guarda su número real de hallazgos, pero solo se guardan los primeros
+  `Limits:MaxFindingsPerDocument` hallazgos del texto.
+- **Reintento:** si la adaptación tiene hallazgos de gravedad **alta**, se pide otra adaptación del documento completo
+  (como mucho `Limits:MaxAdaptationRetries`, 1 por defecto; 0 lo desactiva). Al prompt del adaptador se le añade
+  `adapter-retry.v1` con las pautas incumplidas y su número de casos: solo descripciones fijas del catálogo, nunca
+  fragmentos del documento ni de la respuesta del modelo. Se guarda **la mejor versión** (`BestVersionPolicy`): la que
+  tiene menos hallazgos de gravedad alta y, si empatan, menos hallazgos en total; si siguen empatadas, la primera. Si el
+  reintento falla, se guarda la primera. La versión guardada indica el prompt que la generó (`adapter.v1` o
+  `adapter.v1+adapter-retry.v1`) y suma los tokens y el tiempo de todos los intentos.
 
 ## Seguridad y rendimiento
 

@@ -6,7 +6,9 @@ using LecturaFacil.Application.Llm;
 using LecturaFacil.Application.Tests.Documents;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Infrastructure.Guidelines;
 using LecturaFacil.Testing;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace LecturaFacil.Application.Tests.Adaptation;
@@ -21,6 +23,9 @@ public sealed class AdaptDocumentTests
 
     private readonly InMemoryDocumentRepository _repository = new();
     private readonly LimitsOptions _limits = new() { MinCharacters = 10, MaxCharacters = 2_000, MaxCharactersPerAdaptationChunk = 1_000 };
+
+    // Sin hallazgos por defecto: estos tests no dependen de lo que detecten las reglas reales.
+    private IGuidelineChecker _guidelineChecker = new StubGuidelineChecker(findingsPerText: 0);
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -290,6 +295,150 @@ public sealed class AdaptDocumentTests
     }
 
     [Fact]
+    public async Task Adapt_StoresTheGuidelineReportOfTheAdaptedTextWithTheVersion()
+    {
+        UseRealGuidelines();
+        var document = Store(Paragraph);
+        var llm = FakeLlmProvider.FromFixture("adapter/sigla-en-glosario");
+
+        var result = await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        var report = result.Value.GuidelineReport.ShouldNotBeNull();
+        report.TotalCount.ShouldBe(GuidelineCatalog.All.Count);
+        report.Find(GuidelineCodes.Acronyms).Status.ShouldBe(GuidelineStatus.Compliant);
+        llm.Requests.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Adapt_WhenTheAdaptationBreaksASevereGuideline_RetriesOnceTellingTheModelWhichGuidelinesItBroke()
+    {
+        UseRealGuidelines();
+        var document = Store(Paragraph);
+        var llm = Sequence("adapter/sigla-sin-explicar", "adapter/sigla-en-glosario");
+
+        var result = await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        result.IsSuccess.ShouldBeTrue();
+        llm.Requests.Count.ShouldBe(2);
+        var (first, retry) = (llm.Requests.First(), llm.Requests.Last());
+        first.SystemPrompt.ShouldNotContain(AdaptDocument.RetryPlaceholder);
+        retry.SystemPrompt.ShouldStartWith(first.SystemPrompt[..first.SystemPrompt.IndexOf("<documento-", StringComparison.Ordinal)]);
+        var acronyms = GuidelineCatalog.Find(GuidelineCodes.Acronyms);
+        var retryInstructions = retry.SystemPrompt[first.SystemPrompt.Length..];
+        retryInstructions.ShouldContain($"- {acronyms.Description}: 1");
+        retryInstructions.ShouldNotContain(AdaptDocument.RetryPlaceholder);
+        retryInstructions.ShouldNotContain("BOP");
+        retry.UserMessage.ShouldContain(Paragraph);
+    }
+
+    [Fact]
+    public async Task Adapt_WhenTheRetryIsBetter_KeepsTheRetryAndCountsTheCostOfBothAttempts()
+    {
+        UseRealGuidelines();
+        var document = Store(Paragraph);
+        var llm = Sequence("adapter/sigla-sin-explicar", "adapter/sigla-en-glosario");
+
+        var result = await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        var version = document.AdaptedVersions.ShouldHaveSingleItem();
+        version.ShouldBe(result.Value);
+        version.Glossary.Select(term => term.Term).ShouldBe(["BOP"]);
+        version.GuidelineReport.ShouldNotBeNull().HasHighSeverityViolations.ShouldBeFalse();
+        version.Metadata.PromptVersion.ShouldBe(AdaptDocument.RetryPromptVersion);
+        version.Metadata.InputTokens.ShouldBe(1000 + 1100);
+        version.Metadata.OutputTokens.ShouldBe(800 + 850);
+        version.Metadata.Duration.ShouldBe(TimeSpan.FromMilliseconds(3000 + 3100));
+    }
+
+    [Fact]
+    public async Task Adapt_WhenTheRetryIsWorse_KeepsTheFirstVersion()
+    {
+        UseRealGuidelines();
+        var document = Store(Paragraph);
+        var llm = Sequence("adapter/sigla-sin-explicar", "adapter/siglas-sin-explicar");
+
+        var result = await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        llm.Requests.Count.ShouldBe(2);
+        var version = document.AdaptedVersions.ShouldHaveSingleItem();
+        version.ShouldBe(result.Value);
+        version.Sections[1].Sentences.ShouldBe(["El anuncio sale en el BOP."]);
+        version.GuidelineReport.ShouldNotBeNull().HighSeverityFindingCount.ShouldBe(1);
+        version.Metadata.PromptVersion.ShouldBe(AdaptDocument.PromptName);
+    }
+
+    [Fact]
+    public async Task Adapt_WhenTheRetryFails_KeepsTheFirstVersion()
+    {
+        UseRealGuidelines();
+        var document = Store(Paragraph);
+        var llm = Sequence("adapter/sigla-sin-explicar", "adapter/poema", "adapter/poema");
+
+        var result = await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        result.IsSuccess.ShouldBeTrue();
+        llm.Requests.Count.ShouldBe(3);
+        document.Status.ShouldBe(DocumentStatus.Draft);
+        document.AdaptedVersions.ShouldHaveSingleItem().Metadata.PromptVersion.ShouldBe(AdaptDocument.PromptName);
+    }
+
+    [Fact]
+    public async Task Adapt_WhenTheProviderFailsOnTheRetry_KeepsTheFirstVersion()
+    {
+        UseRealGuidelines();
+        var document = Store(Paragraph);
+        var calls = 0;
+        var llm = new FakeLlmProvider("Proveedor falso", _ => Interlocked.Increment(ref calls) == 1
+            ? LlmRecording.Load("adapter/sigla-sin-explicar")
+            : LlmRecording.Unavailable);
+
+        var result = await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        result.IsSuccess.ShouldBeTrue();
+        document.Status.ShouldBe(DocumentStatus.Draft);
+    }
+
+    [Fact]
+    public async Task Adapt_WhenRetriesAreDisabled_KeepsTheFirstVersionWithoutRetrying()
+    {
+        UseRealGuidelines();
+        _limits.MaxAdaptationRetries = 0;
+        var document = Store(Paragraph);
+        var llm = Sequence("adapter/sigla-sin-explicar", "adapter/sigla-en-glosario");
+
+        var result = await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        llm.Requests.Count.ShouldBe(1);
+        result.Value.GuidelineReport.ShouldNotBeNull().HasHighSeverityViolations.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Adapt_WithTheRecordedGoodAnswer_HasNoSevereViolationsAndDoesNotRetry()
+    {
+        UseRealGuidelines();
+        var document = Store(Paragraph);
+        var llm = FakeLlmProvider.FromFixture("adapter/ok");
+
+        var result = await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        llm.Requests.Count.ShouldBe(1);
+        result.Value.GuidelineReport.ShouldNotBeNull().HasHighSeverityViolations.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Adapt_WhenTheAdaptationOnlyBreaksMinorGuidelines_DoesNotRetry()
+    {
+        _guidelineChecker = new StubGuidelineChecker(findingsPerText: 3);
+        var document = Store(Paragraph);
+        var llm = FakeLlmProvider.FromFixture("adapter/ok");
+
+        var result = await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        llm.Requests.Count.ShouldBe(1);
+        result.Value.GuidelineReport.ShouldNotBeNull().Find(GuidelineCodes.ShortSentences).FindingCount.ShouldBe(3);
+    }
+
+    [Fact]
     public async Task FailUnexpectedly_WhenTheDocumentIsProcessing_LeavesItInErrorWithAGenericReason()
     {
         var document = Store(Paragraph);
@@ -326,6 +475,15 @@ public sealed class AdaptDocumentTests
         return document;
     }
 
+    private void UseRealGuidelines() =>
+        _guidelineChecker = new GuidelineChecker(Options.Create(_limits), NullLogger<GuidelineChecker>.Instance);
+
     private AdaptDocument CreateUseCase(ILlmProvider llm) =>
-        new(_repository, llm, Prompts.Real, Options.Create(_limits), new FixedTimeProvider(Now));
+        new(
+            _repository,
+            llm,
+            Prompts.Real,
+            new ReviewAdaptation(_guidelineChecker, Options.Create(_limits)),
+            Options.Create(_limits),
+            new FixedTimeProvider(Now));
 }

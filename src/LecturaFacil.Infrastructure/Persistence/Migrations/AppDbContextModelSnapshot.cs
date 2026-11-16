@@ -160,6 +160,12 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
                             Code = "FECHAS_COMPLETAS",
                             DefaultSeverity = "Low",
                             Description = "Fechas completas"
+                        },
+                        new
+                        {
+                            Code = "TITULOS_CLAROS",
+                            DefaultSeverity = "Low",
+                            Description = "Títulos claros"
                         });
                 });
 
@@ -183,6 +189,10 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
                                 .IsRequired()
                                 .HasColumnType("jsonb")
                                 .HasColumnName("glossary");
+
+                            b1.Property<string>("GuidelineReport")
+                                .HasColumnType("jsonb")
+                                .HasColumnName("guideline_report");
 
                             b1.Property<string>("Sections")
                                 .IsRequired()

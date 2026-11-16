@@ -3,6 +3,7 @@ using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Llm;
 using LecturaFacil.Domain.Documents;
+using LecturaFacil.Domain.Guidelines;
 
 namespace LecturaFacil.Application.Tests.Documents;
 
@@ -37,6 +38,7 @@ public sealed class GetDocumentTests
         var version = document.CompleteAdaptation(
             AdaptedContent.TryCreate("Ayudas", [new AdaptedSectionDraft("¿Qué es?", ["Una ayuda."])], [])!,
             new AdaptationMetadata("Proveedor", "modelo", "adapter.v1", 1, 1, TimeSpan.FromSeconds(1)),
+            GuidelineReport.Create(new GuidelineAnalysis([], []), [], 10),
             Now);
 
         var result = await CreateUseCase().ExecuteAsync(document.Id, Token);

@@ -83,6 +83,8 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
             [new AdaptedSectionDraft("¿Quién?", ["Primera frase.", "Segunda frase."])],
             [new GlossaryTermDraft("Solicitud", "Papel para pedir algo.")])!;
         var metadata = new AdaptationMetadata("Proveedor", "modelo", "adapter.v1", 10, 20, TimeSpan.FromMilliseconds(1500));
+        var finding = Finding.At(GuidelineCatalog.Find(GuidelineCodes.ShortSentences), content.PlainText, 0, 6, "Divide la frase.");
+        var report = GuidelineReport.Create(new GuidelineAnalysis([finding], [GuidelineCodes.PassiveVoice]), [], 10);
 
         await using (var context = CreateContext())
         {
@@ -90,7 +92,7 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
             var tracked = (await repository.FindAsync(document.Id, Token))!;
             tracked.StartProcessing(DateTimeOffset.UtcNow);
             await repository.SaveAsync(tracked, Token);
-            tracked.CompleteAdaptation(content, metadata, DateTimeOffset.UtcNow);
+            tracked.CompleteAdaptation(content, metadata, report, DateTimeOffset.UtcNow);
             await repository.SaveAsync(tracked, Token);
         }
 
@@ -102,6 +104,10 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
         version.Sections.ShouldHaveSingleItem().Sentences.ShouldBe(["Primera frase.", "Segunda frase."]);
         version.Glossary.ShouldBe(content.Glossary);
         version.Metadata.ShouldBe(metadata);
+        var storedReport = version.GuidelineReport.ShouldNotBeNull();
+        storedReport.Results.ShouldBe(report.Results);
+        storedReport.Find(GuidelineCodes.PassiveVoice).Status.ShouldBe(GuidelineStatus.NotChecked);
+        storedReport.Find(GuidelineCodes.ShortSentences).Findings.ShouldBe([finding]);
     }
 
     [Fact]

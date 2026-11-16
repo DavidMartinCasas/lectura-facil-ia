@@ -41,7 +41,7 @@ public sealed class FindingTests
     {
         GuidelineCatalog.All.Select(guideline => guideline.Code).ShouldBeUnique();
         GuidelineCatalog.All.ShouldAllBe(guideline => !string.IsNullOrWhiteSpace(guideline.Description));
-        GuidelineCatalog.All.Count.ShouldBe(11);
+        GuidelineCatalog.All.Count.ShouldBe(12);
     }
 
     [Fact]
