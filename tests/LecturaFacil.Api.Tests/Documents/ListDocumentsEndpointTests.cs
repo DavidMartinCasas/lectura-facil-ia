@@ -33,9 +33,9 @@ public sealed class ListDocumentsEndpointTests
     public async Task List_ReturnsTitleDateStatusAndProvider_OnlyOfTheCurrentUser_WithoutModelNames()
     {
         await using var factory = new DocumentsApiFactory();
-        var received = Seed(factory, FixedCurrentUser.DevelopmentOwner, "Bases", Now.AddMinutes(-1));
-        var adapted = Seed(factory, FixedCurrentUser.DevelopmentOwner, "Convocatoria", Now, Adapt);
-        Seed(factory, OwnerId.From(Guid.NewGuid()), "Ajeno", Now.AddMinutes(1));
+        var received = await SeedAsync(factory, FixedCurrentUser.DevelopmentOwner, "Bases", Now.AddMinutes(-1));
+        var adapted = await SeedAsync(factory, FixedCurrentUser.DevelopmentOwner, "Convocatoria", Now, Adapt);
+        await SeedAsync(factory, OwnerId.From(Guid.NewGuid()), "Ajeno", Now.AddMinutes(1));
         using var client = factory.CreateClient();
 
         using var response = await client.GetAsync(ListUri, Token);
@@ -66,7 +66,7 @@ public sealed class ListDocumentsEndpointTests
             Now);
     }
 
-    private static Document Seed(
+    private static async Task<Document> SeedAsync(
         DocumentsApiFactory factory,
         OwnerId owner,
         string title,
@@ -79,7 +79,7 @@ public sealed class ListDocumentsEndpointTests
             OriginalText.Create("Texto de prueba suficientemente largo.", new TextLengthLimits(10, 1_000)),
             createdAt);
         prepare?.Invoke(document);
-        factory.Repository.AddAsync(document, Token).GetAwaiter().GetResult();
+        await factory.Repository.AddAsync(document, Token);
         return document;
     }
 }

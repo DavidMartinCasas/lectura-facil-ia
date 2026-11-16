@@ -87,6 +87,22 @@ describe('UploadFormComponent', () => {
     expect(emitted).toEqual([{ kind: 'pdf', file }]);
   });
 
+  it('emits a PDF dropped on the drop zone', async () => {
+    await choosePdfMode();
+    const file = new File(['%PDF-1.7'], 'arrastrado.pdf', { type: 'application/pdf' });
+    const drop = new Event('drop', { cancelable: true });
+    Object.defineProperty(drop, 'dataTransfer', {
+      value: { files: { item: () => file, length: 1 } },
+    });
+    element.querySelector('.drop-zone')!.dispatchEvent(drop);
+    await fixture.whenStable();
+
+    await submit();
+
+    expect(element.textContent).toContain('arrastrado.pdf');
+    expect(emitted).toEqual([{ kind: 'pdf', file }]);
+  });
+
   it('rejects a file larger than 5 MB without emitting', async () => {
     await choosePdfMode();
     await chooseFile(new File(['%PDF-', new Uint8Array(MAX_PDF_BYTES)], 'grande.pdf'));
