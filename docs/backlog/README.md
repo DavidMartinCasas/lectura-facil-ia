@@ -78,7 +78,7 @@ Las historias que se lanzan el mismo día no dependen entre sí y pueden hacerse
 | [US-05](historias/US-05-deteccion-de-problemas.md) | Detectar problemas del original | EP-02 | Must | 3 | Mié 18 | US-01 | No | 🔍 |
 | [US-06](historias/US-06-adaptacion-con-llm.md) | Adaptar el texto con el LLM | EP-03 | Must | 5 | Jue 19 | US-03, US-04, US-05 | No | 🔍 |
 | [US-07](historias/US-07-revisor-de-pautas.md) | Revisor de pautas | EP-03 | Must | 2 | Vie 20 | US-05, US-06 | No | ⬜ |
-| [US-08](historias/US-08-indice-de-legibilidad.md) | Índice de legibilidad INFLESZ | EP-03 | Must | 3 | Jue 19 | US-01 | No | ⬜ |
+| [US-08](historias/US-08-indice-de-legibilidad.md) | Índice de legibilidad INFLESZ | EP-03 | Must | 3 | Jue 19 | US-01 | No | 🔍 |
 | [US-09](historias/US-09-resiliencia-y-respaldo.md) | Proveedores configurables con respaldo opcional | EP-03 | Must | 3 | Jue 19 | US-03 | No | ⬜ |
 | [US-10](historias/US-10-despliegue-esqueleto-vps.md) | Despliegue del esqueleto en el VPS | EP-08 | Must | 3 | Sáb 21 | US-01 | **Sí: infraestructura** | ⬜ |
 | [US-11](historias/US-11-verificador-del-significado.md) | Verificador del significado | EP-04 | Must | 5 | Vie 20 | US-06 | No | ⬜ |
