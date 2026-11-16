@@ -4,6 +4,7 @@ using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Export;
 using LecturaFacil.Application.Readability;
 using LecturaFacil.Application.Review;
+using LecturaFacil.Application.Users;
 using LecturaFacil.Application.Verification;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -31,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<SaveManualEdit>();
         services.AddScoped<AcknowledgeKeyFact>();
         services.AddScoped<ExportDocument>();
+        services.AddScoped<SeedTestUser>();
         return services;
     }
 }

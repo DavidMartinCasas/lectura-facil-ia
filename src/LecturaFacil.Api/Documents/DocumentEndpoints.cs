@@ -38,9 +38,9 @@ internal static partial class DocumentEndpoints
 
     public static IEndpointRouteBuilder MapDocumentEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        // TODO(US-15): RequireAuthorization() y antiforgery cuando haya usuarios y cookies. El formulario se lee a mano,
-        // así que Minimal APIs no añade la validación sola: hace falta .WithMetadata(new RequireAntiforgeryTokenAttribute()).
-        var group = endpoints.MapGroup(Path).WithTags("Documentos");
+        // Sesión obligatoria en todo el grupo (además de la política por defecto). El antiforgery de las peticiones que
+        // cambian estado lo aplica AntiforgeryMiddleware a todo /api.
+        var group = endpoints.MapGroup(Path).WithTags("Documentos").RequireAuthorization();
         group.MapDocumentQueries();
         group.MapDocumentReview();
         group.MapDocumentExport();

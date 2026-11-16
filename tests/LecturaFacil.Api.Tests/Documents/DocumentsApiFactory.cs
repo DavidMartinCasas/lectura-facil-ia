@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using System.Collections.Concurrent;
+using LecturaFacil.Api.Tests.Security;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Domain.Documents;
 using Microsoft.AspNetCore.Hosting;
@@ -26,6 +27,7 @@ public sealed class DocumentsApiFactory(string environment = "Production") : Web
         builder.ConfigureTestServices(services => services
             .AddSingleton<IDocumentRepository>(Repository)
             .UseFakeLlm()
+            .UseTestAuthentication()
             .RemoveAdaptationWorker());
     }
 }

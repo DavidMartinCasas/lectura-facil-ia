@@ -14,7 +14,7 @@ public sealed class RequestLimitsTests
     public async Task Limits_WhenMaxFileSizeIsConfigured_AreAppliedToKestrelAndForms()
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
         const long expected = (5 * 1024 * 1024) + RequestLimits.MultipartOverheadBytes;
 
         var kestrel = factory.Services.GetRequiredService<IOptions<KestrelServerOptions>>().Value;

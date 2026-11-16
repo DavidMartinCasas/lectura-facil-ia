@@ -2,7 +2,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using LecturaFacil.Api.Security;
+using LecturaFacil.Api.Tests.Security;
 using LecturaFacil.Domain.Documents;
 
 namespace LecturaFacil.Api.Tests.Documents;
@@ -22,8 +22,8 @@ public sealed class DocumentExportEndpointTests
     public async Task Export_WhenAllWarningsAreReviewed_DownloadsTheFileWithItsTypeAndExtension(string format, string contentType, string fileName)
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, Reviewed);
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, Reviewed);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PostAsync(ExportUri(document.Id.Value, format), content: null, Token);
 
@@ -40,8 +40,8 @@ public sealed class DocumentExportEndpointTests
     public async Task Export_AsText_ContainsTheAdaptationAndTheDraftNoticeWithoutInternalMetadata()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, Reviewed);
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, Reviewed);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PostAsync(ExportUri(document.Id.Value, "txt"), content: null, Token);
 
@@ -63,8 +63,8 @@ public sealed class DocumentExportEndpointTests
     public async Task Export_WhenAKeyFactWarningIsPending_Returns409(string format)
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, GetDocumentEndpointTests.Adapt);
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, GetDocumentEndpointTests.Adapt);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PostAsync(ExportUri(document.Id.Value, format), content: null, Token);
 
@@ -81,8 +81,8 @@ public sealed class DocumentExportEndpointTests
     public async Task Export_WhenTheFormatIsNotSupported_Returns400(string format)
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, Reviewed);
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, Reviewed);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PostAsync(ExportUri(document.Id.Value, format), content: null, Token);
 
@@ -94,8 +94,8 @@ public sealed class DocumentExportEndpointTests
     public async Task Export_WithoutFormat_Returns400()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, Reviewed);
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, Reviewed);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PostAsync(new Uri($"/api/documents/{document.Id.Value}/export", UriKind.Relative), content: null, Token);
 
@@ -107,7 +107,7 @@ public sealed class DocumentExportEndpointTests
     {
         await using var factory = new DocumentsApiFactory();
         var foreign = GetDocumentEndpointTests.Seed(factory, OwnerId.From(Guid.NewGuid()), Reviewed);
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var foreignResponse = await client.PostAsync(ExportUri(foreign.Id.Value, "docx"), content: null, Token);
         using var missingResponse = await client.PostAsync(ExportUri(Guid.NewGuid(), "docx"), content: null, Token);
@@ -122,8 +122,8 @@ public sealed class DocumentExportEndpointTests
     public async Task Export_WhenThereIsNoAdaptationYet_Returns409()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner);
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PostAsync(ExportUri(document.Id.Value, "txt"), content: null, Token);
 
@@ -135,8 +135,8 @@ public sealed class DocumentExportEndpointTests
     {
         await using var factory = new DocumentsApiFactory();
         await using var limited = factory.WithWebHostBuilder(builder => builder.UseSetting("Limits:ExportsPerMinute", "2"));
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, Reviewed);
-        using var client = limited.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, Reviewed);
+        using var client = await limited.CreateApiClientAsync();
 
         var statuses = new List<HttpStatusCode>();
         for (var attempt = 0; attempt < 3; attempt++)

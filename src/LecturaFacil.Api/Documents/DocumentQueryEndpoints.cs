@@ -16,7 +16,6 @@ internal static class DocumentQueryEndpoints
 
     public static RouteGroupBuilder MapDocumentQueries(this RouteGroupBuilder group)
     {
-        // TODO(US-15): RequireAuthorization() en el grupo cuando haya usuarios.
         group.MapGet("/", ListAsync)
             .Produces<IReadOnlyList<DocumentListItemResponse>>()
             .WithName("ListDocuments")
