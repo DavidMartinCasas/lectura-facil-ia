@@ -82,7 +82,7 @@ Las historias que se lanzan el mismo día no dependen entre sí y pueden hacerse
 | [US-09](historias/US-09-resiliencia-y-respaldo.md) | Proveedores configurables con respaldo opcional | EP-03 | Must | 3 | Jue 19 | US-03 | No | 🔍 |
 | [US-10](historias/US-10-despliegue-esqueleto-vps.md) | Despliegue del esqueleto en el VPS | EP-08 | Must | 3 | Sáb 21 | US-01 | **Sí: infraestructura** | ⬜ |
 | [US-11](historias/US-11-verificador-del-significado.md) | Verificador del significado | EP-04 | Must | 5 | Vie 20 | US-06 | No | ⬜ |
-| [US-12](historias/US-12-subida-y-progreso-ui.md) | Pantalla de subida y progreso | EP-05 | Must | 3 | Vie 20 | US-04, US-06 | No | ⬜ |
+| [US-12](historias/US-12-subida-y-progreso-ui.md) | Pantalla de subida y progreso | EP-05 | Must | 3 | Vie 20 | US-04, US-06 | No | 🔍 |
 | [US-13](historias/US-13-vista-lado-a-lado.md) | Vista lado a lado con edición | EP-05 | Must | 5 | Sáb 21 | US-07, US-08, US-11, US-12 | No | ⬜ |
 | [US-14](historias/US-14-exportacion.md) | Exportar en DOCX, PDF, Markdown o texto | EP-06 | Must | 5 | Dom 22 | US-13 | No | ⬜ |
 | [US-15](historias/US-15-login-y-autorizacion.md) | Login y autorización por documento | EP-07 | Must | 3 | Sáb 21 | US-04 | No | ⬜ |

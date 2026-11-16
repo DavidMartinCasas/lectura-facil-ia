@@ -4,6 +4,8 @@
 
 html {
   height: 100%;
+  // Tema claro u oscuro según la preferencia del sistema: los tokens de Material 3 usan light-dark().
+  color-scheme: light dark;
   @include mat.theme(
     (
       color: (
@@ -20,10 +22,49 @@ html {
 }
 
 body {
-  color-scheme: light;
   background-color: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-large);
   margin: 0;
   height: 100%;
+}
+
+// Foco siempre visible al usar el teclado (WCAG 2.4.7 y 2.4.11). Con !important porque los componentes de
+// Material quitan el contorno y su indicador por defecto es poco visible.
+:focus-visible {
+  outline: 3px solid var(--mat-sys-primary) !important;
+  outline-offset: 2px !important;
+}
+
+a {
+  color: var(--mat-sys-primary);
+}
+
+// Texto solo para lectores de pantalla.
+.visually-hidden {
+  position: absolute !important;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Enlace para saltar la navegación; aparece al recibir el foco.
+.skip-link {
+  position: absolute;
+  inset-block-start: -100px;
+  inset-inline-start: 1rem;
+  z-index: 10;
+  padding: 0.5rem 1rem;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  border-radius: var(--mat-sys-corner-small);
+
+  &:focus {
+    inset-block-start: 0.5rem;
+  }
 }

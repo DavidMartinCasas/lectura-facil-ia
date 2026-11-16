@@ -1,0 +1,19 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<section class="progress" aria-labelledby="progress-title">
+  <h2 id="progress-title">{{ texts.title }}</h2>
+  <ol class="steps">
+    @for (step of steps(); track step.label) {
+      <li
+        class="step"
+        [class]="'step--' + step.state"
+        [attr.aria-current]="step.state === 'current' ? 'step' : null"
+      >
+        <span class="marker" aria-hidden="true">{{ markers[step.state] }}</span>
+        <span class="label"
+          >{{ step.label }} <span class="state">({{ stateLabels[step.state] }})</span></span
+        >
+      </li>
+    }
+  </ol>
+  <p class="visually-hidden" role="status" aria-live="polite">{{ announcement() }}</p>
+</section>
