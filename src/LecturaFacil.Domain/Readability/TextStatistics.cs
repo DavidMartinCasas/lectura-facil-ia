@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 using System.Globalization;
-using System.Text;
 
 namespace LecturaFacil.Domain.Readability;
 
@@ -19,7 +18,7 @@ public readonly record struct TextStatistics(int Sentences, int Words, int Sylla
     {
         ArgumentNullException.ThrowIfNull(text);
 
-        var normalized = text.Normalize(NormalizationForm.FormC).AsSpan();
+        var normalized = SpanishSyllableCounter.ToNfc(text).AsSpan();
         var sentences = 0;
         var words = 0;
         var syllables = 0;

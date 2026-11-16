@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
+using System.Text;
+
 
 namespace LecturaFacil.Domain.Readability;
 
@@ -33,10 +35,10 @@ public static class SpanishSyllableCounter
     public static int Count(string word)
     {
         ArgumentNullException.ThrowIfNull(word);
-        return Count(word.AsSpan());
+        return Count(ToNfc(word).AsSpan());
     }
 
-    /// <inheritdoc cref="Count(string)"/>
+    /// <summary>Como <see cref="Count(string)"/>, pero el texto ya debe estar en NFC (tildes compuestas, "í" y no "i" + U+0301).</summary>
     public static int Count(ReadOnlySpan<char> word)
     {
         var hasLetters = false;
@@ -71,6 +73,22 @@ public static class SpanishSyllableCounter
         }
 
         return hasLetters ? Math.Max(syllables, 1) : 0;
+    }
+
+    /// <summary>
+    /// Normaliza a NFC para que las tildes descompuestas cuenten. Un sustituto suelto (texto mal formado, por ejemplo de una
+    /// respuesta del LLM) hace que Normalize lance: entonces se devuelve el texto tal cual, porque no cambia el recuento.
+    /// </summary>
+    internal static string ToNfc(string text)
+    {
+        try
+        {
+            return text.Normalize(NormalizationForm.FormC);
+        }
+        catch (ArgumentException)
+        {
+            return text;
+        }
     }
 
     private static char NextLetter(ReadOnlySpan<char> word, int index) =>

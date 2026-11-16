@@ -123,6 +123,8 @@ public sealed class SpanishSyllableCounterTests
     [InlineData("AYUNTAMIENTO", 5)]
     [InlineData("Resolución", 4)]
     [InlineData("PAÍS", 2)]
+    [InlineData("pai\u0301s", 2)]
+    [InlineData("di\u0301a", 2)]
     public void Count_WhenWordHasUppercaseOrDecomposedAccents_ReturnsTheSameAsLowercase(string word, int expected)
     {
         SpanishSyllableCounter.Count(word).ShouldBe(expected);

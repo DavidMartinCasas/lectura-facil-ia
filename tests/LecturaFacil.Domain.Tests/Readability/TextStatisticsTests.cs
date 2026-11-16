@@ -58,6 +58,32 @@ public sealed class TextStatisticsTests
     }
 
     [Fact]
+    public void From_WhenTextHasALoneSurrogate_StillCountsTheWords()
+    {
+        TextStatistics.From("Hola \ud800 mundo.").ShouldBe(new TextStatistics(Sentences: 1, Words: 2, Syllables: 4));
+    }
+
+    [Fact]
+    public void From_WhenTextIsOnlyCombiningMarks_HasNoWords()
+    {
+        TextStatistics.From("\u0301\u0301").HasWords.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void From_WhenTextIsHugeAndPathological_FinishesInLinearTime()
+    {
+        const int Size = 2_000_000;
+        var oneHugeWord = new string('a', Size);
+        var onlyPunctuation = new string('.', Size);
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        TextStatistics.From(oneHugeWord).ShouldBe(new TextStatistics(Sentences: 1, Words: 1, Syllables: Size));
+        TextStatistics.From(onlyPunctuation).HasWords.ShouldBeFalse();
+
+        stopwatch.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public void From_WhenTextIsNull_Throws()
     {
         Should.Throw<ArgumentNullException>(() => TextStatistics.From(null!));

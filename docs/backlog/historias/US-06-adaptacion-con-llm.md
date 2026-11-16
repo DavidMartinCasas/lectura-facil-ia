@@ -18,6 +18,7 @@
 - Pipeline y secuencia: sección 8 de `docs/TFM-Lectura-Facil.md`.
 - Ejemplo de entrada y salida esperadas: sección 5.
 - La adaptación se procesa **en segundo plano**: la API responde 202 y un worker procesa la cola.
+- Si US-08 ya está en `main`: tras adaptar, llama a `CompareReadability` (Application/Readability) y guarda con el documento el índice del original y el de la adaptación (criterio "Antes y después" de US-08).
 
 ## Criterios de aceptación
 ```gherkin
