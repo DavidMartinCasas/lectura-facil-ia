@@ -22,11 +22,12 @@ public sealed class StartupConfigurationTests
     public async Task Start_WhenConfigurationIsComplete_StartsAndServesRequests()
     {
         await using var factory = new ConfiguredApiFactory(CompleteSettings());
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateCookieClientAsync();
 
-        using var response = await client.GetAsync(new Uri("/no-existe", UriKind.Relative), TestContext.Current.CancellationToken);
+        using var response = await client.GetAsync(new Uri("/api/auth/me", UriKind.Relative), TestContext.Current.CancellationToken);
 
-        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        // Sin sesión: la tubería completa responde (401), lo que demuestra que ha arrancado.
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -35,11 +36,12 @@ public sealed class StartupConfigurationTests
         var settings = EnvExample.ReadApiSettings();
         settings["Database:ConnectionString"] = TestConfiguration.UnreachableDatabase;
         await using var factory = new ConfiguredApiFactory(settings);
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateCookieClientAsync();
 
-        using var response = await client.GetAsync(new Uri("/no-existe", UriKind.Relative), TestContext.Current.CancellationToken);
+        using var response = await client.GetAsync(new Uri("/api/auth/me", UriKind.Relative), TestContext.Current.CancellationToken);
 
-        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        // Sin sesión: la tubería completa responde (401), lo que demuestra que ha arrancado.
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         settings.Keys.ShouldContain("Llm:Primary:ApiKey");
     }
 
@@ -65,7 +67,7 @@ public sealed class StartupConfigurationTests
     public async Task Start_WhenNothingOptionalIsConfigured_UsesSafeDefaults()
     {
         await using var factory = new ConfiguredApiFactory(CompleteSettings());
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateCookieClientAsync();
         var services = factory.Services;
 
         services.GetRequiredService<IOptions<LlmOptions>>().Value.Fallback.Enabled.ShouldBeFalse();

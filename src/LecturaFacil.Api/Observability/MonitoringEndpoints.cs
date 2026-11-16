@@ -22,12 +22,15 @@ internal static class MonitoringEndpoints
     {
         endpoints.MapGet(ConfigPath, (IOptions<ObservabilityOptions> options, AppVersion version) =>
                 TypedResults.Ok(MonitoringConfigResponse.From(options.Value, version)))
+            .AllowAnonymous()
             .WithName("GetMonitoringConfig")
             .WithSummary("Configuración pública del informe de errores del navegador.");
 
-        // Sin antiforgery a propósito: el SDK de Sentry no envía su cabecera. Nunca depende de la sesión; la protección
-        // es exigir el mismo origen (IsSameOrigin), el DSN exacto y los límites de tamaño y de peticiones.
+        // Anónimo y sin antiforgery a propósito: también hay errores en la pantalla de login y el SDK de Sentry no envía
+        // la cabecera X-XSRF-TOKEN. Nunca depende de la sesión; la protección es exigir el mismo origen (IsSameOrigin),
+        // el DSN exacto y los límites de tamaño y de peticiones.
         endpoints.MapPost(TunnelPath, ForwardAsync)
+            .AllowAnonymous()
             .RequireRateLimiting(TunnelRateLimitPolicy)
             .DisableAntiforgery()
             .ExcludeFromDescription();

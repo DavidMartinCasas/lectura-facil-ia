@@ -16,8 +16,10 @@ export class ApiError extends Error {
   }
 }
 
-/** Códigos de error de la API (DocumentErrors, ReviewErrors y ExportErrors) con su mensaje para el usuario. */
+/** Códigos de error de la API (auth, DocumentErrors, ReviewErrors y ExportErrors) con su mensaje para el usuario. */
 const MESSAGES_BY_CODE: Readonly<Record<string, string>> = {
+  'auth.invalid_credentials': ERROR_TEXTS.invalidCredentials,
+  'auth.antiforgery': ERROR_TEXTS.pageExpired,
   'document.not_found': ERROR_TEXTS.notFound,
   'document.file_too_large': ERROR_TEXTS.fileTooLarge,
   'document.invalid_file_type': ERROR_TEXTS.invalidFileType,
@@ -40,6 +42,7 @@ const MESSAGES_BY_CODE: Readonly<Record<string, string>> = {
 const MESSAGES_BY_STATUS: Readonly<Record<number, string>> = {
   0: ERROR_TEXTS.offline,
   400: ERROR_TEXTS.invalidRequest,
+  401: ERROR_TEXTS.sessionExpired,
   404: ERROR_TEXTS.notFound,
   409: ERROR_TEXTS.conflict,
   413: ERROR_TEXTS.fileTooLarge,

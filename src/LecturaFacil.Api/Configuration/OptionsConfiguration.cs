@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Api.Security;
 using LecturaFacil.Application.Common;
+using LecturaFacil.Application.Users;
 using LecturaFacil.Infrastructure.Export;
 using LecturaFacil.Infrastructure.Llm;
 using LecturaFacil.Infrastructure.Observability;
@@ -21,6 +23,8 @@ internal static class OptionsConfiguration
         services.AddValidated<UiOptions>(UiOptions.SectionName);
         services.AddValidated<ExportOptions>(ExportOptions.SectionName);
         services.AddValidated<ObservabilityOptions>(ObservabilityOptions.SectionName);
+        services.AddValidated<AuthOptions>(AuthOptions.SectionName);
+        services.AddValidated<TestUserOptions>(TestUserOptions.SectionName);
         return services;
     }
 

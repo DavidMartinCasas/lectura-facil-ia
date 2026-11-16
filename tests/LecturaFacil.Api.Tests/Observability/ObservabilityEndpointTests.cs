@@ -38,7 +38,7 @@ public sealed class ObservabilityEndpointTests(ObservabilityApiFactory factory) 
     [Fact]
     public async Task Logs_WhenADocumentIsAdapted_ContainTheAdaptationTraceButNoFragmentOfTheText()
     {
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
         var id = await SubmitExampleAsync(client);
 
         await WaitUntilAsync(() => factory.Repository.Added.Single(document => document.Id.Value == id).Status == DocumentStatus.Draft);
@@ -60,7 +60,7 @@ public sealed class ObservabilityEndpointTests(ObservabilityApiFactory factory) 
     [Fact]
     public async Task UnhandledException_ReachesSentryWithTheStackTraceButNoBodyCookiesAuthorizationEmailOrMessage()
     {
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
         using var request = new HttpRequestMessage(HttpMethod.Post, ObservabilityApiFactory.ThrowingPath + "?email=ana@example.com")
         {
             Content = new StringContent("""{"text":"La Concejalía de Vivienda convoca ayudas."}""", Encoding.UTF8, "application/json"),
@@ -100,7 +100,7 @@ public sealed class ObservabilityEndpointTests(ObservabilityApiFactory factory) 
     [Fact]
     public async Task Metrics_FromTheInternalNetwork_ShowAdaptationsByProviderErrorsAndDuration()
     {
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
         var id = await SubmitExampleAsync(client);
         await WaitUntilAsync(() => factory.Repository.Added.Single(document => document.Id.Value == id).Status == DocumentStatus.Draft);
 

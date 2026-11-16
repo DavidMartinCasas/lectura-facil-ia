@@ -26,8 +26,6 @@ internal static class DocumentReviewEndpoints
 
     public static RouteGroupBuilder MapDocumentReview(this RouteGroupBuilder group)
     {
-        // TODO(US-15): RequireAuthorization() y antiforgery cuando haya usuarios y cookies de sesión. Sin cookies no hay
-        // credenciales que un sitio ajeno pueda aprovechar (CSRF); con ellas, estas peticiones cambian estado y la necesitan.
         group.MapPut("/{id:guid}/versions/{version:int}", SaveEditAsync)
             .Accepts<ManualEditRequest>("application/json")
             .Produces<DocumentResponse>()

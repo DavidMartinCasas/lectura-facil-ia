@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using System.Net;
+using LecturaFacil.Api.Tests.Security;
 using LecturaFacil.Application.Llm;
 using LecturaFacil.Infrastructure.Llm;
 using Microsoft.AspNetCore.Hosting;
@@ -19,7 +20,7 @@ public sealed class LlmStatusEndpointTests
     {
         var availability = new LlmAvailability(fallbackEnabled: false);
         await using var factory = new StatusApiFactory(availability);
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(StatusUri, TestContext.Current.CancellationToken);
 
@@ -34,7 +35,7 @@ public sealed class LlmStatusEndpointTests
         var availability = new LlmAvailability(fallbackEnabled: true);
         availability.Update(new LlmAvailabilityStatus(PrimaryAvailable: false, FallbackAvailable: true));
         await using var factory = new StatusApiFactory(availability);
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(StatusUri, TestContext.Current.CancellationToken);
 
@@ -56,7 +57,7 @@ public sealed class LlmStatusEndpointTests
         var availability = new LlmAvailability(fallbackEnabled: false);
         availability.Update(new LlmAvailabilityStatus(primaryAvailable, null));
         await using var factory = new StatusApiFactory(availability);
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateAnonymousClientAsync();
 
         using var response = await client.GetAsync(new Uri("/health/llm", UriKind.Relative), TestContext.Current.CancellationToken);
 
@@ -75,7 +76,7 @@ public sealed class LlmStatusEndpointTests
                 builder.UseSetting(key, value);
             }
 
-            builder.ConfigureTestServices(services => services.AddSingleton(availability));
+            builder.ConfigureTestServices(services => services.AddSingleton(availability).UseTestAuthentication());
         }
     }
 }

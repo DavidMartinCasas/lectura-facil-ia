@@ -2,7 +2,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using LecturaFacil.Api.Security;
+using LecturaFacil.Api.Tests.Security;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
 using LecturaFacil.Infrastructure.Persistence;
@@ -22,7 +22,7 @@ public sealed class SubmitDocumentPersistenceTests(SubmitDocumentPersistenceTest
     public async Task SubmitText_WhenTextIsValid_PersistsAReceivedDocumentOfTheCurrentUser()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PostAsJsonAsync(
             new Uri("/api/documents", UriKind.Relative),
@@ -36,7 +36,7 @@ public sealed class SubmitDocumentPersistenceTests(SubmitDocumentPersistenceTest
         await using var scope = factory.Services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var stored = await context.Set<Document>().AsNoTracking().SingleAsync(document => document.Id == id, cancellationToken);
-        stored.OwnerId.ShouldBe(FixedCurrentUser.DevelopmentOwner);
+        stored.OwnerId.ShouldBe(TestUsers.DefaultOwner);
         stored.Status.ShouldBe(DocumentStatus.Received);
         stored.Title.Value.ShouldBe("Prueba");
         stored.OriginalText.Value.ShouldBe(ValidText);
@@ -47,7 +47,7 @@ public sealed class SubmitDocumentPersistenceTests(SubmitDocumentPersistenceTest
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         const string text = "La solicitud se publicará en el BOP. La ayuda será del 40 % de la renta mensual.";
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PostAsJsonAsync(
             new Uri("/api/documents", UriKind.Relative),

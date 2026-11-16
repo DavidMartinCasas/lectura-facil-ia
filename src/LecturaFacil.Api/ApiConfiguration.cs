@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using FluentValidation;
+using LecturaFacil.Api.Auth;
 using LecturaFacil.Api.Documents;
 using LecturaFacil.Api.Llm;
 using LecturaFacil.Api.Observability;
@@ -15,7 +16,9 @@ internal static class ApiConfiguration
         services.AddProblemDetails();
         services.AddOpenApi();
         services.AddRequestLimits();
-        services.AddScoped<ICurrentUser, FixedCurrentUser>();
+        services.AddCookieAuthentication();
+        services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
+        services.AddSingleton<IValidator<LoginRequest>, LoginRequestValidator>();
         services.AddSingleton<IValidator<SubmitTextRequest>, SubmitTextRequestValidator>();
         services.AddSingleton<IValidator<SubmitPdfForm>, SubmitPdfFormValidator>();
         services.AddSingleton<IValidator<ManualEditRequest>, ManualEditRequestValidator>();
@@ -27,6 +30,7 @@ internal static class ApiConfiguration
             options.AddDocumentSubmitRateLimit();
             options.AddDocumentExportRateLimit();
             options.AddMonitoringTunnelRateLimit();
+            options.AddLoginRateLimit();
         });
         return services;
     }
@@ -36,11 +40,17 @@ internal static class ApiConfiguration
         app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseExceptionHandler();
         app.UseStatusCodePages();
+        app.UseAuthentication();
+        app.UseAntiforgeryTokenCookie();
+        app.UseAuthorization();
+        app.UseAntiforgeryValidation();
+
+        // Después de la autorización: una petición sin sesión (401) no gasta el cupo de los usuarios con sesión.
         app.UseRateLimiter();
 
         if (app.Environment.IsDevelopment())
         {
-            app.MapOpenApi();
+            app.MapOpenApi().AllowAnonymous();
         }
 
         return app;

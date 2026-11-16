@@ -4,7 +4,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using LecturaFacil.Api.Security;
+using LecturaFacil.Api.Tests.Security;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Testing;
 using Microsoft.AspNetCore.Hosting;
@@ -26,7 +26,7 @@ public sealed class SubmitDocumentEndpointTests
     {
         await using var factory = new DocumentsApiFactory();
         await using var limited = factory.WithWebHostBuilder(builder => builder.UseSetting("Limits:DocumentSubmissionsPerMinute", "2"));
-        using var client = limited.CreateClient();
+        using var client = await limited.CreateApiClientAsync();
 
         var statuses = new List<HttpStatusCode>();
         for (var attempt = 0; attempt < 3; attempt++)
@@ -43,7 +43,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task SubmitText_WhenTextIsValid_Returns202WithTheIdOfAReceivedDocument()
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PostAsJsonAsync(DocumentsUri, new { title = "Prueba", text = ValidText }, Token);
 
@@ -56,7 +56,7 @@ public sealed class SubmitDocumentEndpointTests
         document.Status.ShouldBe(DocumentStatus.Received);
         document.Title.Value.ShouldBe("Prueba");
         document.OriginalText.Value.ShouldBe(ValidText);
-        document.OwnerId.ShouldBe(FixedCurrentUser.DevelopmentOwner);
+        document.OwnerId.ShouldBe(TestUsers.DefaultOwner);
     }
 
     [Theory]
@@ -65,7 +65,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task SubmitText_WhenLengthIsAtTheLimits_Returns202(int length)
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PostAsJsonAsync(DocumentsUri, new { text = new string('a', length) }, Token);
 
@@ -79,7 +79,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task SubmitText_WhenLengthIsOutOfTheLimits_Returns400AndStoresNothing(int length, string expectedDetail)
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PostAsJsonAsync(DocumentsUri, new { text = new string('a', length) }, Token);
 
@@ -96,7 +96,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task SubmitText_WhenTextIsMissing_Returns400ValidationProblem(string body)
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
         using var content = new StringContent(body, Encoding.UTF8, "application/json");
 
         using var response = await client.PostAsync(DocumentsUri, content, Token);
@@ -111,7 +111,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task SubmitText_WhenJsonIsMalformed_Returns400WithoutInternalDetails()
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
         using var content = new StringContent("{\"text\": ", Encoding.UTF8, "application/json");
 
         using var response = await client.PostAsync(DocumentsUri, content, Token);
@@ -126,7 +126,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task Submit_WhenContentTypeIsNotSupported_Returns415()
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
         using var content = new StringContent(ValidText, Encoding.UTF8, "text/plain");
 
         using var response = await client.PostAsync(DocumentsUri, content, Token);
@@ -139,7 +139,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task SubmitPdf_WhenPdfIsDigital_Returns202AndStoresTheTextWithItsParagraphs()
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await PostFileAsync(client, PdfFixtures.Read(PdfFixtures.Normal), "Bases ayudas.pdf");
 
@@ -157,7 +157,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task SubmitPdf_WhenPdfHasNoText_Returns422WithTheScannedMessage()
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await PostFileAsync(client, PdfFixtures.Read(PdfFixtures.WithoutText), "escaneado.pdf");
 
@@ -172,7 +172,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task SubmitPdf_WhenPdfIsCorrupt_Returns422WithoutInternalDetails()
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await PostFileAsync(client, PdfFixtures.Read(PdfFixtures.Corrupt), "documento.pdf");
 
@@ -187,7 +187,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task SubmitPdf_WhenFileIsNamedPdfButSignatureIsNot_Returns400AndStoresNothing()
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await PostFileAsync(client, PdfFixtures.FakePdf(), "documento.pdf");
 
@@ -201,7 +201,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task SubmitPdf_WhenFileIsJustAboveTheMaximumSize_Returns413AndDoesNotProcessIt()
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await PostFileAsync(client, LargePdf(MaxFileSizeBytes + 1), "grande.pdf");
 
@@ -214,7 +214,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task SubmitPdf_WhenRequestIsFarAboveTheMaximumSize_Returns413BeforeReadingTheBody()
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await PostFileAsync(client, LargePdf(MaxFileSizeBytes * 2), "enorme.pdf");
 
@@ -226,7 +226,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task SubmitPdf_WhenFormHasNoFile_Returns400ValidationProblem()
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
         using var form = new MultipartFormDataContent { { new StringContent("hola"), "otro" } };
 
         using var response = await client.PostAsync(DocumentsUri, form, Token);
@@ -240,7 +240,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task SubmitPdf_WhenFileIsEmpty_Returns400ValidationProblem()
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await PostFileAsync(client, [], "vacio.pdf");
 
@@ -252,7 +252,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task OpenApi_InDevelopment_DescribesTheSubmitEndpoint()
     {
         await using var factory = new DocumentsApiFactory("Development");
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(new Uri("/openapi/v1.json", UriKind.Relative), Token);
 

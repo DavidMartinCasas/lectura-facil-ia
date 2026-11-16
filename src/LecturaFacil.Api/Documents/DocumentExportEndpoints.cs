@@ -26,7 +26,7 @@ internal static class DocumentExportEndpoints
 
     public static RouteGroupBuilder MapDocumentExport(this RouteGroupBuilder group)
     {
-        // TODO(US-15): RequireAuthorization() cuando haya usuarios. No cambia estado: no necesita antiforgery.
+        // Es un POST: pasa por la validación antiforgery de AntiforgeryMiddleware aunque no cambie estado.
         group.MapPost("/{id:guid}/export", ExportAsync)
             .RequireRateLimiting(ExportRateLimitPolicy)
             .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")

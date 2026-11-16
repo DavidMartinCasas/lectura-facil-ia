@@ -15,8 +15,22 @@ export const APP_TEXTS = {
   mainNavigation: 'Navegación principal',
   navNew: 'Nuevo documento',
   navList: 'Mis documentos',
+  navLogin: 'Entrar',
+  logout: 'Salir',
+  logoutFailed: 'No se ha podido cerrar la sesión. Inténtalo de nuevo.',
+  signedInAs: 'Has entrado como',
   draftNotice:
     'Cada adaptación es un borrador. Siempre la tiene que revisar y validar una persona antes de usarla.',
+} as const;
+
+export const LOGIN_TEXTS = {
+  pageTitle: 'Entrar',
+  intro: 'Escribe tu correo y tu contraseña para ver tus documentos.',
+  emailLabel: 'Correo',
+  passwordLabel: 'Contraseña',
+  submit: 'Entrar',
+  submitting: 'Entrando…',
+  required: 'Escribe tu correo y tu contraseña.',
 } as const;
 
 export const UPLOAD_TEXTS = {
@@ -194,6 +208,9 @@ export const ERROR_TEXTS = {
   offline: 'No se puede conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.',
   generic: 'Algo ha fallado. Inténtalo de nuevo dentro de un rato.',
   invalidRequest: 'Revisa los datos que has enviado e inténtalo de nuevo.',
+  invalidCredentials: 'Correo o contraseña incorrectos.',
+  sessionExpired: 'Tu sesión ha caducado. Vuelve a entrar.',
+  pageExpired: 'La página ha caducado. Recárgala e inténtalo de nuevo.',
   notFound: 'No se ha encontrado el documento.',
   fileTooLarge: 'El fichero es demasiado grande. Prueba con un PDF más pequeño.',
   unsupported: 'Ese tipo de contenido no se puede adaptar. Pega un texto o sube un PDF.',

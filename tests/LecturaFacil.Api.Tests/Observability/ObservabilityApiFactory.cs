@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
 using LecturaFacil.Api.Tests.Documents;
+using LecturaFacil.Api.Tests.Security;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Infrastructure.Observability;
 using Microsoft.AspNetCore.Builder;
@@ -62,6 +63,7 @@ public sealed class ObservabilityApiFactory : WebApplicationFactory<Program>
         {
             services.AddSingleton<IDocumentRepository>(Repository);
             services.UseFakeLlm();
+            services.UseTestAuthentication();
             services.AddSingleton<ILogEventSink>(Logs);
             services.Configure<SentryAspNetCoreOptions>(options =>
             {

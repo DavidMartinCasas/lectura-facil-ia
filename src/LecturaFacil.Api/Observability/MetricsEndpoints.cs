@@ -18,6 +18,7 @@ internal static class MetricsEndpoints
         endpoints.MapGet(Path, (HttpContext context) => InternalNetwork.IsInternal(context)
                 ? Results.Text(exporter.Render(), PrometheusMetricsExporter.ContentType)
                 : Results.NotFound())
+            .AllowAnonymous()
             .ExcludeFromDescription();
         return endpoints;
     }

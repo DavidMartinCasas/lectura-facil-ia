@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 using System.Net;
 using System.Text.Json;
-using LecturaFacil.Api.Security;
+using LecturaFacil.Api.Tests.Security;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
 using LecturaFacil.Domain.Readability;
@@ -20,8 +20,8 @@ public sealed class GetDocumentEndpointTests
     public async Task Get_WhenTheDocumentIsReceived_ReturnsItsStatusWithoutAdaptation()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = Seed(factory, FixedCurrentUser.DevelopmentOwner);
-        using var client = factory.CreateClient();
+        var document = Seed(factory, TestUsers.DefaultOwner);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(DocumentUri(document.Id.Value), Token);
 
@@ -37,8 +37,8 @@ public sealed class GetDocumentEndpointTests
     public async Task Get_WhenTheDocumentIsInDraft_ReturnsTheAdaptationAsAPendingDraftWithItsProviderButWithoutModelNames()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = Seed(factory, FixedCurrentUser.DevelopmentOwner, Adapt);
-        using var client = factory.CreateClient();
+        var document = Seed(factory, TestUsers.DefaultOwner, Adapt);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(DocumentUri(document.Id.Value), Token);
 
@@ -66,8 +66,8 @@ public sealed class GetDocumentEndpointTests
     public async Task Get_WhenTheDocumentIsInDraft_IncludesTheGuidelineReportOfTheAdaptation()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = Seed(factory, FixedCurrentUser.DevelopmentOwner, Adapt);
-        using var client = factory.CreateClient();
+        var document = Seed(factory, TestUsers.DefaultOwner, Adapt);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(DocumentUri(document.Id.Value), Token);
 
@@ -98,8 +98,8 @@ public sealed class GetDocumentEndpointTests
     public async Task Get_WhenTheDocumentIsInDraft_IncludesTheKeyFactsOfTheAdaptation()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = Seed(factory, FixedCurrentUser.DevelopmentOwner, Adapt);
-        using var client = factory.CreateClient();
+        var document = Seed(factory, TestUsers.DefaultOwner, Adapt);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(DocumentUri(document.Id.Value), Token);
 
@@ -132,13 +132,13 @@ public sealed class GetDocumentEndpointTests
     public async Task Get_WhenTheDocumentIsInDraft_IncludesTheOriginalWithItsFindingsAndTheReadabilityOfBothTexts()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = Seed(factory, FixedCurrentUser.DevelopmentOwner, seeded =>
+        var document = Seed(factory, TestUsers.DefaultOwner, seeded =>
         {
             seeded.RecordOriginalFindings([Finding.At(
                 GuidelineCatalog.Find(GuidelineCodes.ShortSentences), seeded.OriginalText.Value, 0, 5, "Divide la frase.")]);
             Adapt(seeded);
         });
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(DocumentUri(document.Id.Value), Token);
 
@@ -162,12 +162,12 @@ public sealed class GetDocumentEndpointTests
     public async Task Get_WhenTheAdaptationFailed_ReturnsAGenericReason()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = Seed(factory, FixedCurrentUser.DevelopmentOwner, seeded =>
+        var document = Seed(factory, TestUsers.DefaultOwner, seeded =>
         {
             seeded.StartProcessing(Now);
             seeded.FailProcessing("llm.invalid_provider_output", Now);
         });
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(DocumentUri(document.Id.Value), Token);
 
@@ -183,7 +183,7 @@ public sealed class GetDocumentEndpointTests
     {
         await using var factory = new DocumentsApiFactory();
         var foreign = Seed(factory, OwnerId.From(Guid.NewGuid()), Adapt);
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var foreignResponse = await client.GetAsync(DocumentUri(foreign.Id.Value), Token);
         using var missingResponse = await client.GetAsync(DocumentUri(Guid.NewGuid()), Token);
@@ -201,7 +201,7 @@ public sealed class GetDocumentEndpointTests
     public async Task Get_WhenTheIdIsNotValid_Returns404(string id)
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(new Uri($"/api/documents/{id}", UriKind.Relative), Token);
         using var events = await client.GetAsync(new Uri($"/api/documents/{id}/events", UriKind.Relative), Token);
@@ -214,8 +214,8 @@ public sealed class GetDocumentEndpointTests
     public async Task Events_WhenTheDocumentIsFinished_SendsItsStatusAndCloses()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = Seed(factory, FixedCurrentUser.DevelopmentOwner, Adapt);
-        using var client = factory.CreateClient();
+        var document = Seed(factory, TestUsers.DefaultOwner, Adapt);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(EventsUri(document.Id.Value), Token);
 
@@ -232,7 +232,7 @@ public sealed class GetDocumentEndpointTests
     {
         await using var factory = new DocumentsApiFactory();
         var foreign = Seed(factory, OwnerId.From(Guid.NewGuid()));
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(EventsUri(foreign.Id.Value), Token);
 
