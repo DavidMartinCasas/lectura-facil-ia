@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
+using FluentValidation;
+using LecturaFacil.Api.Documents;
 using LecturaFacil.Api.Llm;
 using LecturaFacil.Api.Security;
+using LecturaFacil.Application.Users;
 
 namespace LecturaFacil.Api;
 
@@ -10,6 +13,10 @@ internal static class ApiConfiguration
     {
         services.AddProblemDetails();
         services.AddOpenApi();
+        services.AddRequestLimits();
+        services.AddScoped<ICurrentUser, FixedCurrentUser>();
+        services.AddSingleton<IValidator<SubmitTextRequest>, SubmitTextRequestValidator>();
+        services.AddSingleton<IValidator<SubmitPdfForm>, SubmitPdfFormValidator>();
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

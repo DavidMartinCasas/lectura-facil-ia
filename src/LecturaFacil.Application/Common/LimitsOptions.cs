@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using System.ComponentModel.DataAnnotations;
+using LecturaFacil.Domain.Documents;
 
 namespace LecturaFacil.Application.Common;
 
@@ -14,6 +15,19 @@ public sealed class LimitsOptions
     [Range(100, 200_000, ErrorMessage = "Limits:MaxCharacters debe estar entre {1} y {2}.")]
     public int MaxCharacters { get; set; } = 20_000;
 
+    /// <summary>Caracteres mínimos del texto de entrada. Su máximo es el mínimo de <see cref="MaxCharacters"/>, así nunca lo supera.</summary>
+    [Range(1, 100, ErrorMessage = "Limits:MinCharacters debe estar entre {1} y {2}.")]
+    public int MinCharacters { get; set; } = 50;
+
+    [Range(1, 2_000, ErrorMessage = "Limits:MaxPdfPages debe estar entre {1} y {2}.")]
+    public int MaxPdfPages { get; set; } = 100;
+
+    [Range(1, 120, ErrorMessage = "Limits:PdfExtractionTimeoutSeconds debe estar entre {1} y {2}.")]
+    public int PdfExtractionTimeoutSeconds { get; set; } = 15;
+
+    [Range(1, 64, ErrorMessage = "Limits:MaxConcurrentPdfExtractions debe estar entre {1} y {2}.")]
+    public int MaxConcurrentPdfExtractions { get; set; } = 2;
+
     [Range(5, 50, ErrorMessage = "Limits:MaxWordsPerSentence debe estar entre {1} y {2}.")]
     public int MaxWordsPerSentence { get; set; } = 15;
 
@@ -22,4 +36,6 @@ public sealed class LimitsOptions
 
     [Range(5, 600, ErrorMessage = "Limits:LlmTimeoutSeconds debe estar entre {1} y {2}.")]
     public int LlmTimeoutSeconds { get; set; } = 120;
+
+    public TextLengthLimits TextLengthLimits => new(MinCharacters, MaxCharacters);
 }

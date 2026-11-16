@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 using LecturaFacil.Api;
 using LecturaFacil.Api.Configuration;
+using LecturaFacil.Api.Documents;
 using LecturaFacil.Api.Health;
 using LecturaFacil.Api.Llm;
 using LecturaFacil.Application;
@@ -23,6 +24,7 @@ var app = builder.Build();
 app.ValidateOptionsOrStop();
 app.UseApi();
 app.MapHealthEndpoints();
+app.MapDocumentEndpoints();
 app.MapLlmDiagnosticsEndpoints(app.Environment);
 
 if (app.Services.GetRequiredService<IOptions<DatabaseOptions>>().Value.ApplyMigrationsOnStartup)
