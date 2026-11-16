@@ -8,20 +8,24 @@ import { progressSteps } from './document-progress';
 import {
   DocumentDetails,
   DocumentStatus,
+  ExportFormat,
   ManualEdit,
   isAwaitingAdaptation,
 } from './document.models';
 import { DocumentsApiService } from './documents-api.service';
+import { FileDownloadService } from './file-download.service';
 
 /**
  * Estado de la página de un documento: lo carga y, si aún se está adaptando, sigue su progreso y lo vuelve a cargar
  * al terminar. También guarda las ediciones y marca los datos clave revisados; el servidor devuelve el documento ya
- * recalculado (pautas, datos clave y legibilidad), así que aquí no se calcula nada. Se provee en el componente de la página.
+ * recalculado (pautas, datos clave y legibilidad), así que aquí no se calcula nada. También descarga la exportación que
+ * genera el servidor (US-14). Se provee en el componente de la página.
  */
 @Injectable()
 export class DocumentViewStore {
   private readonly api = inject(DocumentsApiService);
   private readonly events = inject(DocumentEventsService);
+  private readonly downloads = inject(FileDownloadService);
 
   private readonly _document = signal<DocumentDetails | null>(null);
   private readonly _status = signal<DocumentStatus | null>(null);
@@ -29,7 +33,8 @@ export class DocumentViewStore {
   private readonly _error = signal<string | null>(null);
   private readonly _saving = signal(false);
   private readonly _actionError = signal<string | null>(null);
-  private readonly _lastAction = signal<'saved' | 'acknowledged' | null>(null);
+  private readonly _exporting = signal(false);
+  private readonly _lastAction = signal<'saved' | 'acknowledged' | 'exported' | null>(null);
   /** Peticiones en curso (envío o carga y SSE). Se cancelan todas juntas. */
   private active = new Subscription();
 
@@ -39,7 +44,9 @@ export class DocumentViewStore {
   readonly error = this._error.asReadonly();
   /** Hay una edición o una marca de revisado en curso. */
   readonly saving = this._saving.asReadonly();
-  /** Mensaje para el usuario si la última edición o marca ha fallado. */
+  /** Hay una exportación en curso. */
+  readonly exporting = this._exporting.asReadonly();
+  /** Mensaje para el usuario si la última edición, marca o exportación ha fallado. */
   readonly actionError = this._actionError.asReadonly();
   /** Última acción que ha terminado bien, para anunciarla a los lectores de pantalla. */
   readonly lastAction = this._lastAction.asReadonly();
@@ -88,6 +95,31 @@ export class DocumentViewStore {
     );
   }
 
+  /** Descarga la última versión en el formato elegido. Solo se ofrece cuando la adaptación se puede exportar. */
+  exportAdaptation(format: ExportFormat): void {
+    const document = this._document();
+    // Mientras se guarda una edición, se exportaría la versión anterior: se espera a que termine.
+    if (!document?.adaptation?.canExport || this._exporting() || this._saving()) {
+      return;
+    }
+    this._exporting.set(true);
+    this._actionError.set(null);
+    this._lastAction.set(null);
+    this.active.add(
+      this.api.exportDocument(document.id, format).subscribe({
+        next: (file) => {
+          this._exporting.set(false);
+          this.downloads.save(file.blob, file.fileName);
+          this._lastAction.set('exported');
+        },
+        error: (error: unknown) => {
+          this._exporting.set(false);
+          this._actionError.set(error instanceof ApiError ? error.message : ERROR_TEXTS.generic);
+        },
+      }),
+    );
+  }
+
   private run(request: Observable<DocumentDetails>, action: 'saved' | 'acknowledged'): void {
     this._saving.set(true);
     this._actionError.set(null);
@@ -127,6 +159,7 @@ export class DocumentViewStore {
     this.active.unsubscribe();
     this.active = new Subscription();
     this._saving.set(false);
+    this._exporting.set(false);
   }
 
   private fail(error: unknown): void {

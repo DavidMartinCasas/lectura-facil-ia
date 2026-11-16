@@ -26,13 +26,11 @@ describe('problemDetailsInterceptor', () => {
 
   async function failWith(status: number, body: object): Promise<ApiError> {
     const request = firstValueFrom(http.get('/api/documents'));
-    controller
-      .expectOne('/api/documents')
-      .flush(body, {
-        status,
-        statusText: 'Error',
-        headers: { 'Content-Type': 'application/problem+json' },
-      });
+    controller.expectOne('/api/documents').flush(body, {
+      status,
+      statusText: 'Error',
+      headers: { 'Content-Type': 'application/problem+json' },
+    });
     try {
       await request;
     } catch (error) {
@@ -86,5 +84,36 @@ describe('problemDetailsInterceptor', () => {
     controller.expectOne('/api/documents').error(new ProgressEvent('error'), { status: 0 });
 
     await expect(request).rejects.toMatchObject({ message: ERROR_TEXTS.offline, status: 0 });
+  });
+
+  it('reads the problem code of a failed download', async () => {
+    const request = firstValueFrom(
+      http.post('/api/documents/abc/export', null, { responseType: 'blob' }),
+    );
+    controller.expectOne('/api/documents/abc/export').flush(
+      new Blob([JSON.stringify({ status: 409, code: 'export.pending_warnings' })], {
+        type: 'application/problem+json',
+      }),
+      { status: 409, statusText: 'Conflict' },
+    );
+
+    const error = await request.catch((caught: unknown) => caught as ApiError);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).message).toBe(ERROR_TEXTS.exportPendingWarnings);
+    expect((error as ApiError).code).toBe('export.pending_warnings');
+  });
+
+  it('falls back to the status message when a failed download is not JSON', async () => {
+    const request = firstValueFrom(
+      http.post('/api/documents/abc/export', null, { responseType: 'blob' }),
+    );
+    controller
+      .expectOne('/api/documents/abc/export')
+      .flush(new Blob(['<html>']), { status: 429, statusText: 'Too Many Requests' });
+
+    const error = (await request.catch((caught: unknown) => caught)) as ApiError;
+
+    expect(error.message).toBe(ERROR_TEXTS.tooManyRequests);
   });
 });

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import {
   DocumentDetails,
   DocumentListItem,
   DocumentSubmission,
+  ExportFormat,
   ManualEdit,
   SubmitDocumentResponse,
 } from './document.models';
@@ -50,6 +51,40 @@ export class DocumentsApiService {
       version,
     });
   }
+
+  /** Exporta la última versión en el formato elegido. El servidor genera el fichero; aquí solo se descarga. */
+  exportDocument(id: string, format: ExportFormat): Observable<DownloadedFile> {
+    return this.http
+      .post(`${documentPath(id)}/export`, null, {
+        params: { format },
+        responseType: 'blob',
+        observe: 'response',
+      })
+      .pipe(map((response) => toDownloadedFile(response, format)));
+  }
+}
+
+function toDownloadedFile(response: HttpResponse<Blob>, format: ExportFormat): DownloadedFile {
+  return {
+    blob: response.body ?? new Blob(),
+    fileName: fileNameFrom(response.headers.get('Content-Disposition')) ?? `documento.${format}`,
+  };
+}
+
+/**
+ * Nombre del fichero de la cabecera Content-Disposition. El servidor ya lo sanea; aquí se vuelve a filtrar por si acaso
+ * (solo letras, cifras, guiones, puntos y guiones bajos), porque el navegador lo usa para guardar el fichero.
+ */
+export function fileNameFrom(disposition: string | null): string | null {
+  const match = disposition?.match(/filename="?([^";]+)"?/i);
+  const name = match?.[1]?.trim() ?? '';
+  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(name) ? name : null;
+}
+
+/** Fichero descargado de la API, con el nombre que propone el servidor. */
+export interface DownloadedFile {
+  readonly blob: Blob;
+  readonly fileName: string;
 }
 
 function documentPath(id: string): string {

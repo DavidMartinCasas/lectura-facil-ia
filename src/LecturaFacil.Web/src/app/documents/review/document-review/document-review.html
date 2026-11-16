@@ -52,6 +52,12 @@
       [saving]="saving()"
       (acknowledge)="acknowledge.emit($event)"
     />
+    <app-export-panel
+      [canExport]="adaptation().canExport"
+      [blockedMessage]="exportMessage()"
+      [exporting]="exporting() || saving()"
+      (exportAdaptation)="exportAdaptation.emit($event)"
+    />
     <app-guidelines-panel [report]="adaptation().guidelines" />
     <app-readability-panel [readability]="document().readability" />
   </div>

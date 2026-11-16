@@ -43,6 +43,7 @@ internal static partial class DocumentEndpoints
         var group = endpoints.MapGroup(Path).WithTags("Documentos");
         group.MapDocumentQueries();
         group.MapDocumentReview();
+        group.MapDocumentExport();
 
         group.MapPost("/", SubmitAsync)
             .RequireRateLimiting(SubmitRateLimitPolicy)

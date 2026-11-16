@@ -24,6 +24,7 @@ internal static class ApiConfiguration
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.AddLlmDiagnosticsRateLimit();
             options.AddDocumentSubmitRateLimit();
+            options.AddDocumentExportRateLimit();
         });
         return services;
     }

@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
-import { DocumentsApiService } from './documents-api.service';
+import { DocumentsApiService, fileNameFrom } from './documents-api.service';
 
 describe('DocumentsApiService', () => {
   let service: DocumentsApiService;
@@ -91,5 +91,43 @@ describe('DocumentsApiService', () => {
     expect(request.request.body).toEqual({ version: 2 });
     request.flush({ id: 'doc-1' });
     await response;
+  });
+
+  it('exports with the chosen format and keeps the file name of the server', async () => {
+    const response = firstValueFrom(service.exportDocument('a/b', 'docx'));
+
+    const request = controller.expectOne('/api/documents/a%2Fb/export?format=docx');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.responseType).toBe('blob');
+    request.flush(new Blob(['PK']), {
+      headers: {
+        'Content-Disposition': "attachment; filename=ayudas.docx; filename*=UTF-8''ayudas.docx",
+      },
+    });
+    const file = await response;
+    expect(file.fileName).toBe('ayudas.docx');
+    expect(await file.blob.text()).toBe('PK');
+  });
+
+  it('uses a generic name when the server does not send a safe one', async () => {
+    const response = firstValueFrom(service.exportDocument('abc', 'md'));
+
+    controller.expectOne('/api/documents/abc/export?format=md').flush(new Blob(['#']), {
+      headers: { 'Content-Disposition': 'attachment; filename="../x.md"' },
+    });
+
+    expect((await response).fileName).toBe('documento.md');
+  });
+});
+
+describe('fileNameFrom', () => {
+  it.each([
+    ['attachment; filename=ayudas.pdf', 'ayudas.pdf'],
+    ['attachment; filename="ayudas.txt"', 'ayudas.txt'],
+    ['attachment; filename=../../etc/passwd', null],
+    ['attachment; filename=".hidden"', null],
+    [null, null],
+  ])('reads %s as %s', (header, expected) => {
+    expect(fileNameFrom(header)).toBe(expected);
   });
 });

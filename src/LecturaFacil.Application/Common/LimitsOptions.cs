@@ -108,5 +108,12 @@ public sealed class LimitsOptions
     [Range(1_000, 400_000, ErrorMessage = "Limits:MaxEditedCharacters debe estar entre {1} y {2}.")]
     public int MaxEditedCharacters { get; set; } = 40_000;
 
+    /// <summary>
+    /// Exportaciones que se aceptan por minuto en <c>POST /api/documents/{id}/export</c>, en total (US-14). Generar un DOCX
+    /// o un PDF cuesta CPU y memoria. El límite por usuario llegará con la autenticación (US-15, US-16).
+    /// </summary>
+    [Range(1, 1_000, ErrorMessage = "Limits:ExportsPerMinute debe estar entre {1} y {2}.")]
+    public int ExportsPerMinute { get; set; } = 30;
+
     public TextLengthLimits TextLengthLimits => new(MinCharacters, MaxCharacters);
 }

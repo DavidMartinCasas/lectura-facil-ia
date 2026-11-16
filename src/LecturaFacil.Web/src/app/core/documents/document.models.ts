@@ -197,3 +197,8 @@ export interface DocumentStatusEvent {
   readonly id: string;
   readonly status: DocumentStatus;
 }
+
+/** Formatos de POST /api/documents/{id}/export, en el orden en que se ofrecen. DOCX es el principal. */
+export const EXPORT_FORMATS = ['docx', 'pdf', 'md', 'txt'] as const;
+
+export type ExportFormat = (typeof EXPORT_FORMATS)[number];

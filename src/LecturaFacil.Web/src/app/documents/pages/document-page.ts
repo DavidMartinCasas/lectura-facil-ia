@@ -51,6 +51,8 @@ export class DocumentPage {
         return REVIEW_TEXTS.saved;
       case 'acknowledged':
         return REVIEW_TEXTS.acknowledgedAnnouncement;
+      case 'exported':
+        return REVIEW_TEXTS.exported;
       default:
         return '';
     }

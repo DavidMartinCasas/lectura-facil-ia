@@ -2,6 +2,7 @@
 // Todos los textos de la interfaz, en español claro, en un único sitio.
 import {
   DocumentStatus,
+  ExportFormat,
   GuidelineStatus,
   KeyFactStatus,
   KeyFactType,
@@ -131,6 +132,12 @@ export const REVIEW_TEXTS = {
       ? 'Para exportar, marca como revisado el dato clave con aviso.'
       : `Para exportar, marca como revisados los ${count} datos clave con aviso.`,
   exportReady: 'Todos los avisos de datos clave están revisados.',
+  exportTitle: 'Exportar',
+  exportFormatLabel: 'Formato',
+  exportHint: 'El fichero se marca como borrador pendiente de validación, con la fecha de hoy.',
+  exportButton: 'Exportar',
+  exporting: 'Exportando…',
+  exported: 'Fichero exportado. Revisa tus descargas.',
   saved: 'Cambios guardados. Se han vuelto a revisar las pautas y la legibilidad.',
   acknowledgedAnnouncement: 'Dato marcado como revisado.',
 } as const;
@@ -151,6 +158,13 @@ export const KEY_FACT_STATUS_LABELS: Readonly<Record<KeyFactStatus, string>> = {
   Conserved: 'Conservado',
   Review: 'Revisar',
   Omitted: 'Omitido',
+};
+
+export const EXPORT_FORMAT_LABELS: Readonly<Record<ExportFormat, string>> = {
+  docx: 'DOCX (Word o LibreOffice)',
+  pdf: 'PDF',
+  md: 'Markdown',
+  txt: 'Texto',
 };
 
 export const KEY_FACT_TYPE_LABELS: Readonly<Record<KeyFactType, string>> = {
@@ -203,4 +217,7 @@ export const ERROR_TEXTS = {
     'La adaptación necesita un título y, en cada sección, una pregunta y al menos una frase.',
   editTooLong: 'La adaptación es demasiado larga. Acorta el texto e inténtalo de nuevo.',
   keyFactNotFound: 'No se ha encontrado ese dato clave. Vuelve a cargar el documento.',
+  exportPendingWarnings: 'Revisa los avisos antes de exportar',
+  exportUnsupportedFormat: 'Ese formato no se puede exportar. Elige DOCX, PDF, Markdown o texto.',
+  exportNothing: 'Este documento todavía no tiene una adaptación que exportar.',
 } as const;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Documents;
+using LecturaFacil.Application.Export;
 using LecturaFacil.Application.Readability;
 using LecturaFacil.Application.Review;
 using LecturaFacil.Application.Verification;
@@ -29,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<RequeuePendingAdaptations>();
         services.AddScoped<SaveManualEdit>();
         services.AddScoped<AcknowledgeKeyFact>();
+        services.AddScoped<ExportDocument>();
         return services;
     }
 }

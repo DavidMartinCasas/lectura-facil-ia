@@ -75,6 +75,10 @@ El doble guion bajo separa niveles y no importan las mayúsculas: `LLM__PRIMARY_
 | `LIMITS__MAXWORDSPERSENTENCE` | No | `15` | Palabras por frase a partir de las que se avisa (5 – 50). |
 | `LIMITS__MAXOUTPUTTOKENS` | No | `4096` | Tokens máximos por respuesta del modelo (256 – 32 768). |
 | `LIMITS__LLMTIMEOUTSECONDS` | No | `120` | Tiempo máximo por llamada al modelo, en segundos (5 – 600). |
+| `LIMITS__EXPORTSPERMINUTE` | No | `30` | Exportaciones por minuto, en total (1 – 1000). |
+| `EXPORT__FONTSIZEPOINTS` | No | `14` | Letra del texto de los DOCX y PDF exportados, en puntos (14 – 28). |
+| `EXPORT__LINESPACING` | No | `1.5` | Interlineado de los DOCX y PDF exportados (1,5 – 3). |
+| `EXPORT__DOCXFONTFAMILY` | No | `Arial` | Fuente sin serifa del DOCX. El PDF lleva siempre Atkinson Hyperlegible incrustada. |
 | `UI__NOTICE` | No | vacío | Aviso que se muestra en la interfaz (máx. 500 caracteres). |
 
 ## Proveedores de IA
@@ -162,6 +166,8 @@ La decisión está en [ADR 0003](docs/adr/0003-proveedores-configurables.md).
 - [Documento de diseño](docs/TFM-Lectura-Facil.md)
 - [Backlog y plan del sprint](docs/backlog/README.md)
 - [Reglas para agentes de programación](AGENTS.md)
+- [Licencias de las dependencias y de la fuente](docs/licencias.md)
+- [Ejemplos de exportación en DOCX, PDF, Markdown y texto](docs/ejemplos/US-14/README.md)
 
 ## Licencia
 
