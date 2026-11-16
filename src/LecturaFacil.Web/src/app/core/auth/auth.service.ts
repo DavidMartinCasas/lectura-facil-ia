@@ -1,0 +1,58 @@
+// SPDX-License-Identifier: Apache-2.0
+import { HttpClient } from '@angular/common/http';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { Observable, catchError, map, of, tap } from 'rxjs';
+
+export const AUTH_PATH = '/api/auth';
+
+/** Usuario con sesión, tal como lo devuelve /api/auth/me. */
+export interface CurrentUser {
+  readonly email: string;
+}
+
+/**
+ * Estado de la sesión. La sesión es una cookie HttpOnly del backend: aquí solo se sabe quién ha entrado, nunca se
+ * guarda ningún token. El token antiforgery lo envía Angular solo (cookie XSRF-TOKEN → cabecera X-XSRF-TOKEN).
+ */
+@Injectable({ providedIn: 'root' })
+export class AuthService {
+  private readonly http = inject(HttpClient);
+
+  /** `undefined` mientras no se ha preguntado al servidor; `null` sin sesión. */
+  private readonly current = signal<CurrentUser | null | undefined>(undefined);
+
+  readonly user = this.current.asReadonly();
+  readonly isAuthenticated = computed(() => !!this.current());
+
+  /** Pregunta al servidor si hay sesión. De paso, el servidor deja la cookie con el token antiforgery. */
+  loadSession(): Observable<boolean> {
+    return this.http.get<CurrentUser>(`${AUTH_PATH}/me`).pipe(
+      tap((user) => this.current.set(user)),
+      map(() => true),
+      catchError(() => {
+        this.current.set(null);
+        return of(false);
+      }),
+    );
+  }
+
+  login(email: string, password: string): Observable<CurrentUser> {
+    return this.http
+      .post<CurrentUser>(`${AUTH_PATH}/login`, { email, password })
+      .pipe(tap((user) => this.current.set(user)));
+  }
+
+  /** Cierra la sesión en el servidor. Aunque falle, en el navegador se da por cerrada. */
+  logout(): Observable<void> {
+    return this.http.post<void>(`${AUTH_PATH}/logout`, null).pipe(
+      catchError(() => of(undefined)),
+      map(() => undefined),
+      tap(() => this.current.set(null)),
+    );
+  }
+
+  /** La API ha respondido 401: la sesión ha caducado o se ha cerrado en otra pestaña. */
+  sessionExpired(): void {
+    this.current.set(null);
+  }
+}

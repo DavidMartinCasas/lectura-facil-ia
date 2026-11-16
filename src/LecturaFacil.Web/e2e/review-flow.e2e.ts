@@ -5,6 +5,7 @@
 import { Page, expect, test } from '@playwright/test';
 import { DocumentDetails, ManualEdit } from '../src/app/core/documents/document.models';
 import { adaptationFixture, documentFixture } from '../src/app/testing/document-fixtures';
+import { mockSignedIn } from './session';
 
 const DOCUMENT_ID = '7f1c2a9e-0000-4000-8000-000000000013';
 const EDITED_SENTENCE = 'Le damos dinero para pagar el alquiler.';
@@ -17,6 +18,7 @@ interface ApiCalls {
 async function mockReviewApi(page: Page, initial: DocumentDetails): Promise<ApiCalls> {
   const calls: ApiCalls = { acknowledged: [], edits: [] };
   let current = initial;
+  await mockSignedIn(page);
 
   await page.route(`**/api/documents/${DOCUMENT_ID}`, (route) => route.fulfill({ json: current }));
 
