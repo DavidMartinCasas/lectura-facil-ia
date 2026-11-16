@@ -11,6 +11,7 @@ using LecturaFacil.Infrastructure.Documents;
 using LecturaFacil.Infrastructure.Export;
 using LecturaFacil.Infrastructure.Guidelines;
 using LecturaFacil.Infrastructure.Llm;
+using LecturaFacil.Infrastructure.Observability;
 using LecturaFacil.Infrastructure.Persistence;
 using LecturaFacil.Infrastructure.Readability;
 using LecturaFacil.Infrastructure.Verification;
@@ -60,9 +61,12 @@ public static class DependencyInjection
         return services;
     }
 
-    /// <summary>Cola en memoria y proceso en segundo plano que adapta los documentos.</summary>
+    /// <summary>Cola en memoria y proceso en segundo plano que adapta los documentos, con su telemetría (US-17).</summary>
     private static IServiceCollection AddAdaptation(this IServiceCollection services)
     {
+        services.AddMetrics();
+        services.TryAddSingleton<IAdaptationTelemetry, AdaptationTelemetry>();
+        services.TryAddSingleton<PrometheusMetricsExporter>();
         services.AddSingleton<ChannelAdaptationQueue>();
         services.AddSingleton<IAdaptationQueue>(provider => provider.GetRequiredService<ChannelAdaptationQueue>());
         services.AddHostedService<AdaptationWorker>();

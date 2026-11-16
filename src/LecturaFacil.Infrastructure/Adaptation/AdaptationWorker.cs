@@ -14,14 +14,20 @@ namespace LecturaFacil.Infrastructure.Adaptation;
 /// Proceso en segundo plano que adapta los documentos de la cola. Solo orquesta: la lógica está en
 /// <see cref="AdaptDocument"/>. Al arrancar vuelve a poner en la cola los documentos pendientes y procesa hasta
 /// <see cref="LimitsOptions.AdaptationConcurrency"/> documentos a la vez. Un fallo con un documento nunca para el
-/// proceso. Solo registra identificadores, códigos de error y tiempos; nunca el texto.
+/// proceso. Solo registra identificadores, códigos de error y tiempos; nunca el texto. Todo lo que se registra mientras
+/// se procesa un documento lleva su <c>DocumentId</c> (US-17); el resultado de cada adaptación lo registra
+/// <see cref="IAdaptationTelemetry"/>.
 /// </summary>
 public sealed partial class AdaptationWorker(
     ChannelAdaptationQueue queue,
     IServiceScopeFactory scopeFactory,
+    IAdaptationTelemetry telemetry,
     IOptions<LimitsOptions> limits,
     ILogger<AdaptationWorker> logger) : BackgroundService
 {
+    /// <summary>Propiedad del ámbito de log con el identificador del documento que se está procesando.</summary>
+    public const string DocumentIdProperty = "DocumentId";
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await RequeuePendingAsync(stoppingToken);
@@ -65,25 +71,18 @@ public sealed partial class AdaptationWorker(
 
     private async Task ProcessAsync(DocumentId id, CancellationToken stoppingToken)
     {
+        using var documentScope = logger.BeginScope(new Dictionary<string, object> { [DocumentIdProperty] = id.Value });
         var started = Stopwatch.GetTimestamp();
         try
         {
             await using var scope = scopeFactory.CreateAsyncScope();
-            var result = await scope.ServiceProvider.GetRequiredService<AdaptDocument>().ExecuteAsync(id, stoppingToken);
-            var elapsed = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
-            if (result.IsSuccess)
-            {
-                LogAdapted(id.Value, result.Value.Number, elapsed);
-            }
-            else
-            {
-                LogNotAdapted(id.Value, result.Error!.Code, elapsed);
-            }
+            await scope.ServiceProvider.GetRequiredService<AdaptDocument>().ExecuteAsync(id, stoppingToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException || !stoppingToken.IsCancellationRequested)
         {
             // Solo el tipo: el mensaje de una excepción podría contener parte del documento.
             LogUnexpectedFailure(id.Value, exception.GetType().Name);
+            telemetry.Record(AdaptationOutcome.Unexpected(id, Stopwatch.GetElapsedTime(started)));
             await MarkAsFailedAsync(id, stoppingToken);
         }
     }
@@ -107,12 +106,6 @@ public sealed partial class AdaptationWorker(
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Adaptation queue: pending documents could not be requeued on startup ({ExceptionType}).")]
     private partial void LogRequeueFailed(string exceptionType);
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Document {DocumentId} adapted: version {Version} in {DurationMs} ms.")]
-    private partial void LogAdapted(Guid documentId, int version, long durationMs);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Document {DocumentId} not adapted: {ErrorCode} after {DurationMs} ms.")]
-    private partial void LogNotAdapted(Guid documentId, string errorCode, long durationMs);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Document {DocumentId}: unexpected failure while adapting ({ExceptionType}).")]
     private partial void LogUnexpectedFailure(Guid documentId, string exceptionType);

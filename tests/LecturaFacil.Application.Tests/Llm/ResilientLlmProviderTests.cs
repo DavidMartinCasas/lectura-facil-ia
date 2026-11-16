@@ -37,6 +37,28 @@ public sealed class ResilientLlmProviderTests
     }
 
     [Fact]
+    public async Task Complete_WhenPrimaryResponds_MarksTheResponseAsComingFromThePrimary()
+    {
+        var primary = StubLlmProvider.Responding("Principal");
+        var provider = new ResilientLlmProvider(primary, StubLlmProvider.Responding("Respaldo"), fallbackEnabled: true, Availability(primary: true));
+
+        var result = await provider.CompleteStructuredAsync<Reply>(Request, TestContext.Current.CancellationToken);
+
+        result.Value.Role.ShouldBe(LlmProviderRole.Primary);
+    }
+
+    [Fact]
+    public async Task Complete_WhenTheFallbackAnswers_MarksTheResponseAsComingFromTheFallback()
+    {
+        var primary = StubLlmProvider.Unavailable("Principal");
+        var provider = new ResilientLlmProvider(primary, StubLlmProvider.Responding("Respaldo"), fallbackEnabled: true, Availability(primary: true));
+
+        var result = await provider.CompleteStructuredAsync<Reply>(Request, TestContext.Current.CancellationToken);
+
+        result.Value.Role.ShouldBe(LlmProviderRole.Fallback);
+    }
+
+    [Fact]
     public async Task Complete_WhenPrimaryIsUnavailableAndFallbackIsDisabled_NeverCallsTheFallback()
     {
         var primary = StubLlmProvider.Unavailable("Principal");

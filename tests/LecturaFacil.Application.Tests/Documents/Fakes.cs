@@ -161,3 +161,11 @@ internal sealed class DomainReadabilityCalculator : IReadabilityCalculator
             : Result<ReadabilityScore>.Failure(ReadabilityErrors.NoWords);
     }
 }
+
+/// <summary>Guarda los resultados de adaptación que se registran, para comprobarlos.</summary>
+internal sealed class RecordingAdaptationTelemetry : IAdaptationTelemetry
+{
+    public List<AdaptationOutcome> Outcomes { get; } = [];
+
+    public void Record(AdaptationOutcome outcome) => Outcomes.Add(outcome);
+}

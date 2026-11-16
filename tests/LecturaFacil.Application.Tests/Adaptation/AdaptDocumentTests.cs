@@ -25,6 +25,7 @@ public sealed class AdaptDocumentTests
     private static readonly OwnerId Owner = OwnerId.From(Guid.NewGuid());
 
     private readonly InMemoryDocumentRepository _repository = new();
+    private readonly RecordingAdaptationTelemetry _telemetry = new();
     private readonly LimitsOptions _limits = new() { MinCharacters = 10, MaxCharacters = 2_000, MaxCharactersPerAdaptationChunk = 1_000 };
 
     // Sin hallazgos por defecto: estos tests no dependen de lo que detecten las reglas reales.
@@ -537,6 +538,81 @@ public sealed class AdaptDocumentTests
     }
 
     [Fact]
+    public async Task Adapt_WhenTheModelAnswersWell_RecordsOneSuccessfulOutcomeWithProviderModelAndTokens()
+    {
+        var document = Store(Paragraph);
+
+        await CreateUseCase(FakeLlmProvider.FromFixture("adapter/ok", "Servidor propio")).ExecuteAsync(document.Id, Token);
+
+        var outcome = _telemetry.Outcomes.ShouldHaveSingleItem();
+        outcome.DocumentId.ShouldBe(document.Id);
+        outcome.IsSuccess.ShouldBeTrue();
+        outcome.Result.ShouldBe(AdaptationOutcome.SuccessResult);
+        outcome.ProviderRole.ShouldBe(LlmProviderRole.Primary);
+        outcome.Provider.ShouldBe("Servidor propio");
+        outcome.Model.ShouldBe("modelo-adaptador-falso");
+        outcome.InputTokens.ShouldBe(1200);
+        outcome.OutputTokens.ShouldBe(900);
+        outcome.Duration.ShouldBeGreaterThanOrEqualTo(TimeSpan.Zero);
+    }
+
+    [Fact]
+    public async Task Adapt_WhenThePrimaryIsDownAndTheFallbackAnswers_RecordsTheFallbackRole()
+    {
+        var document = Store(Paragraph);
+        var llm = new ResilientLlmProvider(
+            FakeLlmProvider.Unavailable("Principal"),
+            FakeLlmProvider.FromFixture("adapter/ok", "Respaldo"),
+            fallbackEnabled: true,
+            new AlwaysAvailable());
+
+        await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        var outcome = _telemetry.Outcomes.ShouldHaveSingleItem();
+        outcome.ProviderRole.ShouldBe(LlmProviderRole.Fallback);
+        outcome.Provider.ShouldBe("Respaldo");
+    }
+
+    [Fact]
+    public async Task Adapt_WhenTheProviderIsUnavailable_RecordsTheFailureWithItsErrorCodeAndNoProvider()
+    {
+        var document = Store(Paragraph);
+
+        await CreateUseCase(FakeLlmProvider.Unavailable()).ExecuteAsync(document.Id, Token);
+
+        var outcome = _telemetry.Outcomes.ShouldHaveSingleItem();
+        outcome.IsSuccess.ShouldBeFalse();
+        outcome.Result.ShouldBe(LlmErrors.ProviderUnavailable.Code);
+        outcome.ProviderRole.ShouldBeNull();
+        outcome.InputTokens.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Adapt_WhenTheAnswerIsInvalidTwice_RecordsTheTokensSpentOnTheFailedAttempts()
+    {
+        var document = Store(Paragraph);
+
+        await CreateUseCase(FakeLlmProvider.FromFixture("adapter/seccion-vacia")).ExecuteAsync(document.Id, Token);
+
+        var outcome = _telemetry.Outcomes.ShouldHaveSingleItem();
+        outcome.Result.ShouldBe(LlmErrors.InvalidProviderOutput.Code);
+        outcome.ProviderRole.ShouldBe(LlmProviderRole.Primary);
+        outcome.InputTokens.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Adapt_WhenTheDocumentDoesNotExist_RecordsTheFailure()
+    {
+        var id = DocumentId.New();
+
+        await CreateUseCase(FakeLlmProvider.FromFixture("adapter/ok")).ExecuteAsync(id, Token);
+
+        var outcome = _telemetry.Outcomes.ShouldHaveSingleItem();
+        outcome.DocumentId.ShouldBe(id);
+        outcome.Result.ShouldBe(DocumentErrors.NotFound.Code);
+    }
+
+    [Fact]
     public async Task FailUnexpectedly_WhenTheDocumentIsProcessing_LeavesItInErrorWithAGenericReason()
     {
         var document = Store(Paragraph);
@@ -584,5 +660,11 @@ public sealed class AdaptDocumentTests
             new ReviewAdaptation(_guidelineChecker, Options.Create(_limits)),
             new VerifyMeaning(new LlmMeaningVerifier(_verifierLlm, Prompts.Real, Options.Create(_limits)), Options.Create(_limits)),
             Options.Create(_limits),
+            _telemetry,
             new FixedTimeProvider(Now));
+
+    private sealed class AlwaysAvailable : ILlmAvailability
+    {
+        public LlmAvailabilityStatus Current { get; } = new(PrimaryAvailable: true, FallbackAvailable: true);
+    }
 }
