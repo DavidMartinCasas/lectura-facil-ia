@@ -39,6 +39,12 @@ public sealed record AdaptedContent
     public IReadOnlyList<GlossaryTerm> Glossary { get; }
 
     /// <summary>
+    /// El texto que lee la persona, sin el glosario: el título, y cada pregunta y cada frase en su propia línea
+    /// (separadas por <c>\n</c>). Es el texto que revisan las pautas y al que se refieren las posiciones de sus hallazgos.
+    /// </summary>
+    public string PlainText => ToPlainText(Title, Sections);
+
+    /// <summary>
     /// Normaliza la propuesta del modelo. Las frases vacías se descartan. Devuelve <c>null</c> si falta el título, no hay
     /// secciones, una sección se queda sin pregunta o sin frases, o un término del glosario está incompleto.
     /// </summary>
@@ -86,6 +92,9 @@ public sealed record AdaptedContent
     /// <summary>Reconstruye un contenido ya guardado, sin volver a normalizarlo.</summary>
     internal static AdaptedContent Restore(string title, IReadOnlyList<AdaptedSection> sections, IReadOnlyList<GlossaryTerm> glossary) =>
         new(title, sections, glossary);
+
+    internal static string ToPlainText(string title, IEnumerable<AdaptedSection> sections) =>
+        string.Join('\n', sections.SelectMany(section => section.Sentences.Prepend(section.Question)).Prepend(title));
 
     private static AdaptedSection? NormalizeSection(AdaptedSectionDraft section)
     {
