@@ -1,11 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- FakeLlmProvider valida las respuestas grabadas con el mismo validador de esquemas que los proveedores reales. -->
+  <Import Project="..\Shared\Shared.props" />
+
   <PropertyGroup>
     <CoverageAssembly>LecturaFacil.Application</CoverageAssembly>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\LecturaFacil.Application\LecturaFacil.Application.csproj" />
+    <ProjectReference Include="..\..\src\LecturaFacil.Infrastructure\LecturaFacil.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

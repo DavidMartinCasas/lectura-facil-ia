@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Llm;
+using LecturaFacil.Infrastructure.Adaptation;
 using LecturaFacil.Infrastructure.Documents;
 using LecturaFacil.Infrastructure.Guidelines;
 using LecturaFacil.Infrastructure.Llm;
@@ -17,7 +19,8 @@ public static class DependencyInjection
     public const string DatabaseHealthCheckName = "database";
 
     /// <summary>
-    /// Registra los adaptadores: base de datos y su comprobación de salud, documentos, pautas y proveedores de LLM.
+    /// Registra los adaptadores: base de datos y su comprobación de salud, documentos, pautas, cola de adaptación y
+    /// proveedores de LLM.
     /// Las opciones (<see cref="DatabaseOptions"/>, <see cref="LlmOptions"/>…) las registra y valida la composición de la API.
     /// </summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
@@ -31,7 +34,16 @@ public static class DependencyInjection
         services.AddSingleton<ITextExtractor, PdfPigTextExtractor>();
         services.AddSingleton<IGuidelineChecker, GuidelineChecker>();
 
-        return services.AddLlm();
+        return services.AddAdaptation().AddLlm();
+    }
+
+    /// <summary>Cola en memoria y proceso en segundo plano que adapta los documentos.</summary>
+    private static IServiceCollection AddAdaptation(this IServiceCollection services)
+    {
+        services.AddSingleton<ChannelAdaptationQueue>();
+        services.AddSingleton<IAdaptationQueue>(provider => provider.GetRequiredService<ChannelAdaptationQueue>());
+        services.AddHostedService<AdaptationWorker>();
+        return services;
     }
 
     private static IServiceCollection AddLlm(this IServiceCollection services)

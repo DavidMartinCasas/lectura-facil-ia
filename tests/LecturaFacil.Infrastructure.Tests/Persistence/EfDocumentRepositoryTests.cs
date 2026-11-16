@@ -74,6 +74,101 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
         stored.ShouldBe(GuidelineCatalog.All, ignoreOrder: true);
     }
 
+    [Fact]
+    public async Task Save_WhenTheDocumentIsAdapted_PersistsTheVersionAndTheNewStatus()
+    {
+        var document = await StoreAsync(OwnerId.From(Guid.NewGuid()));
+        var content = AdaptedContent.TryCreate(
+            "Ayudas",
+            [new AdaptedSectionDraft("¿Quién?", ["Primera frase.", "Segunda frase."])],
+            [new GlossaryTermDraft("Solicitud", "Papel para pedir algo.")])!;
+        var metadata = new AdaptationMetadata("Proveedor", "modelo", "adapter.v1", 10, 20, TimeSpan.FromMilliseconds(1500));
+
+        await using (var context = CreateContext())
+        {
+            var repository = new EfDocumentRepository(context);
+            var tracked = (await repository.FindAsync(document.Id, Token))!;
+            tracked.StartProcessing(DateTimeOffset.UtcNow);
+            await repository.SaveAsync(tracked, Token);
+            tracked.CompleteAdaptation(content, metadata, DateTimeOffset.UtcNow);
+            await repository.SaveAsync(tracked, Token);
+        }
+
+        await using var readContext = CreateContext();
+        var stored = (await new EfDocumentRepository(readContext).FindForOwnerAsync(document.Id, document.OwnerId, Token))!;
+        stored.Status.ShouldBe(DocumentStatus.Draft);
+        var version = stored.AdaptedVersions.ShouldHaveSingleItem();
+        version.Title.ShouldBe("Ayudas");
+        version.Sections.ShouldHaveSingleItem().Sentences.ShouldBe(["Primera frase.", "Segunda frase."]);
+        version.Glossary.ShouldBe(content.Glossary);
+        version.Metadata.ShouldBe(metadata);
+    }
+
+    [Fact]
+    public async Task Save_WhenTheAdaptationFails_PersistsTheFailureCode()
+    {
+        var document = await StoreAsync(OwnerId.From(Guid.NewGuid()));
+
+        await using (var context = CreateContext())
+        {
+            var repository = new EfDocumentRepository(context);
+            var tracked = (await repository.FindAsync(document.Id, Token))!;
+            tracked.StartProcessing(DateTimeOffset.UtcNow);
+            tracked.FailProcessing("llm.provider_unavailable", DateTimeOffset.UtcNow);
+            await repository.SaveAsync(tracked, Token);
+        }
+
+        await using var readContext = CreateContext();
+        var stored = (await new EfDocumentRepository(readContext).FindAsync(document.Id, Token))!;
+        stored.Status.ShouldBe(DocumentStatus.Error);
+        stored.FailureCode.ShouldBe("llm.provider_unavailable");
+    }
+
+    [Fact]
+    public async Task FindForOwner_WhenTheDocumentBelongsToSomeoneElse_ReturnsNull()
+    {
+        var document = await StoreAsync(OwnerId.From(Guid.NewGuid()));
+        await using var context = CreateContext();
+        var repository = new EfDocumentRepository(context);
+        var stranger = OwnerId.From(Guid.NewGuid());
+
+        (await repository.FindForOwnerAsync(document.Id, stranger, Token)).ShouldBeNull();
+        (await repository.FindStatusForOwnerAsync(document.Id, stranger, Token)).ShouldBeNull();
+        (await repository.FindStatusForOwnerAsync(document.Id, document.OwnerId, Token)).ShouldBe(DocumentStatus.Received);
+    }
+
+    [Fact]
+    public async Task ListAwaitingAdaptation_ReturnsReceivedAndProcessingDocumentsOnly()
+    {
+        var received = await StoreAsync(OwnerId.From(Guid.NewGuid()));
+        var processing = await StoreAsync(OwnerId.From(Guid.NewGuid()), document => document.StartProcessing(DateTimeOffset.UtcNow));
+        var failed = await StoreAsync(OwnerId.From(Guid.NewGuid()), document =>
+        {
+            document.StartProcessing(DateTimeOffset.UtcNow);
+            document.FailProcessing("llm.provider_unavailable", DateTimeOffset.UtcNow);
+        });
+        await using var context = CreateContext();
+
+        var awaiting = await new EfDocumentRepository(context).ListAwaitingAdaptationAsync(Token);
+
+        awaiting.ShouldContain(received.Id);
+        awaiting.ShouldContain(processing.Id);
+        awaiting.ShouldNotContain(failed.Id);
+    }
+
+    private async Task<Document> StoreAsync(OwnerId owner, Action<Document>? prepare = null)
+    {
+        var document = Document.Submit(
+            owner,
+            DocumentTitle.Default,
+            OriginalText.Create("Texto de prueba del documento.", Limits),
+            DateTimeOffset.UtcNow);
+        prepare?.Invoke(document);
+        await using var context = CreateContext();
+        await new EfDocumentRepository(context).AddAsync(document, Token);
+        return document;
+    }
+
     private AppDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(database.ConnectionString).Options);
 }

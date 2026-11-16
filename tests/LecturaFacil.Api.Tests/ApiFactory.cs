@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Testing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 
@@ -18,6 +20,12 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     protected virtual string Environment => "Production";
 
     protected virtual string ConnectionString => _database.GetConnectionString();
+
+    /// <summary>Si es <c>false</c>, los documentos se quedan en el estado en que se guardan.</summary>
+    protected virtual bool RunAdaptationWorker => false;
+
+    /// <summary>El proveedor falso que usa la API. Por defecto responde con <c>adapter/ok</c>.</summary>
+    public FakeLlmProvider Llm { get; } = FakeLlmProvider.FromFixture("adapter/ok");
 
     public virtual async ValueTask InitializeAsync() => await _database.StartAsync();
 
@@ -38,6 +46,14 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         }
 
         builder.ConfigureServices(services => services.AddSingleton<IStartupFilter, ThrowingEndpointStartupFilter>());
+        builder.ConfigureTestServices(services =>
+        {
+            services.UseFakeLlm(Llm);
+            if (!RunAdaptationWorker)
+            {
+                services.RemoveAdaptationWorker();
+            }
+        });
     }
 
     /// <summary>Añade, después de toda la tubería real, una ruta que lanza una excepción no controlada.</summary>

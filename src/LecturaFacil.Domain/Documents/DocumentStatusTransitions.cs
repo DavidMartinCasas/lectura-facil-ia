@@ -17,5 +17,11 @@ public static class DocumentStatusTransitions
         (DocumentStatus.Validated, DocumentStatus.Published),
     ];
 
+    /// <summary>Estados de un documento que espera a que el worker lo adapte.</summary>
+    public static readonly IReadOnlyList<DocumentStatus> AwaitingAdaptation = [DocumentStatus.Received, DocumentStatus.Processing];
+
+    /// <summary>El documento espera a que el worker lo adapte: recién recibido o a medias tras un reinicio.</summary>
+    public static bool IsAwaitingAdaptation(DocumentStatus status) => AwaitingAdaptation.Contains(status);
+
     public static bool IsAllowed(DocumentStatus from, DocumentStatus to) => Allowed.Contains((from, to));
 }

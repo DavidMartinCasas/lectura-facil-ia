@@ -16,6 +16,7 @@ public sealed class SubmitDocumentTests
     private static readonly DateTimeOffset Now = new(2026, 11, 15, 10, 0, 0, TimeSpan.Zero);
 
     private readonly InMemoryDocumentRepository _repository = new();
+    private readonly RecordingAdaptationQueue _queue = new();
     private StubGuidelineChecker _guidelineChecker = new();
     private readonly LimitsOptions _limits = new() { MinCharacters = 50, MaxCharacters = 200, MaxFileSizeBytes = 2_048 };
 
@@ -37,6 +38,22 @@ public sealed class SubmitDocumentTests
         result.Value.Status.ShouldBe(DocumentStatus.Received);
         result.Value.Characters.ShouldBe(ValidText.Length);
         result.Value.PageCount.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task SubmitText_WhenTextIsValid_QueuesTheDocumentForAdaptation()
+    {
+        var result = await CreateUseCase().SubmitTextAsync(new SubmitTextCommand(ValidText, null), Token);
+
+        _queue.Enqueued.ShouldBe([result.Value.Id]);
+    }
+
+    [Fact]
+    public async Task SubmitText_WhenTextIsTooShort_DoesNotQueueAnything()
+    {
+        await CreateUseCase().SubmitTextAsync(new SubmitTextCommand("corto", null), Token);
+
+        _queue.Enqueued.ShouldBeEmpty();
     }
 
     [Fact]
@@ -229,5 +246,6 @@ public sealed class SubmitDocumentTests
             new FixedCurrentUser(Owner),
             Options.Create(_limits),
             new FixedTimeProvider(Now),
-            _guidelineChecker);
+            _guidelineChecker,
+            _queue);
 }

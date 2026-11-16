@@ -23,7 +23,10 @@ public sealed class DocumentsApiFactory(string environment = "Production") : Web
             builder.UseSetting(key, value);
         }
 
-        builder.ConfigureTestServices(services => services.AddSingleton<IDocumentRepository>(Repository));
+        builder.ConfigureTestServices(services => services
+            .AddSingleton<IDocumentRepository>(Repository)
+            .UseFakeLlm()
+            .RemoveAdaptationWorker());
     }
 }
 
@@ -38,4 +41,19 @@ public sealed class RecordingDocumentRepository : IDocumentRepository
         _added.Enqueue(document);
         return Task.CompletedTask;
     }
+
+    public Task<Document?> FindAsync(DocumentId id, CancellationToken cancellationToken) =>
+        Task.FromResult(_added.FirstOrDefault(document => document.Id == id));
+
+    public Task<Document?> FindForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
+        Task.FromResult(_added.FirstOrDefault(document => document.Id == id && document.OwnerId == ownerId));
+
+    public async Task<DocumentStatus?> FindStatusForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
+        (await FindForOwnerAsync(id, ownerId, cancellationToken))?.Status;
+
+    public Task<IReadOnlyList<DocumentId>> ListAwaitingAdaptationAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<DocumentId>>(
+            [.. _added.Where(document => DocumentStatusTransitions.IsAwaitingAdaptation(document.Status)).Select(document => document.Id)]);
+
+    public Task SaveAsync(Document document, CancellationToken cancellationToken) => Task.CompletedTask;
 }

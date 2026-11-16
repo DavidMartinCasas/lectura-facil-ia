@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
+using LecturaFacil.Application.Llm;
 using LecturaFacil.Application.Users;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
@@ -11,12 +13,69 @@ internal sealed class InMemoryDocumentRepository : IDocumentRepository
 {
     public List<Document> Added { get; } = [];
 
+    /// <summary>Estados guardados con <see cref="SaveAsync"/>, en orden.</summary>
+    public List<DocumentStatus> SavedStatuses { get; } = [];
+
+    /// <summary>Estados que devolverá <see cref="FindStatusForOwnerAsync"/>, uno por llamada (el último se repite).</summary>
+    public Queue<DocumentStatus> ScriptedStatuses { get; } = new();
+
     public Task AddAsync(Document document, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Added.Add(document);
         return Task.CompletedTask;
     }
+
+    public Task<Document?> FindAsync(DocumentId id, CancellationToken cancellationToken) =>
+        Task.FromResult(Added.Find(document => document.Id == id));
+
+    public Task<Document?> FindForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
+        Task.FromResult(Added.Find(document => document.Id == id && document.OwnerId == ownerId));
+
+    public Task<DocumentStatus?> FindStatusForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken)
+    {
+        var document = Added.Find(candidate => candidate.Id == id && candidate.OwnerId == ownerId);
+        if (document is null)
+        {
+            return Task.FromResult<DocumentStatus?>(null);
+        }
+
+        var status = ScriptedStatuses.Count switch
+        {
+            0 => document.Status,
+            1 => ScriptedStatuses.Peek(),
+            _ => ScriptedStatuses.Dequeue(),
+        };
+        return Task.FromResult<DocumentStatus?>(status);
+    }
+
+    public Task<IReadOnlyList<DocumentId>> ListAwaitingAdaptationAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<DocumentId>>(
+            [.. Added.Where(document => DocumentStatusTransitions.IsAwaitingAdaptation(document.Status)).Select(document => document.Id)]);
+
+    public Task SaveAsync(Document document, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        SavedStatuses.Add(document.Status);
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class RecordingAdaptationQueue : IAdaptationQueue
+{
+    public List<DocumentId> Enqueued { get; } = [];
+
+    public ValueTask EnqueueAsync(DocumentId id, CancellationToken cancellationToken)
+    {
+        Enqueued.Add(id);
+        return ValueTask.CompletedTask;
+    }
+}
+
+/// <summary>Carga los prompts embebidos reales, para comprobar lo que de verdad se envía al modelo.</summary>
+internal static class Prompts
+{
+    public static IPromptLoader Real { get; } = new LecturaFacil.Infrastructure.Llm.EmbeddedPromptLoader();
 }
 
 internal sealed class StubTextExtractor(Result<ExtractedText> result) : ITextExtractor

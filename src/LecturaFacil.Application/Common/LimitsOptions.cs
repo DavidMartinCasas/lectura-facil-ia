@@ -45,5 +45,35 @@ public sealed class LimitsOptions
     [Range(5, 600, ErrorMessage = "Limits:LlmTimeoutSeconds debe estar entre {1} y {2}.")]
     public int LlmTimeoutSeconds { get; set; } = 120;
 
+    /// <summary>
+    /// Caracteres máximos de cada parte de un texto que se adapta por separado. Un texto más largo se divide por párrafos
+    /// y las adaptaciones se unen. Debe caber en el contexto del modelo adaptador junto con el prompt y la respuesta.
+    /// </summary>
+    [Range(500, 200_000, ErrorMessage = "Limits:MaxCharactersPerAdaptationChunk debe estar entre {1} y {2}.")]
+    public int MaxCharactersPerAdaptationChunk { get; set; } = 6_000;
+
+    /// <summary>Partes como máximo en que se divide un documento para adaptarlo. Acota las llamadas al modelo (OWASP LLM10).</summary>
+    [Range(1, 100, ErrorMessage = "Limits:MaxAdaptationChunksPerDocument debe estar entre {1} y {2}.")]
+    public int MaxAdaptationChunksPerDocument { get; set; } = 10;
+
+    /// <summary>
+    /// Documentos que se aceptan por minuto en <c>POST /api/documents</c>, en total: cada uno genera llamadas al modelo
+    /// (OWASP LLM10). El límite por usuario llegará con la autenticación (US-15, US-16).
+    /// </summary>
+    [Range(1, 1_000, ErrorMessage = "Limits:DocumentSubmissionsPerMinute debe estar entre {1} y {2}.")]
+    public int DocumentSubmissionsPerMinute { get; set; } = 10;
+
+    /// <summary>Documentos que se adaptan a la vez. Por defecto 1: el servidor local atiende una petición cada vez.</summary>
+    [Range(1, 16, ErrorMessage = "Limits:AdaptationConcurrency debe estar entre {1} y {2}.")]
+    public int AdaptationConcurrency { get; set; } = 1;
+
+    /// <summary>Cada cuánto se consulta el estado de un documento para enviar sus cambios por SSE.</summary>
+    [Range(100, 60_000, ErrorMessage = "Limits:DocumentEventsPollMilliseconds debe estar entre {1} y {2}.")]
+    public int DocumentEventsPollMilliseconds { get; set; } = 1_000;
+
+    /// <summary>Tiempo máximo que se mantiene abierta una conexión SSE de progreso. El cliente puede volver a conectarse.</summary>
+    [Range(10, 3_600, ErrorMessage = "Limits:DocumentEventsMaxSeconds debe estar entre {1} y {2}.")]
+    public int DocumentEventsMaxSeconds { get; set; } = 600;
+
     public TextLengthLimits TextLengthLimits => new(MinCharacters, MaxCharacters);
 }
