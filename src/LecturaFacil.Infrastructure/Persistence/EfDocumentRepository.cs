@@ -2,6 +2,7 @@
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Domain.Documents;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace LecturaFacil.Infrastructure.Persistence;
 
@@ -66,6 +67,18 @@ public sealed class EfDocumentRepository(AppDbContext context) : IDocumentReposi
     public async Task SaveAsync(Document document, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(document);
-        await context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            throw new ConcurrentUpdateException("The document was changed by another request.", exception);
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            // Dos ediciones simultáneas de la misma versión crean la misma versión siguiente.
+            throw new ConcurrentUpdateException("The document was changed by another request.", exception);
+        }
     }
 }

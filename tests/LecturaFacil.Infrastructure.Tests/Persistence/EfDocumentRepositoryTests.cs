@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Application.Documents;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
 using LecturaFacil.Domain.Verification;
@@ -166,6 +167,41 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
         stored.LatestAdaptedVersion.Metadata.PromptVersion.ShouldBe("manual");
         stored.LatestAdaptedVersion.PendingKeyFactCount.ShouldBe(0);
         stored.Status.ShouldBe(DocumentStatus.Draft);
+    }
+
+    [Fact]
+    public async Task Save_WhenAnotherRequestChangedTheDocumentMeanwhile_ThrowsAndKeepsTheFirstChange()
+    {
+        var verification = MeaningVerification.Restore(
+            VerificationStatus.Verified,
+            [
+                KeyFact.Create(KeyFactType.Amount, "250 €", null, new KeyFactVerdict(KeyFactStatus.Omitted, KeyFactReason.NotInAdaptation)),
+                KeyFact.Create(KeyFactType.Deadline, "15 días", null, new KeyFactVerdict(KeyFactStatus.Omitted, KeyFactReason.NotInAdaptation)),
+            ],
+            null);
+        var document = await StoreAsync(OwnerId.From(Guid.NewGuid()), seeded =>
+        {
+            seeded.StartProcessing(DateTimeOffset.UtcNow);
+            seeded.CompleteAdaptation(
+                AdaptedContent.TryCreate("Ayudas", [new AdaptedSectionDraft("¿Quién?", ["Una frase."])], [])!,
+                new AdaptationMetadata("Servidor propio", "modelo", "adapter.v1", 1, 1, TimeSpan.FromSeconds(1)),
+                GuidelineReport.Create(new GuidelineAnalysis([], []), [], 10),
+                verification,
+                DateTimeOffset.UtcNow);
+        });
+        await using var first = CreateContext();
+        await using var second = CreateContext();
+        var firstDocument = (await new EfDocumentRepository(first).FindForOwnerToUpdateAsync(document.Id, document.OwnerId, Token))!;
+        var secondDocument = (await new EfDocumentRepository(second).FindForOwnerToUpdateAsync(document.Id, document.OwnerId, Token))!;
+
+        firstDocument.AcknowledgeKeyFact(0, DateTimeOffset.UtcNow.AddSeconds(1));
+        await new EfDocumentRepository(first).SaveAsync(firstDocument, Token);
+        secondDocument.AcknowledgeKeyFact(1, DateTimeOffset.UtcNow.AddSeconds(2));
+
+        await Should.ThrowAsync<ConcurrentUpdateException>(() => new EfDocumentRepository(second).SaveAsync(secondDocument, Token));
+        await using var readContext = CreateContext();
+        var stored = (await new EfDocumentRepository(readContext).FindForOwnerAsync(document.Id, document.OwnerId, Token))!;
+        stored.LatestAdaptedVersion!.MeaningVerification!.KeyFacts.Select(fact => fact.Acknowledged).ShouldBe([true, false]);
     }
 
     [Fact]

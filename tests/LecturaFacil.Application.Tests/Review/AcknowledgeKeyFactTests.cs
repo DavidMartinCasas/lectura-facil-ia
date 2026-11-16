@@ -48,6 +48,17 @@ public sealed class AcknowledgeKeyFactTests
     }
 
     [Fact]
+    public async Task Acknowledge_WhenAnotherRequestChangedTheDocument_ReturnsAConflict()
+    {
+        var document = Adapted(Owner);
+        _repository.FailNextSaveWithConflict = true;
+
+        var result = await CreateUseCase().ExecuteAsync(new AcknowledgeKeyFactCommand(document.Id, 1, 0), Token);
+
+        result.Error.ShouldBe(ReviewErrors.VersionConflict);
+    }
+
+    [Fact]
     public async Task Acknowledge_WhenTheVersionIsNotTheLatest_ReturnsAConflict()
     {
         var document = Adapted(Owner);

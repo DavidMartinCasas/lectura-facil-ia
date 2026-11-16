@@ -38,7 +38,16 @@ public sealed class AcknowledgeKeyFact(
         }
 
         document.AcknowledgeKeyFact(command.KeyFactIndex, timeProvider.GetUtcNow());
-        await repository.SaveAsync(document, cancellationToken);
+        try
+        {
+            await repository.SaveAsync(document, cancellationToken);
+        }
+        catch (ConcurrentUpdateException)
+        {
+            // Otra pestaña o persona ha guardado antes: se avisa en lugar de pisar su cambio.
+            return Result<DocumentDetails>.Failure(ReviewErrors.VersionConflict);
+        }
+
         return Result<DocumentDetails>.Success(describeDocument.Execute(document));
     }
 }

@@ -35,6 +35,9 @@ public interface IDocumentRepository
     /// </summary>
     Task<IReadOnlyList<DocumentSummary>> ListForOwnerAsync(OwnerId ownerId, int maxCount, CancellationToken cancellationToken);
 
-    /// <summary>Guarda los cambios de un documento obtenido con <see cref="FindAsync"/> o <see cref="FindForOwnerToUpdateAsync"/>.</summary>
+    /// <summary>
+    /// Guarda los cambios de un documento obtenido con <see cref="FindAsync"/> o <see cref="FindForOwnerToUpdateAsync"/>.
+    /// Lanza <see cref="ConcurrentUpdateException"/> si otra petición lo ha cambiado mientras tanto.
+    /// </summary>
     Task SaveAsync(Document document, CancellationToken cancellationToken);
 }

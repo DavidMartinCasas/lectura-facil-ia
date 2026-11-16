@@ -90,6 +90,17 @@ public sealed class SaveManualEditTests
     }
 
     [Fact]
+    public async Task SaveManualEdit_WhenAnotherRequestChangedTheDocument_ReturnsAConflict()
+    {
+        var document = Adapted(Owner);
+        _repository.FailNextSaveWithConflict = true;
+
+        var result = await CreateUseCase().ExecuteAsync(Command(document, 1, ["Una frase."]), Token);
+
+        result.Error.ShouldBe(ReviewErrors.VersionConflict);
+    }
+
+    [Fact]
     public async Task SaveManualEdit_WhenTheDocumentIsNotADraft_ReturnsNotEditable()
     {
         var document = Submit(Owner);

@@ -65,9 +65,18 @@ internal sealed class InMemoryDocumentRepository : IDocumentRepository
                 .Take(maxCount)
                 .Select(DocumentSummary.From)]);
 
+    /// <summary>Simula que otra petición ha cambiado el documento antes de guardar.</summary>
+    public bool FailNextSaveWithConflict { get; set; }
+
     public Task SaveAsync(Document document, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (FailNextSaveWithConflict)
+        {
+            FailNextSaveWithConflict = false;
+            throw new ConcurrentUpdateException();
+        }
+
         SavedStatuses.Add(document.Status);
         return Task.CompletedTask;
     }

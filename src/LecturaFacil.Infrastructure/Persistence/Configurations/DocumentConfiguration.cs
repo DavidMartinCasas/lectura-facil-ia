@@ -47,7 +47,9 @@ internal sealed class DocumentConfiguration : IEntityTypeConfiguration<Document>
             .HasMaxLength(Document.FailureCodeMaxLength);
 
         builder.Property(document => document.CreatedAt).HasColumnName("created_at");
-        builder.Property(document => document.UpdatedAt).HasColumnName("updated_at");
+        // Concurrencia optimista: cada cambio del documento cambia UpdatedAt, así dos peticiones que lo modifican a la vez
+        // (dos ediciones, o dos datos clave marcados como revisados) no se pisan; la segunda falla (US-13).
+        builder.Property(document => document.UpdatedAt).HasColumnName("updated_at").IsConcurrencyToken();
 
         // Todas las consultas de documentos filtran por propietario (autorización por objeto).
         builder.HasIndex(document => new { document.OwnerId, document.CreatedAt });
