@@ -17,5 +17,9 @@ public static class DocumentStatusTransitions
         (DocumentStatus.Validated, DocumentStatus.Published),
     ];
 
+    /// <summary>El documento espera a que el worker lo adapte: recién recibido o a medias tras un reinicio.</summary>
+    public static bool IsAwaitingAdaptation(DocumentStatus status) =>
+        status is DocumentStatus.Received or DocumentStatus.Processing;
+
     public static bool IsAllowed(DocumentStatus from, DocumentStatus to) => Allowed.Contains((from, to));
 }
