@@ -80,6 +80,35 @@ El doble guion bajo separa niveles y no importan las mayúsculas: `LLM__PRIMARY_
 | `EXPORT__LINESPACING` | No | `1.5` | Interlineado de los DOCX y PDF exportados (1,5 – 3). |
 | `EXPORT__DOCXFONTFAMILY` | No | `Arial` | Fuente sin serifa del DOCX. El PDF lleva siempre Atkinson Hyperlegible incrustada. |
 | `UI__NOTICE` | No | vacío | Aviso que se muestra en la interfaz (máx. 500 caracteres). |
+| `SERILOG__MINIMUMLEVEL__DEFAULT` | No | `Information` | Nivel de los logs de la API. |
+| `OBSERVABILITY__SENTRYDSN` 🔒 | No | vacío | DSN de Sentry del backend. Vacío: Sentry deshabilitado. |
+| `OBSERVABILITY__FRONTENDSENTRYDSN` | No | vacío | DSN de Sentry del frontend (público). Vacío: deshabilitado. |
+| `OBSERVABILITY__ENVIRONMENT` | No | `production` | Entorno que se ve en Sentry. |
+| `OBSERVABILITY__RELEASE` | No | versión compilada | Versión desplegada (por ejemplo, el `git sha`): en Sentry y en la cabecera `X-App-Version` de `/health`. |
+| `OBSERVABILITY__FRONTENDREPORTSPERMINUTE` | No | `60` | Informes de errores del navegador reenviados a Sentry por minuto (1 – 10 000). |
+
+## Observabilidad
+
+Pensada para ver errores, tiempos y qué proveedor procesa cada documento **sin exponer el contenido de nadie**.
+
+- **Logs:** JSON por la consola (Serilog), con el `TraceId` de la petición y, en el proceso de adaptación, el
+  `DocumentId`. Cada adaptación deja un único evento (`AdaptationCompleted` o `AdaptationFailed`) con el documento,
+  el proveedor (`primary`, `fallback` o `none`), el modelo, los tokens, la duración y el resultado. **Nunca** se registra
+  texto de los documentos ni de las respuestas del modelo.
+- **Sentry:** deshabilitado sin DSN. El backend envía las excepciones no controladas con su traza; el frontend, los
+  errores de JavaScript con el entorno y la versión. Ambos usan un filtro que quita cuerpos, cookies, cabeceras, la
+  consulta de las URLs, los datos de la persona y cualquier campo llamado `text`, `content`, `original` o `adapted`.
+  El navegador envía sus informes a `/api/monitoring/sentry` y la API los reenvía **solo** al DSN del frontend
+  configurado: la CSP sigue sin permitir conexiones a otros orígenes.
+- **Métricas:** formato Prometheus en `/metrics` (adaptaciones por proveedor y resultado, errores por código, duración
+  y tokens). Solo responde a peticiones de la red interna (localhost o IPs privadas) que no lleguen por un proxy; el
+  nginx público la bloquea y la API no publica ningún puerto. Para consultarla desde la máquina del despliegue:
+
+  ```bash
+  docker compose -f deploy/docker-compose.yml exec web wget -qO- http://api:8080/metrics
+  ```
+
+  Un Prometheus propio puede leerla uniéndose a la red `frontend` del compose.
 
 ## Proveedores de IA
 

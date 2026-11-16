@@ -87,7 +87,7 @@ Las historias que se lanzan el mismo día no dependen entre sí y pueden hacerse
 | [US-14](historias/US-14-exportacion.md) | Exportar en DOCX, PDF, Markdown o texto | EP-06 | Must | 5 | Dom 22 | US-13 | No | 🔍 |
 | [US-15](historias/US-15-login-y-autorizacion.md) | Login y autorización por documento | EP-07 | Must | 3 | Sáb 21 | US-04 | No | ⬜ |
 | [US-16](historias/US-16-antiabuso.md) | Protección frente a abuso: Turnstile y límites | EP-07 | Must | 2 | Dom 22 | US-15 | Sí: claves de Turnstile | ⬜ |
-| [US-17](historias/US-17-observabilidad.md) | Observabilidad sin datos personales | EP-08 | Should | 2 | Lun 23 | US-06 | Sí: DSN de Sentry | ⬜ |
+| [US-17](historias/US-17-observabilidad.md) | Observabilidad sin datos personales | EP-08 | Should | 2 | Lun 23 | US-06 | Sí: DSN de Sentry | 🔍 |
 | [US-18](historias/US-18-evaluaciones.md) | Evaluaciones de modelos | EP-08 | Must | 5 | Lun 23 | US-07, US-08, US-11 | Sí: textos de referencia | ⬜ |
 | [US-19](historias/US-19-cicd-y-despliegue-final.md) | CI/CD y despliegue final | EP-08 | Must | 3 | Lun 23 | US-10 | Sí: secretos de GitHub | ⬜ |
 | [US-20](historias/US-20-readme-y-adrs.md) | README, licencia y documentación open source | EP-09 | Must | 3 | Jue 26 | Todas | Sí: URLs de slides y vídeo | ⬜ |
