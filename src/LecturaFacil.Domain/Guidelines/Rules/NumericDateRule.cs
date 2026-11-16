@@ -57,8 +57,9 @@ public sealed partial class NumericDateRule : IGuidelineRule
             : $"Escribe la fecha completa: «{date}» y el año con sus cuatro cifras.";
     }
 
+    // [0-9] y no \d: \d acepta dígitos de otras escrituras ("١٥") que int.Parse no convierte.
     [GeneratedRegex(
-        @"(?<![\p{N}./-])(?:(?<day>\d{1,2})(?<sep>[/-])(?<month>\d{1,2})\k<sep>(?<year>\d{4}|\d{2})|(?<day>\d{1,2})\.(?<month>\d{1,2})\.(?<year>\d{4})|(?<isoyear>\d{4})-(?<isomonth>\d{2})-(?<isoday>\d{2}))(?![\p{N}]|[./-]\p{N})",
+        @"(?<![\p{N}./-])(?:(?<day>[0-9]{1,2})(?<sep>[/-])(?<month>[0-9]{1,2})\k<sep>(?<year>[0-9]{4}|[0-9]{2})|(?<day>[0-9]{1,2})\.(?<month>[0-9]{1,2})\.(?<year>[0-9]{4})|(?<isoyear>[0-9]{4})-(?<isomonth>[0-9]{2})-(?<isoday>[0-9]{2}))(?![\p{N}]|[./-]\p{N})",
         GuidelineRegex.Options,
         GuidelineRegex.TimeoutMilliseconds)]
     private static partial Regex DatePattern();

@@ -32,6 +32,7 @@ public sealed class NumericDateRuleTests
     [InlineData("El código es 15/12-2026.")]
     [InlineData("Llame al 91.555.12.34.")]
     [InlineData("Según el apartado 3.2.10 de las bases.")]
+    [InlineData("El plazo acaba el ١٥/١٢/٢٠٢٦.")]
     public void Check_WhenTextHasNoNumericDate_ReturnsNothing(string text)
     {
         _rule.Check(text).ShouldBeEmpty();
