@@ -4,6 +4,7 @@
 import { Page, Route, expect, test } from '@playwright/test';
 import path from 'node:path';
 import { documentFixture } from '../src/app/testing/document-fixtures';
+import { mockSignedIn } from './session';
 
 const AXE_PATH = path.join(__dirname, '..', 'node_modules', 'axe-core', 'axe.min.js');
 
@@ -20,6 +21,7 @@ async function mockApi(
 ): Promise<{ submissions: number }> {
   const counters = { submissions: 0 };
   let failNext = options.failSubmitOnce ?? false;
+  await mockSignedIn(page);
 
   await page.route('**/api/documents', async (route: Route) => {
     if (route.request().method() === 'POST') {

@@ -80,6 +80,23 @@ El doble guion bajo separa niveles y no importan las mayúsculas: `LLM__PRIMARY_
 | `EXPORT__LINESPACING` | No | `1.5` | Interlineado de los DOCX y PDF exportados (1,5 – 3). |
 | `EXPORT__DOCXFONTFAMILY` | No | `Arial` | Fuente sin serifa del DOCX. El PDF lleva siempre Atkinson Hyperlegible incrustada. |
 | `UI__NOTICE` | No | vacío | Aviso que se muestra en la interfaz (máx. 500 caracteres). |
+| `SEED__TESTUSER__EMAIL` | No | vacío | Correo del [usuario de prueba](#usuario-de-prueba). Se crea al arrancar si no existe. |
+| `SEED__TESTUSER__PASSWORD` 🔒 | Si hay correo | vacío | Su contraseña: 12 caracteres o más, con mayúscula, minúscula, cifra y símbolo. |
+| `AUTH__MAXFAILEDACCESSATTEMPTS` | No | `5` | Intentos fallidos seguidos antes de bloquear la cuenta (3 – 20). |
+| `AUTH__LOCKOUTMINUTES` | No | `15` | Minutos que dura el bloqueo (1 – 1440). |
+| `AUTH__SESSIONHOURS` | No | `8` | Horas sin actividad tras las que caduca la sesión (1 – 24). |
+| `AUTH__LOGINATTEMPTSPERMINUTE` | No | `10` | Intentos de inicio de sesión por minuto y dirección IP (1 – 1000). |
+
+## Usuario de prueba
+
+No hay registro de usuarios: las cuentas se crean desde la configuración. Para el usuario de prueba, define en `deploy/.env` `SEED__TESTUSER__EMAIL` y `SEED__TESTUSER__PASSWORD`. Al arrancar, la API lo crea si no existe; si ya existe, no lo toca.
+
+- **Correo del usuario de prueba del TFM:** _pendiente: lo añade la persona responsable al desplegar_. La contraseña se entrega en el formulario del TFM; nunca está en el repositorio.
+- Cada persona ve solo sus documentos. Un documento de otra persona responde igual que uno que no existe (404).
+- Tras 5 intentos fallidos seguidos la cuenta queda bloqueada 15 minutos. El mensaje de error es siempre el mismo: «Correo o contraseña incorrectos».
+- La sesión es una cookie `HttpOnly`, `Secure` y `SameSite=Strict` del propio backend; el navegador no guarda ningún token. Caduca tras 8 horas sin uso y «Salir» la invalida también en el servidor (cierra la sesión en todos los dispositivos de esa persona).
+- Las peticiones que cambian algo llevan la cabecera `X-XSRF-TOKEN` con el valor de la cookie `XSRF-TOKEN` (Angular lo hace solo).
+- La cookie de sesión es `Secure`: abre la aplicación por HTTPS o en `http://localhost` (los navegadores lo tratan como seguro).
 
 ## Proveedores de IA
 

@@ -11,6 +11,7 @@ internal static class HealthEndpoints
     public const string LlmPath = "/health/llm";
 
     /// <summary>
+    /// Sin sesión: los usan Docker y la monitorización. Solo devuelven el estado global.
     /// <c>/health</c>: la API y su base de datos (lo que usan Docker y la prueba de humo). Que el modelo no responda no
     /// hace que la API esté caída: eso se ve en <c>/health/llm</c> (<c>Degraded</c>, HTTP 200) y en <c>/api/status/llm</c>.
     /// </summary>
@@ -20,12 +21,12 @@ internal static class HealthEndpoints
         {
             Predicate = registration => !IsLlm(registration),
             ResponseWriter = WriteStatusOnlyAsync,
-        });
+        }).AllowAnonymous();
         endpoints.MapHealthChecks(LlmPath, new HealthCheckOptions
         {
             Predicate = IsLlm,
             ResponseWriter = WriteStatusOnlyAsync,
-        });
+        }).AllowAnonymous();
         return endpoints;
     }
 

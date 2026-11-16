@@ -2,7 +2,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using LecturaFacil.Api.Security;
+using LecturaFacil.Api.Tests.Security;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
 using LecturaFacil.Domain.Readability;
@@ -18,8 +18,8 @@ public sealed class DocumentReviewEndpointTests
     public async Task Put_WhenTheDraftIsEdited_ReturnsANewVersionWithItsGuidelinesAndReadabilityRecalculated()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, GetDocumentEndpointTests.Adapt);
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, GetDocumentEndpointTests.Adapt);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PutAsJsonAsync(VersionUri(document.Id.Value, 1), Edit("Quien vive de alquiler.", "La ayuda paga una parte del alquiler."), Token);
 
@@ -44,8 +44,8 @@ public sealed class DocumentReviewEndpointTests
     public async Task Put_WhenTheTextLooksLikeHtml_KeepsItAsLiteralText()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, GetDocumentEndpointTests.Adapt);
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, GetDocumentEndpointTests.Adapt);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PutAsJsonAsync(VersionUri(document.Id.Value, 1), Edit("<script>alert(1)</script>"), Token);
 
@@ -61,7 +61,7 @@ public sealed class DocumentReviewEndpointTests
     {
         await using var factory = new DocumentsApiFactory();
         var foreign = GetDocumentEndpointTests.Seed(factory, OwnerId.From(Guid.NewGuid()), GetDocumentEndpointTests.Adapt);
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var foreignResponse = await client.PutAsJsonAsync(VersionUri(foreign.Id.Value, 1), Edit("Otra frase."), Token);
         using var missingResponse = await client.PutAsJsonAsync(VersionUri(Guid.NewGuid(), 1), Edit("Otra frase."), Token);
@@ -77,8 +77,8 @@ public sealed class DocumentReviewEndpointTests
     public async Task Put_WhenTheVersionIsNotTheLatest_Returns409()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, GetDocumentEndpointTests.Adapt);
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, GetDocumentEndpointTests.Adapt);
+        using var client = await factory.CreateApiClientAsync();
         using var first = await client.PutAsJsonAsync(VersionUri(document.Id.Value, 1), Edit("Primera edición."), Token);
 
         using var response = await client.PutAsJsonAsync(VersionUri(document.Id.Value, 1), Edit("Segunda edición."), Token);
@@ -93,8 +93,8 @@ public sealed class DocumentReviewEndpointTests
     public async Task Put_WhenTheDocumentIsStillBeingAdapted_Returns409()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, seeded => seeded.StartProcessing(DateTimeOffset.UtcNow));
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, seeded => seeded.StartProcessing(DateTimeOffset.UtcNow));
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PutAsJsonAsync(VersionUri(document.Id.Value, 1), Edit("Una frase."), Token);
 
@@ -110,8 +110,8 @@ public sealed class DocumentReviewEndpointTests
     public async Task Put_WhenTheEditIsNotComplete_Returns400WithoutInternalDetails(string body)
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, GetDocumentEndpointTests.Adapt);
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, GetDocumentEndpointTests.Adapt);
+        using var client = await factory.CreateApiClientAsync();
         using var content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
 
         using var response = await client.PutAsync(VersionUri(document.Id.Value, 1), content, Token);
@@ -127,8 +127,8 @@ public sealed class DocumentReviewEndpointTests
     public async Task Put_WhenTheEditIsTooLong_Returns400()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, GetDocumentEndpointTests.Adapt);
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, GetDocumentEndpointTests.Adapt);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PutAsJsonAsync(VersionUri(document.Id.Value, 1), Edit(new string('a', 40_001)), Token);
 
@@ -140,8 +140,8 @@ public sealed class DocumentReviewEndpointTests
     public async Task Acknowledge_MarksTheWarningAsReviewed_AndAllowsExportWhenNoneIsLeft()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, GetDocumentEndpointTests.Adapt);
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, GetDocumentEndpointTests.Adapt);
+        using var client = await factory.CreateApiClientAsync();
 
         using var first = await client.PostAsJsonAsync(AcknowledgeUri(document.Id.Value, 1), new { version = 1 }, Token);
         using var second = await client.PostAsJsonAsync(AcknowledgeUri(document.Id.Value, 2), new { version = 1 }, Token);
@@ -168,7 +168,7 @@ public sealed class DocumentReviewEndpointTests
     {
         await using var factory = new DocumentsApiFactory();
         var foreign = GetDocumentEndpointTests.Seed(factory, OwnerId.From(Guid.NewGuid()), GetDocumentEndpointTests.Adapt);
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PostAsJsonAsync(AcknowledgeUri(foreign.Id.Value, 1), new { version = 1 }, Token);
 
@@ -180,8 +180,8 @@ public sealed class DocumentReviewEndpointTests
     public async Task Acknowledge_WhenTheKeyFactDoesNotExist_Returns404()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, GetDocumentEndpointTests.Adapt);
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, GetDocumentEndpointTests.Adapt);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PostAsJsonAsync(AcknowledgeUri(document.Id.Value, 9), new { version = 1 }, Token);
 
@@ -194,8 +194,8 @@ public sealed class DocumentReviewEndpointTests
     public async Task Acknowledge_WhenTheVersionIsMissing_Returns400()
     {
         await using var factory = new DocumentsApiFactory();
-        var document = GetDocumentEndpointTests.Seed(factory, FixedCurrentUser.DevelopmentOwner, GetDocumentEndpointTests.Adapt);
-        using var client = factory.CreateClient();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, GetDocumentEndpointTests.Adapt);
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.PostAsJsonAsync(AcknowledgeUri(document.Id.Value, 1), new { }, Token);
 
