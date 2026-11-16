@@ -2,11 +2,13 @@
 using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
+using LecturaFacil.Application.Export;
 using LecturaFacil.Application.Llm;
 using LecturaFacil.Application.Readability;
 using LecturaFacil.Application.Verification;
 using LecturaFacil.Infrastructure.Adaptation;
 using LecturaFacil.Infrastructure.Documents;
+using LecturaFacil.Infrastructure.Export;
 using LecturaFacil.Infrastructure.Guidelines;
 using LecturaFacil.Infrastructure.Llm;
 using LecturaFacil.Infrastructure.Persistence;
@@ -29,7 +31,8 @@ public static class DependencyInjection
     public const string LlmHealthCheckTag = "llm";
 
     /// <summary>
-    /// Registra los adaptadores: base de datos y su comprobación de salud, documentos, legibilidad y proveedores de LLM.
+    /// Registra los adaptadores: base de datos y su comprobación de salud, documentos, legibilidad, exportación y
+    /// proveedores de LLM.
     /// Las opciones (<see cref="DatabaseOptions"/>, <see cref="LlmOptions"/>…) las registra y valida la composición de la API.
     /// </summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
@@ -44,7 +47,17 @@ public static class DependencyInjection
         services.AddSingleton<IReadabilityCalculator, SzigrisztPazosReadabilityCalculator>();
         services.AddSingleton<IGuidelineChecker, GuidelineChecker>();
 
-        return services.AddAdaptation().AddLlm();
+        return services.AddAdaptation().AddExport().AddLlm();
+    }
+
+    /// <summary>Una estrategia por formato (US-14). Añadir un formato es añadir aquí su exportador.</summary>
+    private static IServiceCollection AddExport(this IServiceCollection services)
+    {
+        services.AddSingleton<IDocumentExporter, DocxExporter>();
+        services.AddSingleton<IDocumentExporter, PdfExporter>();
+        services.AddSingleton<IDocumentExporter, MarkdownExporter>();
+        services.AddSingleton<IDocumentExporter, PlainTextExporter>();
+        return services;
     }
 
     /// <summary>Cola en memoria y proceso en segundo plano que adapta los documentos.</summary>
