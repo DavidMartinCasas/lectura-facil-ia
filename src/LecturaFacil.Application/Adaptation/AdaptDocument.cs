@@ -104,7 +104,7 @@ public sealed class AdaptDocument(
     /// <summary>Adapta, revisa las pautas y, si incumple alguna grave, reintenta y se queda con la mejor versión.</summary>
     private async Task<Result<ReviewedAdaptation>> AdaptAndReviewAsync(Document document, CancellationToken cancellationToken)
     {
-        var first = await AdaptAsync(document, SystemPrompt(document.OriginalFindings), cancellationToken);
+        var first = await AdaptAsync(document, SystemPrompt(document.OriginalFindings), new Usage(), cancellationToken);
         if (first.IsFailure)
         {
             return Result<ReviewedAdaptation>.Failure(first.Error!);
@@ -115,7 +115,10 @@ public sealed class AdaptDocument(
         var cost = best.Metadata;
         for (var retry = 0; retry < _limits.MaxAdaptationRetries && last.Report.HasHighSeverityViolations; retry++)
         {
-            var attempt = await AdaptAsync(document, RetrySystemPrompt(document.OriginalFindings, last.Report), cancellationToken);
+            // Lo que cuestan las respuestas válidas del reintento se suma aunque el reintento acabe fallando en otra parte.
+            var retryUsage = new Usage();
+            var attempt = await AdaptAsync(document, RetrySystemPrompt(document.OriginalFindings, last.Report), retryUsage, cancellationToken);
+            cost = AddCost(cost, retryUsage);
             if (attempt.IsFailure)
             {
                 // La versión que ya hay es válida: un reintento fallido no tira el trabajo hecho.
@@ -123,7 +126,6 @@ public sealed class AdaptDocument(
             }
 
             last = Review(attempt.Value);
-            cost = AddCost(cost, last.Metadata);
             if (BestVersionPolicy.PrefersRetry(best.Content, best.Report, last.Content, last.Report))
             {
                 best = last;
@@ -143,7 +145,7 @@ public sealed class AdaptDocument(
     private ReviewedAdaptation Review((AdaptedContent Content, AdaptationMetadata Metadata) adaptation) =>
         new(adaptation.Content, adaptation.Metadata, reviewAdaptation.Execute(adaptation.Content));
 
-    private static AdaptationMetadata AddCost(AdaptationMetadata total, AdaptationMetadata attempt) =>
+    private static AdaptationMetadata AddCost(AdaptationMetadata total, Usage attempt) =>
         total with
         {
             InputTokens = total.InputTokens + attempt.InputTokens,
@@ -151,14 +153,15 @@ public sealed class AdaptDocument(
             Duration = total.Duration + attempt.Duration,
         };
 
+    /// <param name="usage">Acumula lo que cuestan las respuestas válidas, también si el intento acaba fallando.</param>
     private async Task<Result<(AdaptedContent Content, AdaptationMetadata Metadata)>> AdaptAsync(
         Document document,
         Prompt systemPrompt,
+        Usage usage,
         CancellationToken cancellationToken)
     {
         var maxChunk = Math.Min(_limits.MaxCharactersPerAdaptationChunk, _limits.MaxCharacters);
         var parts = new List<AdaptedContent>();
-        var usage = new Usage();
         var chunks = TextChunker.Split(document.OriginalText.Value, maxChunk);
         if (chunks.Count > _limits.MaxAdaptationChunksPerDocument)
         {

@@ -68,6 +68,21 @@ public sealed class BestVersionPolicyTests
         BestVersionPolicy.PrefersRetry(current, Report(high: 1, low: 0), retry, Report(high: 0, low: 0)).ShouldBeTrue();
     }
 
+    [Theory]
+    [InlineData("Puede pedirla hasta el 15/12/2026.", "Puede pedirla hasta el 15 de diciembre de 2026.")]
+    [InlineData("Puede pedirla hasta el 05-03-2026.", "Puede pedirla hasta el 5 de marzo de 2026.")]
+    [InlineData("Puede pedirla hasta el 15 de diciembre de 2026.", "Puede pedirla hasta el 15/12/2026.")]
+    public void PrefersRetry_WhenTheRetryWritesTheSameDateInAnotherWay_KeepsComparingTheReports(string first, string retry) =>
+        BestVersionPolicy.PrefersRetry(Content(first), Report(high: 1, low: 0), Content(retry), Report(high: 0, low: 0)).ShouldBeTrue();
+
+    [Fact]
+    public void PrefersRetry_WhenTheRetryChangesADate_KeepsTheFirstVersion() =>
+        BestVersionPolicy.PrefersRetry(
+            Content("Puede pedirla hasta el 15/12/2026."),
+            Report(high: 1, low: 0),
+            Content("Puede pedirla hasta el 15 de noviembre de 2026."),
+            Report(high: 0, low: 0)).ShouldBeFalse();
+
     private static AdaptedContent Content(params string[] sentences) =>
         AdaptedContent.TryCreate("Ayudas", [new AdaptedSectionDraft("¿Qué es?", sentences)], [])!;
 

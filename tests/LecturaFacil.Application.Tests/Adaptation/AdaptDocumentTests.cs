@@ -385,6 +385,26 @@ public sealed class AdaptDocumentTests
     }
 
     [Fact]
+    public async Task Adapt_WhenTheRetryFailsOnALaterPart_KeepsTheFirstVersionAndCountsWhatTheRetrySpent()
+    {
+        UseRealGuidelines();
+        _limits.MaxCharactersPerAdaptationChunk = 500;
+        var document = Store(string.Join("\n\n", Enumerable.Repeat(new string('x', 300), 2)));
+        var llm = Sequence(
+            "adapter/sigla-sin-explicar", "adapter/sigla-sin-explicar",
+            "adapter/sigla-en-glosario", "adapter/poema", "adapter/poema");
+
+        var result = await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        llm.Requests.Count.ShouldBe(5);
+        var version = result.Value;
+        version.Metadata.PromptVersion.ShouldBe(AdaptDocument.PromptName);
+        version.Metadata.InputTokens.ShouldBe((2 * 1000) + 1100);
+        version.Metadata.OutputTokens.ShouldBe((2 * 800) + 850);
+        version.Metadata.Duration.ShouldBe(TimeSpan.FromMilliseconds((2 * 3000) + 3100));
+    }
+
+    [Fact]
     public async Task Adapt_WhenTheProviderFailsOnTheRetry_KeepsTheFirstVersion()
     {
         UseRealGuidelines();
