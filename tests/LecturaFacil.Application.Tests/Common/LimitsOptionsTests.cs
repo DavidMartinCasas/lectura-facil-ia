@@ -20,12 +20,20 @@ public sealed class LimitsOptionsTests
         options.MaxFileSizeBytes.ShouldBe(5 * 1024 * 1024);
         options.MaxCharacters.ShouldBe(20_000);
         options.MaxWordsPerSentence.ShouldBe(15);
+        options.MaxConnectorsPerSentence.ShouldBe(1);
+        options.MaxFindingsPerDocument.ShouldBe(500);
         options.MaxOutputTokens.ShouldBe(4_096);
         options.LlmTimeoutSeconds.ShouldBe(120);
         options.MinCharacters.ShouldBe(50);
         options.MaxPdfPages.ShouldBe(100);
         options.PdfExtractionTimeoutSeconds.ShouldBe(15);
         options.MaxConcurrentPdfExtractions.ShouldBe(2);
+        options.MaxCharactersPerAdaptationChunk.ShouldBe(6_000);
+        options.AdaptationConcurrency.ShouldBe(1);
+        options.DocumentSubmissionsPerMinute.ShouldBe(10);
+        options.MaxAdaptationChunksPerDocument.ShouldBe(10);
+        options.DocumentEventsPollMilliseconds.ShouldBe(1_000);
+        options.DocumentEventsMaxSeconds.ShouldBe(600);
     }
 
     [Fact]
@@ -44,6 +52,10 @@ public sealed class LimitsOptionsTests
     [InlineData(nameof(LimitsOptions.MaxCharacters), 1_000_000)]
     [InlineData(nameof(LimitsOptions.MaxWordsPerSentence), 0)]
     [InlineData(nameof(LimitsOptions.MaxWordsPerSentence), 100)]
+    [InlineData(nameof(LimitsOptions.MaxConnectorsPerSentence), 0)]
+    [InlineData(nameof(LimitsOptions.MaxConnectorsPerSentence), 11)]
+    [InlineData(nameof(LimitsOptions.MaxFindingsPerDocument), 9)]
+    [InlineData(nameof(LimitsOptions.MaxFindingsPerDocument), 5_001)]
     [InlineData(nameof(LimitsOptions.MaxOutputTokens), 10)]
     [InlineData(nameof(LimitsOptions.MaxOutputTokens), 1_000_000)]
     [InlineData(nameof(LimitsOptions.LlmTimeoutSeconds), 0)]

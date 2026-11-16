@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using LecturaFacil.Domain.Documents;
+using LecturaFacil.Domain.Guidelines;
 
 namespace LecturaFacil.Domain.Tests.Documents;
 
@@ -21,6 +22,31 @@ public sealed class DocumentTests
         document.Status.ShouldBe(DocumentStatus.Received);
         document.CreatedAt.ShouldBe(Now);
         document.UpdatedAt.ShouldBe(Now);
+        document.OriginalFindings.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void RecordOriginalFindings_ReplacesThePreviousFindings()
+    {
+        var document = Submit();
+        var guideline = GuidelineCatalog.Find(GuidelineCodes.ShortSentences);
+        var first = Finding.At(guideline, Text.Value, 0, 5, "Primera.");
+        var second = Finding.At(guideline, Text.Value, 6, 8, "Segunda.");
+
+        document.RecordOriginalFindings([first]);
+        document.RecordOriginalFindings([second]);
+
+        document.OriginalFindings.ShouldBe([second]);
+    }
+
+    [Fact]
+    public void RecordOriginalFindings_WhenAFindingIsOutsideTheOriginalText_Throws()
+    {
+        var document = Submit();
+        var longer = Text.Value + " y más texto";
+        var outside = Finding.At(GuidelineCatalog.Find(GuidelineCodes.ShortSentences), longer, 0, longer.Length, "Fuera.");
+
+        Should.Throw<ArgumentException>(() => document.RecordOriginalFindings([outside]));
     }
 
     [Theory]

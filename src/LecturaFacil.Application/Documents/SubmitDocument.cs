@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Users;
 using LecturaFacil.Domain.Documents;
@@ -6,13 +7,18 @@ using Microsoft.Extensions.Options;
 
 namespace LecturaFacil.Application.Documents;
 
-/// <summary>Recibe un texto pegado o un PDF digital y crea un documento en estado <see cref="DocumentStatus.Received"/>.</summary>
+/// <summary>
+/// Recibe un texto pegado o un PDF digital y crea un documento en estado <see cref="DocumentStatus.Received"/>, con los
+/// problemas de lectura fácil que tiene su texto original, y lo deja en la cola de adaptación.
+/// </summary>
 public sealed class SubmitDocument(
     ITextExtractor textExtractor,
     IDocumentRepository repository,
     ICurrentUser currentUser,
     IOptions<LimitsOptions> limits,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    IGuidelineChecker guidelineChecker,
+    IAdaptationQueue adaptationQueue)
 {
     // Tamaño del bloque de lectura: el mismo que usa Stream.CopyToAsync por defecto.
     private const int ReadBufferSize = 81_920;
@@ -76,7 +82,13 @@ public sealed class SubmitDocument(
 
         var originalText = OriginalText.Create(text, limits);
         var document = Document.Submit(currentUser.OwnerId, title, originalText, timeProvider.GetUtcNow());
+        // TODO(US-07): las pautas que agotan su tiempo (TimedOutGuidelines) solo quedan en el log; guardarlas para que
+        // "sin hallazgos" no se lea como "cumple" cuando una pauta no se ha podido comprobar.
+        // TODO(US-07): indicar también cuándo se han descartado hallazgos por superar MaxFindingsPerDocument.
+        var findings = guidelineChecker.Check(originalText.Value).Findings.Take(_limits.MaxFindingsPerDocument);
+        document.RecordOriginalFindings(findings);
         await repository.AddAsync(document, cancellationToken);
+        await adaptationQueue.EnqueueAsync(document.Id, cancellationToken);
 
         return Result<SubmittedDocument>.Success(
             new SubmittedDocument(document.Id, document.Status, originalText.Value.Length, pageCount));

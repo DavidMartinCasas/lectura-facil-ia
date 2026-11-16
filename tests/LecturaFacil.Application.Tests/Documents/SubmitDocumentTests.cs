@@ -3,6 +3,7 @@ using System.Text;
 using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Domain.Documents;
+using LecturaFacil.Domain.Guidelines;
 using Microsoft.Extensions.Options;
 
 namespace LecturaFacil.Application.Tests.Documents;
@@ -15,6 +16,8 @@ public sealed class SubmitDocumentTests
     private static readonly DateTimeOffset Now = new(2026, 11, 15, 10, 0, 0, TimeSpan.Zero);
 
     private readonly InMemoryDocumentRepository _repository = new();
+    private readonly RecordingAdaptationQueue _queue = new();
+    private StubGuidelineChecker _guidelineChecker = new();
     private readonly LimitsOptions _limits = new() { MinCharacters = 50, MaxCharacters = 200, MaxFileSizeBytes = 2_048 };
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
@@ -35,6 +38,62 @@ public sealed class SubmitDocumentTests
         result.Value.Status.ShouldBe(DocumentStatus.Received);
         result.Value.Characters.ShouldBe(ValidText.Length);
         result.Value.PageCount.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task SubmitText_WhenTextIsValid_QueuesTheDocumentForAdaptation()
+    {
+        var result = await CreateUseCase().SubmitTextAsync(new SubmitTextCommand(ValidText, null), Token);
+
+        _queue.Enqueued.ShouldBe([result.Value.Id]);
+    }
+
+    [Fact]
+    public async Task SubmitText_WhenTextIsTooShort_DoesNotQueueAnything()
+    {
+        await CreateUseCase().SubmitTextAsync(new SubmitTextCommand("corto", null), Token);
+
+        _queue.Enqueued.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task SubmitText_WhenTextIsValid_StoresTheFindingsOfTheNormalizedOriginalText()
+    {
+        var result = await CreateUseCase().SubmitTextAsync(new SubmitTextCommand("  " + ValidText + "\r\n", null), Token);
+
+        result.IsSuccess.ShouldBeTrue();
+        _guidelineChecker.CheckedTexts.ShouldBe([ValidText]);
+        var finding = _repository.Added.ShouldHaveSingleItem().OriginalFindings.ShouldHaveSingleItem();
+        finding.GuidelineCode.ShouldBe(GuidelineCodes.ShortSentences);
+        finding.Fragment.ShouldBe(ValidText[..5]);
+    }
+
+    [Fact]
+    public async Task SubmitPdf_WhenPdfIsValid_StoresTheFindingsOfItsText()
+    {
+        var result = await CreateUseCase().SubmitPdfAsync(PdfCommand("bases.pdf"), Token);
+
+        result.IsSuccess.ShouldBeTrue();
+        _repository.Added.ShouldHaveSingleItem().OriginalFindings.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public async Task SubmitText_WhenThereAreMoreFindingsThanTheMaximum_StoresOnlyTheMaximum()
+    {
+        _limits.MaxFindingsPerDocument = 10;
+        _guidelineChecker = new StubGuidelineChecker(findingsPerText: 25);
+
+        await CreateUseCase().SubmitTextAsync(new SubmitTextCommand(ValidText, null), Token);
+
+        _repository.Added.ShouldHaveSingleItem().OriginalFindings.Count.ShouldBe(10);
+    }
+
+    [Fact]
+    public async Task SubmitText_WhenTextIsTooLong_DoesNotAnalyzeIt()
+    {
+        await CreateUseCase().SubmitTextAsync(new SubmitTextCommand(new string('a', 201), null), Token);
+
+        _guidelineChecker.CheckedTexts.ShouldBeEmpty();
     }
 
     [Fact]
@@ -186,5 +245,7 @@ public sealed class SubmitDocumentTests
             _repository,
             new FixedCurrentUser(Owner),
             Options.Create(_limits),
-            new FixedTimeProvider(Now));
+            new FixedTimeProvider(Now),
+            _guidelineChecker,
+            _queue);
 }

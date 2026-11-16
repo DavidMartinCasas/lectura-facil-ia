@@ -1,0 +1,7 @@
+{
+  "model": "modelo-adaptador-falso",
+  "content": "{\"titulo\": \"Ayudas\", \"secciones\": [{\"pregunta\": \"¿Qué es esta ayuda?\", \"frases\": [\"El Ayuntamiento da ayudas para pagar el alquiler de su casa.\"]}, {\"pregunta\": \"¿Quién puede pedir la ayuda?\", \"frases\": [\"Puede pedir la ayuda si:\", \"Vive de alquiler en la ciudad.\", \"No tiene otra casa a su nombre.\", \"Gana menos de 2,5 veces el IPREM.\"]}, {\"pregunta\": \"¿Cuánto dinero da la ayuda?\", \"frases\": [\"El Ayuntamiento paga 40 de cada 100 euros de su alquiler.\", \"Como mucho, 250 euros al mes.\", \"Por ejemplo: si paga 500 euros de alquiler, la ayuda es de 200 euros.\"]}, {\"pregunta\": \"¿Cómo pido la ayuda?\", \"frases\": [\"Rellene la solicitud.\", \"Lleve los papeles que demuestran lo que gana.\", \"Tiene 15 días para pedirla.\", \"No cuentan sábados, domingos ni festivos.\", \"Los 15 días empiezan el día después de que salga el anuncio en el Boletín Oficial.\"]}]}",
+  "inputTokens": 1200,
+  "outputTokens": 900,
+  "durationMs": 3400
+}
