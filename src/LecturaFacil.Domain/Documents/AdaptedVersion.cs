@@ -79,6 +79,9 @@ public sealed class AdaptedVersion
     /// <summary>Avisos de datos clave sin marcar como revisados. Mientras haya alguno, la versión no se puede exportar.</summary>
     public int PendingKeyFactCount => MeaningVerification?.PendingAcknowledgementCount ?? 0;
 
+    /// <summary>Se puede exportar cuando una persona ha marcado como revisados todos los avisos de datos clave.</summary>
+    public bool CanExport => PendingKeyFactCount == 0;
+
     /// <inheritdoc cref="AdaptedContent.PlainText"/>
     public string PlainText => AdaptedContent.ToPlainText(Title, Sections);
 

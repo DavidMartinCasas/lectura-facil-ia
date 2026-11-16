@@ -48,7 +48,7 @@ export class DocumentReviewComponent {
     { initialValue: false },
   );
   protected readonly adaptation = computed(() => this.document().adaptation);
-  protected readonly editable = computed(() => this.document().status === 'Draft');
+  protected readonly editable = computed(() => this.document().editable);
   protected readonly exportMessage = computed(() => {
     const pending = this.adaptation().pendingKeyFactCount;
     return pending > 0 ? REVIEW_TEXTS.exportBlocked(pending) : REVIEW_TEXTS.exportReady;

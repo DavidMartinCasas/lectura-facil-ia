@@ -14,6 +14,7 @@ namespace LecturaFacil.Api.Documents;
 /// <param name="Error">Motivo genérico si la adaptación ha fallado.</param>
 /// <param name="Original">El texto original con sus problemas de lectura fácil.</param>
 /// <param name="Readability">Índice INFLESZ del original y de la última versión; <c>null</c> si aún no hay adaptación.</param>
+/// <param name="Editable">Si la adaptación se puede editar y sus avisos marcar como revisados (un borrador ya adaptado).</param>
 public sealed record DocumentResponse(
     Guid Id,
     string Title,
@@ -23,7 +24,8 @@ public sealed record DocumentResponse(
     DocumentErrorResponse? Error,
     AdaptationResponse? Adaptation,
     OriginalTextResponse Original,
-    ReadabilityComparisonResponse? Readability)
+    ReadabilityComparisonResponse? Readability,
+    bool Editable)
 {
     public static DocumentResponse From(DocumentDetails details)
     {
@@ -37,7 +39,8 @@ public sealed record DocumentResponse(
             details.Failure is { } failure ? new DocumentErrorResponse(failure.Code, failure.Message) : null,
             details.Adaptation is { } version ? AdaptationResponse.From(version, details.Status) : null,
             OriginalTextResponse.From(details.OriginalText, details.OriginalFindings),
-            details.Readability is { } readability ? ReadabilityComparisonResponse.From(readability) : null);
+            details.Readability is { } readability ? ReadabilityComparisonResponse.From(readability) : null,
+            details.Editable);
     }
 }
 
@@ -71,7 +74,8 @@ public sealed record OriginalFindingResponse(
         ArgumentNullException.ThrowIfNull(finding);
         return new OriginalFindingResponse(
             finding.GuidelineCode,
-            GuidelineCatalog.Find(finding.GuidelineCode).Description,
+            // Una pauta que ya no está en el catálogo no impide leer el documento.
+            GuidelineCatalog.All.FirstOrDefault(guideline => guideline.Code == finding.GuidelineCode)?.Description ?? finding.GuidelineCode,
             finding.Fragment,
             finding.Start,
             finding.End,
@@ -175,7 +179,7 @@ public sealed record AdaptationResponse(
             version.MeaningVerification is { } verification ? MeaningVerificationResponse.From(verification) : null,
             version.Metadata.Provider,
             version.PendingKeyFactCount,
-            version.PendingKeyFactCount == 0);
+            version.CanExport);
     }
 }
 

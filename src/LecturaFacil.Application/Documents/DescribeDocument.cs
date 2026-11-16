@@ -31,6 +31,7 @@ public sealed class DescribeDocument(CompareReadability compareReadability)
             latest,
             document.OriginalText.Value,
             document.OriginalFindings,
-            readability is { IsSuccess: true } ? readability.Value : null);
+            readability is { IsSuccess: true } ? readability.Value : null,
+            document.IsEditable);
     }
 }

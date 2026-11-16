@@ -54,6 +54,8 @@ export interface DocumentDetails {
   readonly adaptation: Adaptation | null;
   readonly original: OriginalText;
   readonly readability: ReadabilityComparison | null;
+  /** Un borrador ya adaptado: se puede editar y marcar sus avisos como revisados. Lo decide el servidor. */
+  readonly editable: boolean;
 }
 
 /** Documento con una adaptación que revisar. */

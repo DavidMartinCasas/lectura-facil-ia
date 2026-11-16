@@ -131,6 +131,7 @@ export function documentFixture(
           improvement: 32.8,
         }
       : null,
+    editable: adapted,
     ...overrides,
   };
 }

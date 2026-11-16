@@ -23,6 +23,7 @@ public sealed class GetDocument(IDocumentRepository repository, ICurrentUser cur
 /// <param name="Adaptation">Última versión adaptada, si la hay. Siempre es un borrador pendiente de validación humana.</param>
 /// <param name="OriginalText">El texto original, al que se refieren las posiciones de <paramref name="OriginalFindings"/>.</param>
 /// <param name="OriginalFindings">Problemas de lectura fácil del original.</param>
+/// <param name="Editable">Un borrador ya adaptado: se puede editar y revisar (<see cref="Document.IsEditable"/>).</param>
 /// <param name="Readability">
 /// Índice INFLESZ del original y de la última versión; <c>null</c> si aún no hay adaptación o no se puede calcular.
 /// </param>
@@ -36,4 +37,5 @@ public sealed record DocumentDetails(
     AdaptedVersion? Adaptation,
     string OriginalText,
     IReadOnlyList<Finding> OriginalFindings,
-    ReadabilityComparison? Readability);
+    ReadabilityComparison? Readability,
+    bool Editable);

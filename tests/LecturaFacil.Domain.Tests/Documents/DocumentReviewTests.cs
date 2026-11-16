@@ -43,6 +43,7 @@ public sealed class DocumentReviewTests
     {
         var document = Adapted();
         document.LatestAdaptedVersion!.PendingKeyFactCount.ShouldBe(1);
+        document.LatestAdaptedVersion.CanExport.ShouldBeFalse();
 
         document.AcknowledgeKeyFact(0, Now.AddMinutes(5));
 
@@ -50,6 +51,7 @@ public sealed class DocumentReviewTests
         fact.Acknowledged.ShouldBeTrue();
         fact.Status.ShouldBe(KeyFactStatus.Omitted);
         document.LatestAdaptedVersion.PendingKeyFactCount.ShouldBe(0);
+        document.LatestAdaptedVersion.CanExport.ShouldBeTrue();
         document.UpdatedAt.ShouldBe(Now.AddMinutes(5));
     }
 

@@ -58,6 +58,7 @@ public sealed class GetDocumentEndpointTests
         adaptation.GetProperty("provider").GetString().ShouldBe("Servidor interno");
         adaptation.GetProperty("pendingKeyFactCount").GetInt32().ShouldBe(2);
         adaptation.GetProperty("canExport").GetBoolean().ShouldBeFalse();
+        json.RootElement.GetProperty("editable").GetBoolean().ShouldBeTrue();
         body.ShouldNotContain("modelo-secreto");
     }
 
