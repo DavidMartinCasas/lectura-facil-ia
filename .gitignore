@@ -27,3 +27,6 @@ coverage/
 *.swp
 Thumbs.db
 .DS_Store
+
+# Evaluaciones: las ejecuciones simuladas (--dry-run) no se versionan
+evals/resultados/*-dry-run/
