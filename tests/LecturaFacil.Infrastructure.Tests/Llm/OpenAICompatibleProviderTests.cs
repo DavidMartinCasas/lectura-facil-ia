@@ -191,6 +191,23 @@ public sealed class OpenAICompatibleProviderTests
     }
 
     [Fact]
+    public async Task Complete_WhenAComparisonFitsTheVerificationLimit_SendsIt()
+    {
+        var handler = FakeHttpMessageHandler.ReturningCompletion("""{"ok":true}""");
+        var limits = new LimitsOptions { MaxCharacters = 100, MaxCharactersPerVerification = 1_000 };
+        var prompt = new Prompt("prueba.v1", $"<{LlmRequest.OriginalTagPlaceholder}> <{LlmRequest.AdaptationTagPlaceholder}>");
+
+        var atLimit = await CompleteAsync(
+            handler, LlmRequest.ForComparison(LlmRole.Verifier, prompt, new string('a', 600), new string('b', 400), 200), limits: limits);
+        var overLimit = await CompleteAsync(
+            handler, LlmRequest.ForComparison(LlmRole.Verifier, prompt, new string('a', 600), new string('b', 401), 200), limits: limits);
+
+        atLimit.IsSuccess.ShouldBeTrue();
+        overLimit.Error.ShouldBe(LlmErrors.InputTooLong);
+        handler.Requests.Count.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task Complete_WhenTheCallerCancels_Throws()
     {
         var handler = FakeHttpMessageHandler.ReturningCompletion("""{"ok":true}""");

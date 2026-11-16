@@ -4,6 +4,7 @@ using System.Text.Json;
 using LecturaFacil.Api.Security;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Verification;
 
 namespace LecturaFacil.Api.Tests.Documents;
 
@@ -87,6 +88,36 @@ public sealed class GetDocumentEndpointTests
         finding.GetProperty("suggestion").GetString().ShouldBe("Explica la cantidad sin porcentajes.");
         items.Where(item => item.GetProperty("code").GetString() != GuidelineCodes.Percentages)
             .ShouldAllBe(item => item.GetProperty("status").GetString() == "Compliant");
+    }
+
+    [Fact]
+    public async Task Get_WhenTheDocumentIsInDraft_IncludesTheKeyFactsOfTheAdaptation()
+    {
+        await using var factory = new DocumentsApiFactory();
+        var document = Seed(factory, FixedCurrentUser.DevelopmentOwner, Adapt);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync(DocumentUri(document.Id.Value), Token);
+
+        var body = await response.Content.ReadAsStringAsync(Token);
+        using var json = JsonDocument.Parse(body);
+        var verification = json.RootElement.GetProperty("adaptation").GetProperty("verification");
+        verification.GetProperty("status").GetString().ShouldBe("Verified");
+        verification.GetProperty("summary").GetString().ShouldBe("1 conservado, 1 a revisar, 1 omitido");
+        verification.GetProperty("reviewCount").GetInt32().ShouldBe(1);
+        var items = verification.GetProperty("keyFacts").EnumerateArray().ToList();
+        items.Count.ShouldBe(3);
+        var amount = items[1];
+        amount.GetProperty("type").GetString().ShouldBe("Amount");
+        amount.GetProperty("originalValue").GetString().ShouldBe("40 % de la renta");
+        amount.GetProperty("adaptedValue").GetString().ShouldBe("La ayuda paga el 40 % del alquiler");
+        amount.GetProperty("status").GetString().ShouldBe("Review");
+        amount.GetProperty("reason").GetString().ShouldBe("CalculatedConversion");
+        amount.GetProperty("reasonMessage").GetString().ShouldBe("Conversión calculada; debe confirmarla una persona");
+        items[2].GetProperty("adaptedValue").ValueKind.ShouldBe(JsonValueKind.Null);
+        items[0].GetProperty("reason").GetString().ShouldBe("None");
+        body.ShouldNotContain("modelo-verificador-secreto");
+        body.ShouldNotContain("Verificador interno");
     }
 
     [Fact]
@@ -184,6 +215,22 @@ public sealed class GetDocumentEndpointTests
             content,
             new AdaptationMetadata("Servidor interno", "modelo-secreto", "adapter.v1", 10, 20, TimeSpan.FromSeconds(1)),
             GuidelineReport.Create(new GuidelineAnalysis([percentage], []), [], 10),
+            MeaningVerification.Restore(
+                VerificationStatus.Verified,
+                [
+                    KeyFact.Create(KeyFactType.Requirement, "vivan de alquiler", "Quien vive de alquiler", KeyFactVerdict.Conserved),
+                    KeyFact.Create(
+                        KeyFactType.Amount,
+                        "40 % de la renta",
+                        "La ayuda paga el 40 % del alquiler",
+                        new KeyFactVerdict(KeyFactStatus.Review, KeyFactReason.CalculatedConversion)),
+                    KeyFact.Create(
+                        KeyFactType.Reference,
+                        "Ordenanza Municipal 7/2024",
+                        null,
+                        new KeyFactVerdict(KeyFactStatus.Omitted, KeyFactReason.NotInAdaptation)),
+                ],
+                new VerificationMetadata("Verificador interno", "modelo-verificador-secreto", "verify.v1")),
             Now);
     }
 

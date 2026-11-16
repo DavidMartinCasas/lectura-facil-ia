@@ -4,6 +4,7 @@ using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Llm;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Verification;
 
 namespace LecturaFacil.Application.Tests.Documents;
 
@@ -39,6 +40,7 @@ public sealed class GetDocumentTests
             AdaptedContent.TryCreate("Ayudas", [new AdaptedSectionDraft("¿Qué es?", ["Una ayuda."])], [])!,
             new AdaptationMetadata("Proveedor", "modelo", "adapter.v1", 1, 1, TimeSpan.FromSeconds(1)),
             GuidelineReport.Create(new GuidelineAnalysis([], []), [], 10),
+            MeaningVerification.NotVerified("Una ayuda de 250 €.", 10),
             Now);
 
         var result = await CreateUseCase().ExecuteAsync(document.Id, Token);

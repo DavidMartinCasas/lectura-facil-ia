@@ -194,6 +194,10 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
                                 .HasColumnType("jsonb")
                                 .HasColumnName("guideline_report");
 
+                            b1.Property<string>("MeaningVerification")
+                                .HasColumnType("jsonb")
+                                .HasColumnName("meaning_verification");
+
                             b1.Property<string>("Sections")
                                 .IsRequired()
                                 .HasColumnType("jsonb")

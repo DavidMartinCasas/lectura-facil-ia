@@ -1,0 +1,7 @@
+{
+  "model": "modelo-verificador-falso",
+  "content": "{\"datos_clave\": [{\"tipo\": \"plazo\", \"original\": \"quince días hábiles\", \"adaptado\": \"10 días\", \"estado\": \"revisar\", \"motivo\": \"valor_cambiado\"}]}",
+  "inputTokens": 1500,
+  "outputTokens": 400,
+  "durationMs": 2100
+}

@@ -1,0 +1,7 @@
+{
+  "model": "modelo-verificador-falso",
+  "content": "{\"datos_clave\":[{\"tipo\":\"importe\",\"original\":\"máximo de 250 €\",\"estado\":\"conservado\",\"motivo\":\"ninguno\"}]}",
+  "inputTokens": 1500,
+  "outputTokens": 400,
+  "durationMs": 2100
+}

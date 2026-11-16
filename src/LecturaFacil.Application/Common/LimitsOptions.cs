@@ -68,6 +68,17 @@ public sealed class LimitsOptions
     public int MaxAdaptationRetries { get; set; } = 1;
 
     /// <summary>
+    /// Caracteres como mucho del original más la adaptación que se envían juntos al verificador del significado (US-11).
+    /// Si se superan, no se llama al modelo y todas las cifras del original quedan para revisar (OWASP LLM10).
+    /// </summary>
+    [Range(1_000, 400_000, ErrorMessage = "Limits:MaxCharactersPerVerification debe estar entre {1} y {2}.")]
+    public int MaxCharactersPerVerification { get; set; } = 50_000;
+
+    /// <summary>Datos clave conservados que se guardan como mucho por versión. Los avisos se guardan siempre todos.</summary>
+    [Range(10, 1_000, ErrorMessage = "Limits:MaxKeyFactsPerVersion debe estar entre {1} y {2}.")]
+    public int MaxKeyFactsPerVersion { get; set; } = 100;
+
+    /// <summary>
     /// Documentos que se aceptan por minuto en <c>POST /api/documents</c>, en total: cada uno genera llamadas al modelo
     /// (OWASP LLM10). El límite por usuario llegará con la autenticación (US-15, US-16).
     /// </summary>
