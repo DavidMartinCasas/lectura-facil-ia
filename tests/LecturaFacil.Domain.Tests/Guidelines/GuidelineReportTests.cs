@@ -58,12 +58,15 @@ public sealed class GuidelineReportTests
     [InlineData("bop")]
     [InlineData("BOP (Boletín Oficial de la Provincia)")]
     [InlineData("Boletín Oficial de la Provincia (BOP)")]
-    public void Create_WhenTheGlossaryTermContainsTheAcronymAsAWord_CountsItAsExplained(string term) =>
+    public void Create_WhenTheGlossaryTermIsTheAcronymOrItsExpansion_CountsItAsExplained(string term) =>
         Review("El anuncio sale en el BOP.", term).Find(GuidelineCodes.Acronyms).Status.ShouldBe(GuidelineStatus.Compliant);
 
-    [Fact]
-    public void Create_WhenTheGlossaryTermOnlyContainsTheAcronymInsideAnotherWord_DoesNotCountItAsExplained() =>
-        Review("El anuncio sale en el BOP.", "BOPA").Find(GuidelineCodes.Acronyms).Status.ShouldBe(GuidelineStatus.NotCompliant);
+    [Theory]
+    [InlineData("BOPA")]
+    [InlineData("BOP IPREM DNI")]
+    [InlineData("Anuncio del BOP")]
+    public void Create_WhenTheGlossaryTermIsNotTheAcronym_DoesNotCountItAsExplained(string term) =>
+        Review("El anuncio sale en el BOP.", term).Find(GuidelineCodes.Acronyms).Status.ShouldBe(GuidelineStatus.NotCompliant);
 
     [Fact]
     public void Create_WhenADifficultWordIsInTheGlossary_CountsItAsExplained()

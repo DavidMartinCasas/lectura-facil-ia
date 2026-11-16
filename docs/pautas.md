@@ -22,7 +22,7 @@ El catálogo (código, descripción y gravedad por defecto) está en `GuidelineC
 | `PALABRAS_DIFICILES` | Palabras difíciles explicadas | Media | Palabras de una lista inicial, pequeña y ampliable, con su alternativa ("sufragar" → "pagar", "arrendamiento" → "alquiler", "días hábiles" → "días de lunes a viernes que no son festivos") |
 | `SIN_EXPRESIONES_JURIDICAS` | Sin expresiones jurídicas complejas | Alta | Expresiones de una lista configurable con su alternativa ("en virtud de" → "según", "a contar desde" → "desde"). Si dos se solapan, gana la más larga |
 | `FECHAS_COMPLETAS` | Fechas completas | Baja | Fechas en cifras: `dd/mm/aaaa`, `d-m-aa`, `dd.mm.aaaa` y `aaaa-mm-dd`, con día y mes válidos. Con puntos se exige el año con cuatro cifras para no confundir una fecha con un apartado ("3.2.10"). Se sugiere la fecha completa ("15 de diciembre de 2026") |
-| `TITULOS_CLAROS` | Títulos claros | Baja | **Solo en la adaptación** (US-07): necesita saber qué líneas son títulos. Cada sección tiene siempre una pregunta que hace de título (lo exige el esquema); la regla avisa si el título tiene más palabras que `Limits:MaxWordsPerSentence`. Está en `ClearHeadingsRule` y no implementa `IGuidelineRule` porque trabaja sobre la estructura, no sobre el texto |
+| `TITULOS_CLAROS` | Títulos claros | Baja | **Solo en la adaptación** (US-07): necesita saber qué líneas son títulos. Cada sección tiene siempre una pregunta que hace de título (lo exige el esquema). **Solo mide la longitud**: avisa si el título del documento o el de una sección tiene más palabras que `Limits:MaxWordsPerHeading` (8 por defecto). No comprueba que el título anticipe bien el contenido; eso lo valida la persona. Un título de más de 15 palabras cuenta también en `FRASES_CORTAS`, porque cada línea es una frase. Está en `ClearHeadingsRule` y no implementa `IGuidelineRule` porque trabaja sobre la estructura, no sobre el texto |
 
 ### Pautas de la sección 10 que no detecta el código (todavía)
 
@@ -71,18 +71,27 @@ Después de adaptar, `ReviewAdaptation` aplica **las mismas reglas** (`IGuidelin
   su tiempo; no se da por cumplida). El resumen dice, por ejemplo, "11 de 12 pautas cumplidas".
 - **Texto revisado:** el título, y cada pregunta y cada frase en su propia línea (separadas por `\n`), sin el glosario.
   Las posiciones de los hallazgos se refieren a ese texto (`AdaptedContent.PlainText`).
-- **Glosario:** una sigla o una palabra difícil que aparece en un término del glosario, como palabra completa y sin
-  distinguir mayúsculas, cuenta como explicada ("BOP" la explican "BOP" y "Boletín Oficial de la Provincia (BOP)", pero
-  no "BOPA"). Solo afecta a `SIN_SIGLAS` y `PALABRAS_DIFICILES`.
+- **Glosario:** una sigla o una palabra difícil cuenta como explicada si un término del glosario es igual a ella (sin
+  distinguir mayúsculas) o tiene la forma "Expansión (SIGLA)" o "SIGLA (Expansión)". "BOP" la explican "BOP" y
+  "Boletín Oficial de la Provincia (BOP)", pero no "BOPA" ni "BOP IPREM". Solo afecta a `SIN_SIGLAS` y
+  `PALABRAS_DIFICILES`. Límites conocidos: no se reconocen plurales ("arrendamientos" con "arrendamiento" en el
+  glosario) ni puntos ("B.O.P." con "BOP"), y no se comprueba que la definición explique bien el término.
 - **Recuentos y límite:** cada pauta guarda su número real de hallazgos, pero solo se guardan los primeros
   `Limits:MaxFindingsPerDocument` hallazgos del texto.
 - **Reintento:** si la adaptación tiene hallazgos de gravedad **alta**, se pide otra adaptación del documento completo
   (como mucho `Limits:MaxAdaptationRetries`, 1 por defecto; 0 lo desactiva). Al prompt del adaptador se le añade
   `adapter-retry.v1` con las pautas incumplidas y su número de casos: solo descripciones fijas del catálogo, nunca
-  fragmentos del documento ni de la respuesta del modelo. Se guarda **la mejor versión** (`BestVersionPolicy`): la que
-  tiene menos hallazgos de gravedad alta y, si empatan, menos hallazgos en total; si siguen empatadas, la primera. Si el
-  reintento falla, se guarda la primera. La versión guardada indica el prompt que la generó (`adapter.v1` o
-  `adapter.v1+adapter-retry.v1`) y suma los tokens y el tiempo de todos los intentos.
+  fragmentos del documento ni de la respuesta del modelo. Se guarda **la mejor versión** (`BestVersionPolicy`):
+  - El reintento **nunca** gana si ha perdido alguna cifra de la primera versión (importes, plazos, fechas,
+    teléfonos…). Cumplir pautas quitando datos no es mejor. Es una salvaguarda mínima hasta el verificador del
+    significado (US-11): no detecta datos sin cifras, como un lugar o un documento.
+  - Tampoco gana si no se ha podido comprobar una pauta grave que en la primera sí se comprobó.
+  - Si no, gana la que tiene menos hallazgos de gravedad alta y, si empatan, menos hallazgos en total; si siguen
+    empatadas, la primera.
+
+  Si el reintento falla, se guarda la primera. La versión guardada indica el prompt que la generó (`adapter.v1` o
+  `adapter.v1+adapter-retry.v1`) y suma los tokens y el tiempo de las respuestas válidas de todos los intentos (como
+  en la US-06, una respuesta que no cumple el esquema no se cuenta).
 
 ## Seguridad y rendimiento
 

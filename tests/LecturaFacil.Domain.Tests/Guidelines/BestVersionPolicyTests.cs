@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
 
 namespace LecturaFacil.Domain.Tests.Guidelines;
@@ -25,6 +26,50 @@ public sealed class BestVersionPolicyTests
     [Fact]
     public void PrefersRetry_WhenBothAreEquallyGood_KeepsTheFirstVersion() =>
         BestVersionPolicy.PrefersRetry(Report(high: 1, low: 1), Report(high: 1, low: 1)).ShouldBeFalse();
+
+    [Fact]
+    public void PrefersRetry_WhenTheRetryCouldNotCheckASevereGuidelineTheFirstOneChecked_KeepsTheFirstVersion()
+    {
+        var acronyms = GuidelineCatalog.Find(GuidelineCodes.Acronyms);
+        var current = GuidelineReport.Create(
+            new GuidelineAnalysis([Finding.At(acronyms, Text, 0, 3, "Explica la sigla.")], []), [], maxStoredFindings: 10);
+        var retry = GuidelineReport.Create(new GuidelineAnalysis([], [GuidelineCodes.Acronyms]), [], maxStoredFindings: 10);
+
+        BestVersionPolicy.PrefersRetry(current, retry).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void PrefersRetry_WhenTheRetryLosesAFigureOfTheFirstVersion_KeepsTheFirstVersion()
+    {
+        var current = Content("El anuncio sale en el BOP.", "Puede pedirla hasta el 15 de diciembre de 2026.");
+        var retry = Content("El anuncio sale en el boletín de la provincia.");
+
+        BestVersionPolicy.PrefersRetry(current, Report(high: 1, low: 0), retry, Report(high: 0, low: 0)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void PrefersRetry_WhenTheRetryKeepsEveryFigure_ComparesTheReports()
+    {
+        var current = Content("El anuncio sale en el BOP.", "Puede pedirla hasta el 15 de diciembre de 2026.");
+        var retry = Content("El anuncio sale en el boletín.", "Tiene hasta el 15 de diciembre de 2026.");
+
+        BestVersionPolicy.PrefersRetry(current, Report(high: 1, low: 0), retry, Report(high: 0, low: 0)).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void PrefersRetry_CountsTheFiguresOfTheGlossaryDefinitions()
+    {
+        var current = Content("Gana menos de 2,5 veces el IPREM.");
+        var retry = AdaptedContent.TryCreate(
+            "Ayudas",
+            [new AdaptedSectionDraft("¿Quién la pide?", ["Gana menos de lo que dice el glosario."])],
+            [new GlossaryTermDraft("Límite de ingresos", "2,5 veces el indicador público de renta.")])!;
+
+        BestVersionPolicy.PrefersRetry(current, Report(high: 1, low: 0), retry, Report(high: 0, low: 0)).ShouldBeTrue();
+    }
+
+    private static AdaptedContent Content(params string[] sentences) =>
+        AdaptedContent.TryCreate("Ayudas", [new AdaptedSectionDraft("¿Qué es?", sentences)], [])!;
 
     private static GuidelineReport Report(int high, int low)
     {

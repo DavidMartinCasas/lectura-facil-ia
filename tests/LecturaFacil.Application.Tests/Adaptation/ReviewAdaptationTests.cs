@@ -57,9 +57,9 @@ public sealed class ReviewAdaptationTests
     }
 
     [Fact]
-    public void Review_WhenASectionHeadingIsLongerThanASentence_ReportsTheClearHeadingsGuideline()
+    public void Review_WhenASectionHeadingIsTooLong_ReportsTheClearHeadingsGuideline()
     {
-        _limits.MaxWordsPerSentence = 5;
+        _limits.MaxWordsPerHeading = 5;
         var heading = "¿Qué personas pueden pedir esta ayuda?";
         var content = AdaptedContent.TryCreate("Ayudas", [new AdaptedSectionDraft(heading, ["Usted puede pedirla."])], [])!;
 

@@ -85,8 +85,14 @@ internal static class AdaptedVersionConfiguration
     private static string SerializeReport(GuidelineReport report) =>
         JsonSerializer.Serialize(report.Results.Select(StoredGuidelineResult.From), Json);
 
+    /// <summary>
+    /// Un informe guardado por otra versión de la aplicación puede traer pautas o valores que ya no existen: se descartan
+    /// en lugar de impedir leer el documento.
+    /// </summary>
     private static GuidelineReport DeserializeReport(string json) =>
-        GuidelineReport.Restore(Deserialize<StoredGuidelineResult>(json).Select(result => result.ToResult()));
+        GuidelineReport.Restore(Deserialize<StoredGuidelineResult>(json)
+            .Select(result => result.ToResult())
+            .OfType<GuidelineResult>());
 
     /// <summary>Forma guardada de cada pauta del informe. Los enumerados van como texto para que el JSON sea legible.</summary>
     private sealed record StoredGuidelineResult(string Code, string Status, int FindingCount, IReadOnlyList<StoredFinding> Findings)
@@ -94,8 +100,10 @@ internal static class AdaptedVersionConfiguration
         public static StoredGuidelineResult From(GuidelineResult result) =>
             new(result.GuidelineCode, result.Status.ToString(), result.FindingCount, [.. result.Findings.Select(StoredFinding.From)]);
 
-        public GuidelineResult ToResult() =>
-            new(Code, Enum.Parse<GuidelineStatus>(Status), FindingCount, [.. Findings.Select(finding => finding.ToFinding(Code))]);
+        public GuidelineResult? ToResult() =>
+            GuidelineCatalog.All.Any(guideline => guideline.Code == Code) && Enum.TryParse<GuidelineStatus>(Status, out var status)
+                ? new GuidelineResult(Code, status, FindingCount, [.. (Findings ?? []).Select(finding => finding.ToFinding(Code)).OfType<Finding>()])
+                : null;
     }
 
     private sealed record StoredFinding(string Fragment, int Start, int End, string Severity, string Suggestion)
@@ -103,7 +111,9 @@ internal static class AdaptedVersionConfiguration
         public static StoredFinding From(Finding finding) =>
             new(finding.Fragment, finding.Start, finding.End, finding.Severity.ToString(), finding.Suggestion);
 
-        public Finding ToFinding(string guidelineCode) =>
-            Finding.Restore(guidelineCode, Fragment, Start, End, Enum.Parse<Severity>(Severity), Suggestion);
+        public Finding? ToFinding(string guidelineCode) =>
+            Enum.TryParse<Severity>(Severity, out var severity)
+                ? Finding.Restore(guidelineCode, Fragment, Start, End, severity, Suggestion)
+                : null;
     }
 }

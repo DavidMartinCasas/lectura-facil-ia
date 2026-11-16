@@ -45,6 +45,9 @@ public sealed class AdaptDocument(
     /// <summary>Marcador del prompt de reintento donde van las pautas que incumplió la adaptación (texto del catálogo).</summary>
     public const string RetryPlaceholder = "{{PAUTAS_INCUMPLIDAS}}";
 
+    /// <summary>Marcador del prompt de reintento para <see cref="LimitsOptions.MaxWordsPerHeading"/>.</summary>
+    public const string MaxHeadingWordsPlaceholder = "{{MAX_PALABRAS_POR_TITULO}}";
+
     public const string NoFindingsLine = "- No se ha detectado ningún problema concreto. Aplica igualmente todas las pautas.";
 
     /// <summary>Un intento y un solo reintento si la respuesta no es válida (US-06, OWASP LLM10).</summary>
@@ -121,7 +124,7 @@ public sealed class AdaptDocument(
 
             last = Review(attempt.Value);
             cost = AddCost(cost, last.Metadata);
-            if (BestVersionPolicy.PrefersRetry(best.Report, last.Report))
+            if (BestVersionPolicy.PrefersRetry(best.Content, best.Report, last.Content, last.Report))
             {
                 best = last;
             }
@@ -243,7 +246,9 @@ public sealed class AdaptDocument(
         var basePrompt = SystemPrompt(originalFindings);
         var retry = prompts.Load(RetryPromptName);
         var violations = GuidelineLines(report.Violations.Select(result => (result.Guideline, result.FindingCount)));
-        var instructions = retry.Text.Replace(RetryPlaceholder, violations, StringComparison.Ordinal);
+        var instructions = retry.Text
+            .Replace(RetryPlaceholder, violations, StringComparison.Ordinal)
+            .Replace(MaxHeadingWordsPlaceholder, _limits.MaxWordsPerHeading.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
         return new Prompt(RetryPromptVersion, $"{basePrompt.Text}\n\n{instructions}");
     }
 

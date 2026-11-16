@@ -31,6 +31,10 @@ public sealed class LimitsOptions
     [Range(5, 50, ErrorMessage = "Limits:MaxWordsPerSentence debe estar entre {1} y {2}.")]
     public int MaxWordsPerSentence { get; set; } = 15;
 
+    /// <summary>Palabras como mucho del título del documento y de cada sección de la adaptación (pauta TITULOS_CLAROS).</summary>
+    [Range(3, 20, ErrorMessage = "Limits:MaxWordsPerHeading debe estar entre {1} y {2}.")]
+    public int MaxWordsPerHeading { get; set; } = 8;
+
     /// <summary>Conectores que abren otra oración ("cuyo", "siempre que"…) a partir de los que una frase une varias ideas.</summary>
     [Range(1, 10, ErrorMessage = "Limits:MaxConnectorsPerSentence debe estar entre {1} y {2}.")]
     public int MaxConnectorsPerSentence { get; set; } = 1;

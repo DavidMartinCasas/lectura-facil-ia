@@ -327,6 +327,8 @@ public sealed class AdaptDocumentTests
         var retryInstructions = retry.SystemPrompt[first.SystemPrompt.Length..];
         retryInstructions.ShouldContain($"- {acronyms.Description}: 1");
         retryInstructions.ShouldNotContain(AdaptDocument.RetryPlaceholder);
+        retryInstructions.ShouldNotContain(AdaptDocument.MaxHeadingWordsPlaceholder);
+        retryInstructions.ShouldContain($"{_limits.MaxWordsPerHeading} palabras como mucho");
         retryInstructions.ShouldNotContain("BOP");
         retry.UserMessage.ShouldContain(Paragraph);
     }

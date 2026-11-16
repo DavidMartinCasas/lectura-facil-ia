@@ -10,7 +10,7 @@ namespace LecturaFacil.Application.Adaptation;
 /// <summary>
 /// Revisa las pautas de una adaptación con las mismas reglas deterministas que el texto original (US-05), sobre su
 /// <see cref="AdaptedContent.PlainText"/>, más la de títulos claros. Las siglas y palabras difíciles del glosario
-/// cuentan como explicadas. Los títulos tienen el mismo límite de palabras que las frases.
+/// cuentan como explicadas.
 /// </summary>
 public sealed class ReviewAdaptation(IGuidelineChecker guidelineChecker, IOptions<LimitsOptions> limits)
 {
@@ -21,6 +21,6 @@ public sealed class ReviewAdaptation(IGuidelineChecker guidelineChecker, IOption
         ArgumentNullException.ThrowIfNull(content);
 
         var analysis = guidelineChecker.Check(content.PlainText);
-        return GuidelineReport.ForAdaptation(content, analysis, _limits.MaxWordsPerSentence, _limits.MaxFindingsPerDocument);
+        return GuidelineReport.ForAdaptation(content, analysis, _limits.MaxWordsPerHeading, _limits.MaxFindingsPerDocument);
     }
 }

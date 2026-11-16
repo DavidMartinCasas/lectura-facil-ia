@@ -28,10 +28,22 @@ public sealed class ClearHeadingsRuleTests
     }
 
     [Fact]
-    public void Check_DoesNotLookAtTheTitleOrTheSentences()
+    public void Check_WhenTheDocumentTitleIsTooLong_PointsToIt()
+    {
+        const string title = "Un título de documento con muchas más palabras de las que se permiten";
+        var content = AdaptedContent.TryCreate(title, [new AdaptedSectionDraft("¿Qué es?", ["Una frase."])], [])!;
+
+        var finding = _rule.Check(content).ShouldHaveSingleItem();
+
+        finding.Start.ShouldBe(0);
+        finding.Fragment.ShouldBe(title);
+    }
+
+    [Fact]
+    public void Check_DoesNotLookAtTheSentences()
     {
         var content = AdaptedContent.TryCreate(
-            "Un título de documento con muchas más palabras de las que se permiten",
+            "Ayudas",
             [new AdaptedSectionDraft("¿Qué es?", ["Una frase con muchas más palabras de las que se permiten en un título."])],
             [])!;
 

@@ -6,8 +6,8 @@ namespace LecturaFacil.Domain.Guidelines.Rules;
 /// <summary>
 /// Títulos claros en la adaptación. No es una regla de texto (<see cref="IGuidelineRule"/>): necesita saber qué líneas
 /// son títulos, así que solo se aplica a un <see cref="AdaptedContent"/>, nunca al original. Cada sección tiene siempre
-/// un título (lo garantiza <see cref="AdaptedContent"/>); aquí se comprueba que sea corto: como mucho el mismo número de
-/// palabras que una frase. Las posiciones de los hallazgos se refieren a <see cref="AdaptedContent.PlainText"/>.
+/// un título (lo garantiza <see cref="AdaptedContent"/>); aquí solo se mide que el título del documento y el de cada
+/// sección sean cortos. Las posiciones de los hallazgos se refieren a <see cref="AdaptedContent.PlainText"/>.
 /// </summary>
 public sealed class ClearHeadingsRule
 {
@@ -27,10 +27,16 @@ public sealed class ClearHeadingsRule
 
         var text = content.PlainText;
         var findings = new List<Finding>();
+        if (IsTooLong(content.Title))
+        {
+            findings.Add(Finding.At(Guideline, text, 0, content.Title.Length,
+                $"El título del documento es largo. Usa un título corto, de {_maxWordsPerHeading} palabras como mucho, que diga de qué trata."));
+        }
+
         var position = content.Title.Length + 1;
         foreach (var section in content.Sections)
         {
-            if (Words.Count(section.Question) > _maxWordsPerHeading)
+            if (IsTooLong(section.Question))
             {
                 findings.Add(Finding.At(Guideline, text, position, position + section.Question.Length,
                     $"El título de la sección es largo. Usa una pregunta corta, de {_maxWordsPerHeading} palabras como mucho, por ejemplo «¿Quién puede pedir la ayuda?»."));
@@ -41,4 +47,6 @@ public sealed class ClearHeadingsRule
 
         return findings;
     }
+
+    private bool IsTooLong(string heading) => Words.Count(heading) > _maxWordsPerHeading;
 }

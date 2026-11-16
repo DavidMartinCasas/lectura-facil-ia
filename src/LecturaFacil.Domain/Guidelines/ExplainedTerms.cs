@@ -3,8 +3,9 @@ namespace LecturaFacil.Domain.Guidelines;
 
 /// <summary>
 /// Las siglas y las palabras difíciles que aparecen en el glosario de la adaptación están explicadas: sus hallazgos no
-/// cuentan. Un término explica un fragmento si lo contiene como palabra o expresión completa, sin distinguir mayúsculas
-/// ("BOP" lo explican "BOP" y "Boletín Oficial de la Provincia (BOP)", pero no "BOPA").
+/// cuentan. Un término explica un fragmento si es igual a él, sin distinguir mayúsculas, o si tiene la forma
+/// "Expansión (SIGLA)" o "SIGLA (Expansión)" y una de sus dos partes es igual al fragmento. Así "BOP" lo explican "BOP"
+/// y "Boletín Oficial de la Provincia (BOP)", pero no "BOPA" ni un término que junta varias siglas ("BOP IPREM").
 /// </summary>
 internal static class ExplainedTerms
 {
@@ -16,28 +17,38 @@ internal static class ExplainedTerms
 
     public static IReadOnlyList<Finding> Exclude(IReadOnlyList<Finding> findings, IEnumerable<string> glossaryTerms)
     {
-        var terms = glossaryTerms.Where(term => !string.IsNullOrWhiteSpace(term)).ToList();
-        if (terms.Count == 0)
+        var explained = glossaryTerms
+            .Where(term => !string.IsNullOrWhiteSpace(term))
+            .SelectMany(Forms)
+            .Select(Key)
+            .Where(key => key.Length > 0)
+            .ToHashSet(StringComparer.Ordinal);
+        if (explained.Count == 0)
         {
             return findings;
         }
 
-        var explained = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         return findings
-            .Where(finding => !ExplainableGuidelines.Contains(finding.GuidelineCode)
-                || !IsExplained(finding.Fragment, terms, explained))
+            .Where(finding => !ExplainableGuidelines.Contains(finding.GuidelineCode) || !explained.Contains(Key(finding.Fragment)))
             .ToList();
     }
 
-    private static bool IsExplained(string fragment, List<string> terms, Dictionary<string, bool> cache)
+    /// <summary>El término entero y, si lleva un paréntesis, lo que hay antes y lo que hay dentro.</summary>
+    private static IEnumerable<string> Forms(string term)
     {
-        if (!cache.TryGetValue(fragment, out var isExplained))
+        yield return term;
+
+        var open = term.IndexOf('(', StringComparison.Ordinal);
+        var close = term.LastIndexOf(')');
+        if (open < 0 || close < open)
         {
-            var fragmentList = new TermList([new TermSuggestion(fragment, string.Empty)]);
-            isExplained = terms.Exists(term => fragmentList.Find(term).Any());
-            cache[fragment] = isExplained;
+            yield break;
         }
 
-        return isExplained;
+        yield return term[..open];
+        yield return term[(open + 1)..close];
     }
+
+    private static string Key(string text) =>
+        string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant();
 }
