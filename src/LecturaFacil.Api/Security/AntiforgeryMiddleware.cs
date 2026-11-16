@@ -7,7 +7,9 @@ namespace LecturaFacil.Api.Security;
 /// Protección antiforgery de doble envío para <c>/api</c>: cada petición de lectura deja el token en la cookie
 /// <see cref="CookieName"/> (legible por el frontend, no HttpOnly) y toda petición que cambia estado debe devolverlo en la
 /// cabecera <see cref="HeaderName"/>. Se aplica a todas las rutas, no endpoint a endpoint, para que una ruta nueva quede
-/// protegida sin acordarse de ello.
+/// protegida sin acordarse de ello. La única excepción es un endpoint marcado a propósito con
+/// <c>.DisableAntiforgery()</c>, que debe ser anónimo y no depender nunca de la sesión (el reenvío de informes de errores
+/// del navegador, US-17, que se protege comprobando el origen).
 /// </summary>
 internal static class AntiforgeryMiddleware
 {
@@ -33,7 +35,7 @@ internal static class AntiforgeryMiddleware
     public static IApplicationBuilder UseAntiforgeryValidation(this IApplicationBuilder app) =>
         app.Use(async (context, next) =>
         {
-            if (IsApi(context) && !IsSafe(context.Request.Method)
+            if (IsApi(context) && !IsSafe(context.Request.Method) && !IsExempt(context)
                 && !await context.RequestServices.GetRequiredService<IAntiforgery>().IsRequestValidAsync(context))
             {
                 await TypedResults.Problem(
@@ -63,6 +65,9 @@ internal static class AntiforgeryMiddleware
             IsEssential = true,
         });
     }
+
+    private static bool IsExempt(HttpContext context) =>
+        context.GetEndpoint()?.Metadata.GetMetadata<IAntiforgeryMetadata>() is { RequiresValidation: false };
 
     private static bool IsApi(HttpContext context) => context.Request.Path.StartsWithSegments(ApiPath, StringComparison.OrdinalIgnoreCase);
 

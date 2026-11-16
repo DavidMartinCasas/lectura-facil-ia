@@ -18,9 +18,17 @@ Licencias comprobadas en el `.nuspec` de cada paquete publicado en NuGet (noviem
 | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL (permisiva, tipo MIT/BSD) | Base de datos |
 | Microsoft.Extensions.AI.OpenAI, Microsoft.Extensions.Http.Resilience | 10.11.0 | MIT | Proveedores de LLM y resiliencia |
 | Microsoft.AspNetCore.OpenApi, Microsoft.EntityFrameworkCore.Design, Microsoft.Extensions.* | 10.0.15 | MIT | Plataforma .NET |
+| Serilog.AspNetCore (y Serilog, sus sinks y formateadores) | 10.0.0 | Apache 2.0 | Logs en JSON (US-17) |
+| Sentry.AspNetCore (y Sentry, Sentry.Extensions.Logging) | 6.12.1 | MIT | Errores del backend en Sentry (US-17) |
 
 > **Atención con PDFsharp-MigraDoc:** desde la versión **6.5.0** el paquete se publica con licencia **AGPL-3.0**, que
 > no es compatible con este proyecto. No se debe actualizar por encima de la rama 6.2.x sin revisar antes su licencia.
+
+## Frontend (producción, además de Angular y Angular Material)
+
+| Paquete | Versión | Licencia | Para qué |
+|---|---|---|---|
+| @sentry/angular (y @sentry/browser, @sentry/core) | 11.10.0 | MIT | Errores de JavaScript en Sentry (US-17) |
 
 ## Tests
 

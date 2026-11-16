@@ -3,6 +3,7 @@ using FluentValidation;
 using LecturaFacil.Api.Auth;
 using LecturaFacil.Api.Documents;
 using LecturaFacil.Api.Llm;
+using LecturaFacil.Api.Observability;
 using LecturaFacil.Api.Security;
 using LecturaFacil.Application.Users;
 
@@ -28,6 +29,7 @@ internal static class ApiConfiguration
             options.AddLlmDiagnosticsRateLimit();
             options.AddDocumentSubmitRateLimit();
             options.AddDocumentExportRateLimit();
+            options.AddMonitoringTunnelRateLimit();
             options.AddLoginRateLimit();
         });
         return services;

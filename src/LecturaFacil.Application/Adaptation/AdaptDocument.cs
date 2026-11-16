@@ -21,6 +21,7 @@ namespace LecturaFacil.Application.Adaptation;
 /// y se guarda la mejor según <see cref="BestVersionPolicy"/>. Si el reintento falla, se guarda la primera.
 /// Por último se verifica el significado de la versión que se guarda (<see cref="VerifyMeaning"/>): solo de esa, para
 /// no multiplicar las llamadas al verificador. La verificación nunca impide guardar el borrador; solo añade avisos.
+/// Cada ejecución, bien o mal, se registra una vez en <see cref="IAdaptationTelemetry"/> (US-17).
 /// </summary>
 public sealed class AdaptDocument(
     IDocumentRepository repository,
@@ -29,6 +30,7 @@ public sealed class AdaptDocument(
     ReviewAdaptation reviewAdaptation,
     VerifyMeaning verifyMeaning,
     IOptions<LimitsOptions> limits,
+    IAdaptationTelemetry telemetry,
     TimeProvider timeProvider)
 {
     /// <summary>Prompt de sistema del adaptador. Se guarda con cada versión para saber cuál la generó.</summary>
@@ -61,6 +63,25 @@ public sealed class AdaptDocument(
 
     public async Task<Result<AdaptedVersion>> ExecuteAsync(DocumentId id, CancellationToken cancellationToken)
     {
+        var started = timeProvider.GetTimestamp();
+        var usage = new Usage();
+        var result = await RunAsync(id, usage, cancellationToken);
+        telemetry.Record(new AdaptationOutcome(
+            id,
+            usage.Role,
+            usage.Role is null ? null : usage.Provider,
+            usage.Role is null ? null : usage.Model,
+            usage.InputTokens,
+            usage.OutputTokens,
+            timeProvider.GetElapsedTime(started),
+            result.IsSuccess ? AdaptationOutcome.SuccessResult : result.Error!.Code,
+            usage.TokensByRole));
+        return result;
+    }
+
+    /// <param name="usage">Acumula lo que cuestan todas las respuestas válidas de esta ejecución, para la telemetría.</param>
+    private async Task<Result<AdaptedVersion>> RunAsync(DocumentId id, Usage usage, CancellationToken cancellationToken)
+    {
         var document = await repository.FindAsync(id, cancellationToken);
         if (document is null)
         {
@@ -75,7 +96,7 @@ public sealed class AdaptDocument(
         document.StartProcessing(timeProvider.GetUtcNow());
         await repository.SaveAsync(document, cancellationToken);
 
-        var adaptation = await AdaptAndReviewAsync(document, cancellationToken);
+        var adaptation = await AdaptAndReviewAsync(document, usage, cancellationToken);
         if (adaptation.IsFailure)
         {
             document.FailProcessing(adaptation.Error!.Code, timeProvider.GetUtcNow());
@@ -107,9 +128,9 @@ public sealed class AdaptDocument(
     }
 
     /// <summary>Adapta, revisa las pautas y, si incumple alguna grave, reintenta y se queda con la mejor versión.</summary>
-    private async Task<Result<ReviewedAdaptation>> AdaptAndReviewAsync(Document document, CancellationToken cancellationToken)
+    private async Task<Result<ReviewedAdaptation>> AdaptAndReviewAsync(Document document, Usage total, CancellationToken cancellationToken)
     {
-        var first = await AdaptAsync(document, SystemPrompt(document.OriginalFindings), new Usage(), cancellationToken);
+        var first = await AdaptAsync(document, SystemPrompt(document.OriginalFindings), new Usage(total), cancellationToken);
         if (first.IsFailure)
         {
             return Result<ReviewedAdaptation>.Failure(first.Error!);
@@ -121,7 +142,7 @@ public sealed class AdaptDocument(
         for (var retry = 0; retry < _limits.MaxAdaptationRetries && last.Report.HasHighSeverityViolations; retry++)
         {
             // Lo que cuestan las respuestas válidas del reintento se suma aunque el reintento acabe fallando en otra parte.
-            var retryUsage = new Usage();
+            var retryUsage = new Usage(total);
             var attempt = await AdaptAsync(document, RetrySystemPrompt(document.OriginalFindings, last.Report), retryUsage, cancellationToken);
             cost = AddCost(cost, retryUsage);
             if (attempt.IsFailure)
@@ -274,12 +295,21 @@ public sealed class AdaptDocument(
     /// <summary>Una adaptación con su informe de pautas.</summary>
     private sealed record ReviewedAdaptation(AdaptedContent Content, AdaptationMetadata Metadata, GuidelineReport Report);
 
-    /// <summary>Suma de lo que han costado las respuestas válidas de todas las partes.</summary>
-    private sealed class Usage
+    /// <summary>
+    /// Suma de lo que han costado las respuestas válidas de todas las partes. Si tiene <c>parent</c>, también se lo suma
+    /// a él: así la telemetría ve el total de la ejecución, incluidos los intentos que se descartan.
+    /// </summary>
+    private sealed class Usage(Usage? parent = null)
     {
         public string Provider { get; private set; } = string.Empty;
 
         public string Model { get; private set; } = string.Empty;
+
+        public LlmProviderRole? Role { get; private set; }
+
+        public IReadOnlyList<RoleTokens> TokensByRole => [.. _byRole.Select(pair => new RoleTokens(pair.Key, pair.Value.Input, pair.Value.Output))];
+
+        private readonly SortedDictionary<LlmProviderRole, (long Input, long Output)> _byRole = [];
 
         public long InputTokens { get; private set; }
 
@@ -289,6 +319,10 @@ public sealed class AdaptDocument(
 
         public void Add<T>(LlmResponse<T> response)
         {
+            parent?.Add(response);
+            Role = response.Role;
+            var (input, output) = _byRole.GetValueOrDefault(response.Role);
+            _byRole[response.Role] = (input + response.InputTokens, output + response.OutputTokens);
             Provider = response.Provider;
             Model = response.Model;
             InputTokens += response.InputTokens;

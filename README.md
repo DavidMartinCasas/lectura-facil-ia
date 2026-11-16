@@ -86,6 +86,38 @@ El doble guion bajo separa niveles y no importan las mayúsculas: `LLM__PRIMARY_
 | `AUTH__LOCKOUTMINUTES` | No | `15` | Minutos que dura el bloqueo (1 – 1440). |
 | `AUTH__SESSIONHOURS` | No | `8` | Horas sin actividad tras las que caduca la sesión (1 – 24). |
 | `AUTH__LOGINATTEMPTSPERMINUTE` | No | `10` | Intentos de inicio de sesión por minuto y dirección IP (1 – 1000). |
+| `SERILOG__MINIMUMLEVEL__DEFAULT` | No | `Information` | Nivel de los logs de la API. |
+| `OBSERVABILITY__SENTRYDSN` 🔒 | No | vacío | DSN de Sentry del backend. Vacío: Sentry deshabilitado. |
+| `OBSERVABILITY__FRONTENDSENTRYDSN` | No | vacío | DSN de Sentry del frontend (público). Vacío: deshabilitado. |
+| `OBSERVABILITY__ENVIRONMENT` | No | `production` | Entorno que se ve en Sentry. |
+| `OBSERVABILITY__RELEASE` | No | versión compilada | Versión desplegada (por ejemplo, el `git sha`): en Sentry y en la cabecera `X-App-Version` de `/health`. |
+| `OBSERVABILITY__FRONTENDREPORTSPERMINUTE` | No | `10` | Informes de errores del navegador reenviados a Sentry por minuto y por cliente (1 – 1000). |
+| `OBSERVABILITY__MAXFRONTENDREPORTBYTES` | No | `200000` | Tamaño máximo de cada informe del navegador, en bytes (1024 – 1 048 576). |
+
+## Observabilidad
+
+Pensada para ver errores, tiempos y qué proveedor procesa cada documento **sin exponer el contenido de nadie**.
+
+- **Logs:** JSON por la consola (Serilog), con el `TraceId` de la petición y, en el proceso de adaptación, el
+  `DocumentId`. Cada adaptación deja un único evento (`AdaptationCompleted` o `AdaptationFailed`) con el documento,
+  el proveedor (`primary`, `fallback` o `none`), el modelo, los tokens, la duración y el resultado. **Nunca** se registra
+  texto de los documentos ni de las respuestas del modelo.
+- **Sentry:** deshabilitado sin DSN. El backend envía las excepciones no controladas con su traza; el frontend, los
+  errores de JavaScript con el entorno y la versión. Ambos usan un filtro que quita cuerpos, cookies, cabeceras, la
+  consulta de las URLs, los datos de la persona y cualquier campo llamado `text`, `content`, `original` o `adapted`.
+  El navegador envía sus informes a `/api/monitoring/sentry` y la API los reenvía **solo** al DSN del frontend
+  configurado, solo desde el propio origen, solo errores, sesiones e informes del SDK (nada de adjuntos ni
+  grabaciones) y con un límite por cliente: la CSP sigue sin permitir conexiones a otros orígenes. Como el DSN del
+  frontend es público, **fija también un límite de eventos y de cuota en el proyecto de Sentry del frontend**.
+- **Métricas:** formato Prometheus en `/metrics` (adaptaciones por proveedor y resultado, errores por código, duración
+  y tokens). Solo responde a peticiones de la red interna (localhost o IPs privadas) que no lleguen por un proxy; el
+  nginx público la bloquea y la API no publica ningún puerto. Para consultarla desde la máquina del despliegue:
+
+  ```bash
+  docker compose -f deploy/docker-compose.yml exec web wget -qO- http://api:8080/metrics
+  ```
+
+  Un Prometheus propio puede leerla uniéndose a la red `frontend` del compose.
 
 ## Usuario de prueba
 

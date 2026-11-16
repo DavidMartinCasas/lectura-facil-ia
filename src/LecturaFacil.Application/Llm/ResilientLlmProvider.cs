@@ -54,6 +54,9 @@ public sealed class ResilientLlmProvider : ILlmProvider
             }
         }
 
-        return await _fallback.CompleteStructuredAsync<T>(request, cancellationToken);
+        var fallback = await _fallback.CompleteStructuredAsync<T>(request, cancellationToken);
+        return fallback.IsSuccess
+            ? Result<LlmResponse<T>>.Success(fallback.Value with { Role = LlmProviderRole.Fallback })
+            : fallback;
     }
 }
