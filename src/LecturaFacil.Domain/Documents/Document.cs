@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Verification;
 
 namespace LecturaFacil.Domain.Documents;
 
@@ -92,21 +93,23 @@ public sealed class Document
     }
 
     /// <summary>
-    /// Guarda la adaptación y su informe de pautas como una versión nueva y deja el documento en <see cref="DocumentStatus.Draft"/>.
+    /// Guarda la adaptación, su informe de pautas y la verificación de su significado como una versión nueva y deja el documento en <see cref="DocumentStatus.Draft"/>.
     /// </summary>
     public AdaptedVersion CompleteAdaptation(
         AdaptedContent content,
         AdaptationMetadata metadata,
         GuidelineReport guidelineReport,
+        MeaningVerification meaningVerification,
         DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(guidelineReport);
+        ArgumentNullException.ThrowIfNull(meaningVerification);
         if (Status != DocumentStatus.Processing)
         {
             throw new InvalidOperationException($"A document in {Status} cannot receive an adaptation.");
         }
 
-        var version = AdaptedVersion.Create((LatestAdaptedVersion?.Number ?? 0) + 1, content, metadata, guidelineReport, now);
+        var version = AdaptedVersion.Create((LatestAdaptedVersion?.Number ?? 0) + 1, content, metadata, guidelineReport, meaningVerification, now);
         _adaptedVersions.Add(version);
         TransitionTo(DocumentStatus.Draft, now);
         return version;

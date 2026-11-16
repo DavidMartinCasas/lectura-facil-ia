@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Verification;
 using LecturaFacil.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -85,6 +86,12 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
         var metadata = new AdaptationMetadata("Proveedor", "modelo", "adapter.v1", 10, 20, TimeSpan.FromMilliseconds(1500));
         var finding = Finding.At(GuidelineCatalog.Find(GuidelineCodes.ShortSentences), content.PlainText, 0, 6, "Divide la frase.");
         var report = GuidelineReport.Create(new GuidelineAnalysis([finding], [GuidelineCodes.PassiveVoice]), [], 10);
+        var verification = MeaningVerification.Combine(
+            "Un máximo de 250 € y el 40 % de la renta.",
+            "Como mucho, 250 euros.",
+            [KeyFact.Create(KeyFactType.Amount, "máximo de 250 €", "Como mucho, 250 euros", KeyFactVerdict.Conserved)],
+            new VerificationMetadata("Proveedor", "modelo-verificador", "verify.v1"),
+            10);
 
         await using (var context = CreateContext())
         {
@@ -92,7 +99,7 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
             var tracked = (await repository.FindAsync(document.Id, Token))!;
             tracked.StartProcessing(DateTimeOffset.UtcNow);
             await repository.SaveAsync(tracked, Token);
-            tracked.CompleteAdaptation(content, metadata, report, DateTimeOffset.UtcNow);
+            tracked.CompleteAdaptation(content, metadata, report, verification, DateTimeOffset.UtcNow);
             await repository.SaveAsync(tracked, Token);
         }
 
@@ -108,6 +115,11 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
         storedReport.Results.ShouldBe(report.Results);
         storedReport.Find(GuidelineCodes.PassiveVoice).Status.ShouldBe(GuidelineStatus.NotChecked);
         storedReport.Find(GuidelineCodes.ShortSentences).Findings.ShouldBe([finding]);
+        var storedVerification = version.MeaningVerification.ShouldNotBeNull();
+        storedVerification.Status.ShouldBe(VerificationStatus.Verified);
+        storedVerification.Metadata.ShouldBe(verification.Metadata);
+        storedVerification.KeyFacts.ShouldBe(verification.KeyFacts);
+        storedVerification.KeyFacts[0].AdaptedValue.ShouldBeNull();
     }
 
     [Fact]

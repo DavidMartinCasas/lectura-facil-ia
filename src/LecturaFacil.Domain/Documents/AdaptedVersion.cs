@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Verification;
 
 namespace LecturaFacil.Domain.Documents;
 
@@ -14,6 +15,7 @@ public sealed class AdaptedVersion
         AdaptedContent content,
         AdaptationMetadata metadata,
         GuidelineReport? guidelineReport,
+        MeaningVerification? meaningVerification,
         DateTimeOffset createdAt)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(number);
@@ -26,6 +28,7 @@ public sealed class AdaptedVersion
         Glossary = content.Glossary;
         Metadata = metadata;
         GuidelineReport = guidelineReport;
+        MeaningVerification = meaningVerification;
         CreatedAt = createdAt;
     }
 
@@ -36,6 +39,7 @@ public sealed class AdaptedVersion
         IReadOnlyList<AdaptedSection> sections,
         IReadOnlyList<GlossaryTerm> glossary,
         GuidelineReport? guidelineReport,
+        MeaningVerification? meaningVerification,
         DateTimeOffset createdAt)
     {
         Number = number;
@@ -44,6 +48,7 @@ public sealed class AdaptedVersion
         Glossary = glossary;
         Metadata = null!;
         GuidelineReport = guidelineReport;
+        MeaningVerification = meaningVerification;
         CreatedAt = createdAt;
     }
 
@@ -64,6 +69,12 @@ public sealed class AdaptedVersion
     /// </summary>
     public GuidelineReport? GuidelineReport { get; }
 
+    /// <summary>
+    /// Datos clave del original y su estado en esta versión (US-11). <c>null</c> en las versiones creadas antes de que
+    /// existiera el verificador.
+    /// </summary>
+    public MeaningVerification? MeaningVerification { get; }
+
     /// <inheritdoc cref="AdaptedContent.PlainText"/>
     public string PlainText => AdaptedContent.ToPlainText(Title, Sections);
 
@@ -77,14 +88,16 @@ public sealed class AdaptedVersion
         IReadOnlyList<GlossaryTerm> glossary,
         AdaptationMetadata metadata,
         GuidelineReport? guidelineReport,
+        MeaningVerification? meaningVerification,
         DateTimeOffset createdAt) =>
-        new(number, AdaptedContent.Restore(title, sections, glossary), metadata, guidelineReport, createdAt);
+        new(number, AdaptedContent.Restore(title, sections, glossary), metadata, guidelineReport, meaningVerification, createdAt);
 
     internal static AdaptedVersion Create(
         int number,
         AdaptedContent content,
         AdaptationMetadata metadata,
         GuidelineReport guidelineReport,
+        MeaningVerification meaningVerification,
         DateTimeOffset createdAt) =>
-        new(number, content, metadata, guidelineReport, createdAt);
+        new(number, content, metadata, guidelineReport, meaningVerification, createdAt);
 }

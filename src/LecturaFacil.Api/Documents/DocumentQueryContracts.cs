@@ -2,6 +2,7 @@
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Verification;
 
 namespace LecturaFacil.Api.Documents;
 
@@ -38,6 +39,7 @@ public sealed record DocumentErrorResponse(string Code, string Message);
 /// <param name="PendingHumanValidation">Siempre <c>true</c> hasta que una persona la valide: es un borrador.</param>
 /// <param name="PromptVersion">Versión del prompt que la generó. El modelo y el proveedor se guardan, pero no se exponen.</param>
 /// <param name="Guidelines">Informe de pautas de la versión; <c>null</c> si se creó antes de existir el revisor.</param>
+/// <param name="Verification">Datos clave del original y su estado; <c>null</c> si se creó antes de existir el verificador.</param>
 public sealed record AdaptationResponse(
     int Version,
     string Title,
@@ -46,7 +48,8 @@ public sealed record AdaptationResponse(
     bool PendingHumanValidation,
     string PromptVersion,
     DateTimeOffset CreatedAt,
-    GuidelineReportResponse? Guidelines)
+    GuidelineReportResponse? Guidelines,
+    MeaningVerificationResponse? Verification)
 {
     public static AdaptationResponse From(AdaptedVersion version, DocumentStatus status)
     {
@@ -59,7 +62,8 @@ public sealed record AdaptationResponse(
             status is not (DocumentStatus.Validated or DocumentStatus.Published),
             version.Metadata.PromptVersion,
             version.CreatedAt,
-            version.GuidelineReport is { } report ? GuidelineReportResponse.From(report) : null);
+            version.GuidelineReport is { } report ? GuidelineReportResponse.From(report) : null,
+            version.MeaningVerification is { } verification ? MeaningVerificationResponse.From(verification) : null);
     }
 }
 
@@ -116,6 +120,52 @@ public sealed record GuidelineResultResponse(
 }
 
 public sealed record GuidelineFindingResponse(string Fragment, int Start, int End, string Severity, string Suggestion);
+
+/// <summary>
+/// Datos clave del original (plazos, importes, requisitos…) y cómo han quedado en la adaptación. Los avisos van
+/// primero. Los valores son citas de los textos: texto plano que el cliente nunca debe interpretar como HTML.
+/// </summary>
+/// <param name="Status"><c>Verified</c>, o <c>NotVerified</c> si el verificador no ha podido comprobarla: entonces todas las cifras del original quedan para revisar.</param>
+/// <param name="Summary">Por ejemplo, "5 conservados, 1 a revisar, 1 omitido".</param>
+public sealed record MeaningVerificationResponse(
+    string Status,
+    string Summary,
+    int ConservedCount,
+    int ReviewCount,
+    int OmittedCount,
+    IReadOnlyList<KeyFactResponse> KeyFacts)
+{
+    public static MeaningVerificationResponse From(MeaningVerification verification)
+    {
+        ArgumentNullException.ThrowIfNull(verification);
+        return new MeaningVerificationResponse(
+            verification.Status.ToString(),
+            verification.Summary,
+            verification.ConservedCount,
+            verification.ReviewCount,
+            verification.OmittedCount,
+            [.. verification.KeyFacts.Select(fact => new KeyFactResponse(
+                fact.Type.ToString(),
+                fact.OriginalValue,
+                fact.AdaptedValue,
+                fact.Status.ToString(),
+                fact.Reason.ToString(),
+                fact.ReasonMessage))]);
+    }
+}
+
+/// <param name="Type"><c>Deadline</c>, <c>Amount</c>, <c>Requirement</c>, <c>Date</c>, <c>Place</c>, <c>Document</c>, <c>Reference</c>, <c>Figure</c> (cifra que ha encontrado el código) u <c>Other</c>.</param>
+/// <param name="AdaptedValue">Dónde está en la adaptación; <c>null</c> si no aparece.</param>
+/// <param name="Status"><c>Conserved</c>, <c>Review</c> u <c>Omitted</c>.</param>
+/// <param name="Reason">Código estable del motivo (<c>None</c> si se conserva).</param>
+/// <param name="ReasonMessage">El motivo para mostrarlo, por ejemplo "El valor ha cambiado". Vacío si se conserva.</param>
+public sealed record KeyFactResponse(
+    string Type,
+    string OriginalValue,
+    string? AdaptedValue,
+    string Status,
+    string Reason,
+    string ReasonMessage);
 
 /// <summary>Evento SSE <c>status</c>: el estado actual del documento.</summary>
 public sealed record DocumentStatusEvent(Guid Id, string Status);
