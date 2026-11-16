@@ -39,9 +39,9 @@ public sealed class AdaptDocumentTests
         version.ShouldBe(result.Value);
         version.Number.ShouldBe(1);
         version.Title.ShouldBe("Ayudas para pagar el alquiler");
-        version.Sections.Count.ShouldBe(3);
-        version.Sections[0].Question.ShouldBe("¿Quién puede pedir la ayuda?");
-        version.Glossary.Select(term => term.Term).ShouldBe(["Solicitud", "Boletín Oficial"]);
+        version.Sections.Count.ShouldBe(4);
+        version.Sections[1].Question.ShouldBe("¿Quién puede pedir la ayuda?");
+        version.Glossary.Select(term => term.Term).ShouldBe(["Solicitud", "IPREM", "Boletín Oficial"]);
         version.Metadata.ShouldBe(new AdaptationMetadata(
             "Servidor propio", "modelo-adaptador-falso", AdaptDocument.PromptName, 1200, 900, TimeSpan.FromMilliseconds(3400)));
         version.CreatedAt.ShouldBe(Now);
@@ -82,6 +82,41 @@ public sealed class AdaptDocumentTests
         systemPrompt.ShouldNotContain(AdaptDocument.MaxWordsPlaceholder);
         systemPrompt.ShouldContain($"de {_limits.MaxWordsPerSentence} palabras como mucho");
         systemPrompt.ShouldNotContain(LlmRequest.DocumentTagPlaceholder);
+    }
+
+    [Fact]
+    public async Task Adapt_ListsTheGuidelinesFromTheMostToTheLeastSevere()
+    {
+        var document = Store(Paragraph);
+        var shortSentences = GuidelineCatalog.Find(GuidelineCodes.ShortSentences);
+        var doubleNegation = GuidelineCatalog.Find(GuidelineCodes.DoubleNegation);
+        document.RecordOriginalFindings([
+            Finding.At(shortSentences, Paragraph, 0, 2, "Divide la frase."),
+            Finding.At(shortSentences, Paragraph, 3, 5, "Divide la frase."),
+            Finding.At(doubleNegation, Paragraph, 6, 8, "Dilo en positivo."),
+        ]);
+        var llm = FakeLlmProvider.FromFixture("adapter/ok");
+
+        await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        var systemPrompt = llm.Requests.ShouldHaveSingleItem().SystemPrompt;
+        systemPrompt.IndexOf($"- {doubleNegation.Description}: 1", StringComparison.Ordinal)
+            .ShouldBeLessThan(systemPrompt.IndexOf($"- {shortSentences.Description}: 2", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Adapt_WhenTheTextNeedsMorePartsThanAllowed_FailsWithoutCallingTheModel()
+    {
+        var document = Store(string.Join("\n\n", Enumerable.Repeat(new string('x', 600), 3)));
+        _limits.MaxCharactersPerAdaptationChunk = 500;
+        _limits.MaxAdaptationChunksPerDocument = 2;
+        var llm = FakeLlmProvider.FromFixture("adapter/ok");
+
+        var result = await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        result.Error.ShouldBe(LlmErrors.InputTooLong);
+        llm.Requests.ShouldBeEmpty();
+        document.Status.ShouldBe(DocumentStatus.Error);
     }
 
     [Fact]
@@ -183,8 +218,8 @@ public sealed class AdaptDocumentTests
         llm.Requests.Count.ShouldBe(3);
         llm.Requests.ShouldAllBe(request => request.UserMessage.Length < 500 + LlmRequest.DocumentEnvelopeLength);
         var version = result.Value;
-        version.Sections.Count.ShouldBe(9);
-        version.Glossary.Count.ShouldBe(2);
+        version.Sections.Count.ShouldBe(12);
+        version.Glossary.Count.ShouldBe(3);
         version.Metadata.InputTokens.ShouldBe(3 * 1200);
         version.Metadata.OutputTokens.ShouldBe(3 * 900);
         version.Metadata.Duration.ShouldBe(TimeSpan.FromMilliseconds(3 * 3400));
@@ -252,6 +287,30 @@ public sealed class AdaptDocumentTests
         result.Error.ShouldBe(AdaptationErrors.NotAwaitingAdaptation);
         llm.Requests.Count.ShouldBe(1);
         document.AdaptedVersions.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task FailUnexpectedly_WhenTheDocumentIsProcessing_LeavesItInErrorWithAGenericReason()
+    {
+        var document = Store(Paragraph);
+        document.StartProcessing(Now);
+
+        await CreateUseCase(FakeLlmProvider.FromFixture("adapter/ok")).FailUnexpectedlyAsync(document.Id, Token);
+
+        document.Status.ShouldBe(DocumentStatus.Error);
+        document.FailureCode.ShouldBe(AdaptationErrors.Failed.Code);
+    }
+
+    [Fact]
+    public async Task FailUnexpectedly_WhenTheDocumentIsNotProcessing_LeavesItAsItIs()
+    {
+        var document = Store(Paragraph);
+
+        await CreateUseCase(FakeLlmProvider.FromFixture("adapter/ok")).FailUnexpectedlyAsync(document.Id, Token);
+        await CreateUseCase(FakeLlmProvider.FromFixture("adapter/ok")).FailUnexpectedlyAsync(DocumentId.New(), Token);
+
+        document.Status.ShouldBe(DocumentStatus.Received);
+        _repository.SavedStatuses.ShouldBeEmpty();
     }
 
     private static FakeLlmProvider Sequence(params string[] fixtures)

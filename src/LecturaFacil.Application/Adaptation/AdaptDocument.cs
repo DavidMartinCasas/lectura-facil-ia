@@ -69,6 +69,22 @@ public sealed class AdaptDocument(
         return Result<AdaptedVersion>.Success(version);
     }
 
+    /// <summary>
+    /// Tras un fallo inesperado (una excepción, no un error esperado), deja el documento en "Error" con un motivo
+    /// genérico para que no se quede en "Procesando" hasta el siguiente reinicio.
+    /// </summary>
+    public async Task FailUnexpectedlyAsync(DocumentId id, CancellationToken cancellationToken)
+    {
+        var document = await repository.FindAsync(id, cancellationToken);
+        if (document is not { Status: DocumentStatus.Processing })
+        {
+            return;
+        }
+
+        document.FailProcessing(AdaptationErrors.Failed.Code, timeProvider.GetUtcNow());
+        await repository.SaveAsync(document, cancellationToken);
+    }
+
     private async Task<Result<(AdaptedContent Content, AdaptationMetadata Metadata)>> AdaptAsync(
         Document document,
         CancellationToken cancellationToken)
@@ -77,7 +93,13 @@ public sealed class AdaptDocument(
         var maxChunk = Math.Min(_limits.MaxCharactersPerAdaptationChunk, _limits.MaxCharacters);
         var parts = new List<AdaptedContent>();
         var usage = new Usage();
-        foreach (var chunk in TextChunker.Split(document.OriginalText.Value, maxChunk))
+        var chunks = TextChunker.Split(document.OriginalText.Value, maxChunk);
+        if (chunks.Count > _limits.MaxAdaptationChunksPerDocument)
+        {
+            return Result<(AdaptedContent, AdaptationMetadata)>.Failure(LlmErrors.InputTooLong);
+        }
+
+        foreach (var chunk in chunks)
         {
             var part = await AdaptChunkAsync(systemPrompt, chunk, usage, cancellationToken);
             if (part.IsFailure)
@@ -137,10 +159,14 @@ public sealed class AdaptDocument(
     {
         var prompt = prompts.Load(PromptName);
         var lines = new StringBuilder();
-        foreach (var group in findings.GroupBy(finding => finding.GuidelineCode, StringComparer.Ordinal).OrderByDescending(group => group.Count()))
+        var groups = findings
+            .GroupBy(finding => finding.GuidelineCode, StringComparer.Ordinal)
+            .Select(group => (Guideline: GuidelineCatalog.Find(group.Key), Count: group.Count()))
+            .OrderByDescending(group => group.Guideline.DefaultSeverity)
+            .ThenByDescending(group => group.Count);
+        foreach (var (guideline, count) in groups)
         {
-            var description = GuidelineCatalog.Find(group.Key).Description;
-            lines.AppendLine(CultureInfo.InvariantCulture, $"- {description}: {group.Count()}");
+            lines.AppendLine(CultureInfo.InvariantCulture, $"- {guideline.Description}: {count}");
         }
 
         var guidelines = lines.Length == 0 ? NoFindingsLine : lines.ToString().TrimEnd();

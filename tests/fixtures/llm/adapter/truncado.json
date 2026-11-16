@@ -1,6 +1,6 @@
 {
   "model": "modelo-adaptador-falso",
-  "content": "{\"titulo\": \"Ayudas para pagar el alquiler\", \"secciones\": [{\"pregunta\": \"¿Quién puede pedir la ayuda?\", \"frases\": [\"Puede pedir la ayuda si:\", \"Vive de alquiler en la ciudad.\", \"No tiene otra casa a su",
+  "content": "{\"titulo\": \"Ayudas para pagar el alquiler\", \"secciones\": [{\"pregunta\": \"¿Qué es esta ayuda?\", \"frases\": [\"El Ayuntamiento da ayudas para pagar el alquiler de su casa.\"]}, {\"pregunta\": \"¿Quién puede pe",
   "inputTokens": 1200,
   "outputTokens": 900,
   "durationMs": 3400

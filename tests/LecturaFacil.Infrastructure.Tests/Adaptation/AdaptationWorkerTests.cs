@@ -53,9 +53,9 @@ public sealed class AdaptationWorkerTests(PostgreSqlFixture database) : IClassFi
         var version = stored.LatestAdaptedVersion.ShouldNotBeNull();
         version.Number.ShouldBe(1);
         version.Title.ShouldBe("Ayudas para pagar el alquiler");
-        version.Sections.Count.ShouldBe(3);
-        version.Sections[2].Sentences.ShouldContain("Tiene 15 días para pedirla.");
-        version.Glossary.Count.ShouldBe(2);
+        version.Sections.Count.ShouldBe(4);
+        version.Sections[3].Sentences.ShouldContain("Tiene 15 días para pedirla.");
+        version.Glossary.Count.ShouldBe(3);
         version.Metadata.ShouldBe(new AdaptationMetadata(
             "Proveedor falso", "modelo-adaptador-falso", AdaptDocument.PromptName, 1200, 900, TimeSpan.FromMilliseconds(3400)));
     }
@@ -95,6 +95,22 @@ public sealed class AdaptationWorkerTests(PostgreSqlFixture database) : IClassFi
         failed.Status.ShouldBe(DocumentStatus.Error);
         failed.FailureCode.ShouldBe(LlmErrors.InvalidProviderOutput.Code);
         adapted.Status.ShouldBe(DocumentStatus.Draft);
+    }
+
+    [Fact]
+    public async Task Worker_WhenAdaptingThrowsUnexpectedly_LeavesTheDocumentInErrorInsteadOfProcessing()
+    {
+        var document = await StoreAsync(processing: false);
+        var llm = new FakeLlmProvider("Proveedor falso", _ => throw new InvalidOperationException("Fallo inesperado"));
+        await using var services = BuildServices(llm);
+        var worker = await StartWorkerAsync(services);
+
+        await services.GetRequiredService<IAdaptationQueue>().EnqueueAsync(document.Id, Token);
+        var stored = await WaitUntilFinishedAsync(document.Id);
+        await worker.StopAsync(Token);
+
+        stored.Status.ShouldBe(DocumentStatus.Error);
+        stored.FailureCode.ShouldBe(AdaptationErrors.Failed.Code);
     }
 
     private async Task<Document> StoreAsync(bool processing)

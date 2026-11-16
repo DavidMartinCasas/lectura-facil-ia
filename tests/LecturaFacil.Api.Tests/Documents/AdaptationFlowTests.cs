@@ -32,7 +32,7 @@ public sealed class AdaptationFlowTests(AdaptationFlowTests.WorkerApiFactory fac
         document.GetProperty("status").GetString().ShouldBe("Draft");
         var adaptation = document.GetProperty("adaptation");
         adaptation.GetProperty("title").GetString().ShouldBe("Ayudas para pagar el alquiler");
-        adaptation.GetProperty("sections").GetArrayLength().ShouldBe(3);
+        adaptation.GetProperty("sections").GetArrayLength().ShouldBe(4);
         adaptation.GetProperty("pendingHumanValidation").GetBoolean().ShouldBeTrue();
         var request = factory.Llm.Requests.ShouldHaveSingleItem();
         request.UserMessage.ShouldContain("2,5 veces el IPREM");

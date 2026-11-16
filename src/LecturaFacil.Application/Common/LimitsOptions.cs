@@ -52,6 +52,10 @@ public sealed class LimitsOptions
     [Range(500, 200_000, ErrorMessage = "Limits:MaxCharactersPerAdaptationChunk debe estar entre {1} y {2}.")]
     public int MaxCharactersPerAdaptationChunk { get; set; } = 6_000;
 
+    /// <summary>Partes como máximo en que se divide un documento para adaptarlo. Acota las llamadas al modelo (OWASP LLM10).</summary>
+    [Range(1, 100, ErrorMessage = "Limits:MaxAdaptationChunksPerDocument debe estar entre {1} y {2}.")]
+    public int MaxAdaptationChunksPerDocument { get; set; } = 10;
+
     /// <summary>Documentos que se adaptan a la vez. Por defecto 1: el servidor local atiende una petición cada vez.</summary>
     [Range(1, 16, ErrorMessage = "Limits:AdaptationConcurrency debe estar entre {1} y {2}.")]
     public int AdaptationConcurrency { get; set; } = 1;

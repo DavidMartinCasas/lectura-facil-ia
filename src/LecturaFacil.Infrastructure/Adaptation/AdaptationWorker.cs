@@ -84,6 +84,21 @@ public sealed partial class AdaptationWorker(
         {
             // Solo el tipo: el mensaje de una excepción podría contener parte del documento.
             LogUnexpectedFailure(id.Value, exception.GetType().Name);
+            await MarkAsFailedAsync(id, stoppingToken);
+        }
+    }
+
+    /// <summary>Intenta dejar el documento en "Error". Si tampoco se puede, se queda en "Procesando" y se reencola al arrancar.</summary>
+    private async Task MarkAsFailedAsync(DocumentId id, CancellationToken stoppingToken)
+    {
+        try
+        {
+            await using var scope = scopeFactory.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<AdaptDocument>().FailUnexpectedlyAsync(id, stoppingToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException || !stoppingToken.IsCancellationRequested)
+        {
+            LogMarkAsFailedFailed(id.Value, exception.GetType().Name);
         }
     }
 
@@ -101,4 +116,7 @@ public sealed partial class AdaptationWorker(
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Document {DocumentId}: unexpected failure while adapting ({ExceptionType}).")]
     private partial void LogUnexpectedFailure(Guid documentId, string exceptionType);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Document {DocumentId} could not be marked as failed ({ExceptionType}); it will be requeued on startup.")]
+    private partial void LogMarkAsFailedFailed(Guid documentId, string exceptionType);
 }

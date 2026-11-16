@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+using System.Globalization;
 using LecturaFacil.Domain.Documents;
 
 namespace LecturaFacil.Domain.Tests.Documents;
@@ -55,6 +56,24 @@ public sealed class AdaptedContentTests
         merged.Title.ShouldBe("Primero");
         merged.Sections.Select(section => section.Question).ShouldBe(["¿Uno?", "¿Dos?"]);
         merged.Glossary.ShouldBe([new GlossaryTerm("Solicitud", "Papel."), new GlossaryTerm("Boletín", "Periódico oficial.")]);
+    }
+
+    [Fact]
+    public void Merge_ComparesTermsWithSpanishRulesWhateverTheCurrentCulture()
+    {
+        var previous = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+        try
+        {
+            var first = AdaptedContent.TryCreate("T", [Section()], [new GlossaryTermDraft("Órgano", "Uno.")])!;
+            var second = AdaptedContent.TryCreate("T", [Section()], [new GlossaryTermDraft("órgano", "Dos.")])!;
+
+            AdaptedContent.Merge([first, second]).Glossary.ShouldHaveSingleItem().Definition.ShouldBe("Uno.");
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
     }
 
     [Fact]

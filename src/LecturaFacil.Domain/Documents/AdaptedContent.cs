@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
+using System.Globalization;
+
 namespace LecturaFacil.Domain.Documents;
 
 /// <summary>Sección de una adaptación sin validar, tal y como la propone el modelo.</summary>
@@ -20,6 +22,9 @@ public sealed record GlossaryTerm(string Term, string Definition);
 /// </summary>
 public sealed record AdaptedContent
 {
+    // Cultura fija: el resultado no depende del idioma del proceso que adapta.
+    private static readonly StringComparer SpanishIgnoreCase = StringComparer.Create(CultureInfo.GetCultureInfo("es-ES"), ignoreCase: true);
+
     private AdaptedContent(string title, IReadOnlyList<AdaptedSection> sections, IReadOnlyList<GlossaryTerm> glossary)
     {
         Title = title;
@@ -73,7 +78,7 @@ public sealed record AdaptedContent
 
         var sections = parts.SelectMany(part => part.Sections).ToList();
         var glossary = parts.SelectMany(part => part.Glossary)
-            .DistinctBy(term => term.Term, StringComparer.CurrentCultureIgnoreCase)
+            .DistinctBy(term => term.Term, SpanishIgnoreCase)
             .ToList();
         return new AdaptedContent(parts[0].Title, sections.AsReadOnly(), glossary.AsReadOnly());
     }

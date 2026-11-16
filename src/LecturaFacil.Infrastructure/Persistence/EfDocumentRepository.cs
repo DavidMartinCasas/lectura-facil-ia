@@ -31,7 +31,7 @@ public sealed class EfDocumentRepository(AppDbContext context) : IDocumentReposi
 
     public async Task<IReadOnlyList<DocumentId>> ListAwaitingAdaptationAsync(CancellationToken cancellationToken) =>
         await Documents.AsNoTracking()
-            .Where(document => document.Status == DocumentStatus.Received || document.Status == DocumentStatus.Processing)
+            .Where(document => DocumentStatusTransitions.AwaitingAdaptation.Contains(document.Status))
             .OrderBy(document => document.CreatedAt)
             .Select(document => document.Id)
             .ToListAsync(cancellationToken);
