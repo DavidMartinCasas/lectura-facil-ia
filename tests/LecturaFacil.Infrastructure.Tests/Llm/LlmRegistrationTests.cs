@@ -19,7 +19,32 @@ public sealed class LlmRegistrationTests
     {
         using var services = BuildServices(Options(type), _ => FakeHttpMessageHandler.ReturningCompletion("{}"));
 
-        services.GetRequiredService<ILlmProvider>().ShouldBeOfType(expected);
+        services.GetRequiredService<LlmProviders>().Primary.ShouldBeOfType(expected);
+    }
+
+    [Fact]
+    public void Provider_SeenByTheUseCases_IsTheResilientDecorator()
+    {
+        using var services = BuildServices(Options(LlmProviderType.OpenAICompatible), _ => FakeHttpMessageHandler.ReturningCompletion("{}"));
+
+        services.GetRequiredService<ILlmProvider>().ShouldBeOfType<ResilientLlmProvider>();
+    }
+
+    [Fact]
+    public async Task Fallback_WhenEnabledAndThePrimaryFails_AnswersAndTheResponseNamesIt()
+    {
+        var options = Options(LlmProviderType.OpenAICompatible);
+        options.Fallback = Fallback();
+        var fallbackHandler = FakeHttpMessageHandler.ReturningCompletion("""{"ok":true}""");
+        using var services = BuildServices(options, name => name == LlmProviderFactory.FallbackHttpClient
+            ? fallbackHandler
+            : FakeHttpMessageHandler.Returning(HttpStatusCode.ServiceUnavailable, "{}"));
+
+        var result = await services.GetRequiredService<ILlmProvider>()
+            .CompleteStructuredAsync<PingReply>(Request(), TestContext.Current.CancellationToken);
+
+        result.Value.Provider.ShouldBe(options.Fallback.DisplayName);
+        fallbackHandler.Requests.ShouldHaveSingleItem();
     }
 
     [Fact]
@@ -103,14 +128,14 @@ public sealed class LlmRegistrationTests
         logs.Messages.ShouldAllBe(message => !message.Contains("respuesta que no es JSON", StringComparison.Ordinal));
     }
 
-    private static LlmRequest Request() => new(LlmRole.Adapter, "sistema", "texto del documento", 100);
+    internal static LlmRequest Request() => new(LlmRole.Adapter, "sistema", "texto del documento", 100);
 
-    private static LlmOptions Options(LlmProviderType type) => new()
+    internal static LlmOptions Options(LlmProviderType type) => new()
     {
         Primary = LlmTestOptions.Provider(type, "https://principal.example.com/v1"),
     };
 
-    private static FallbackLlmProviderOptions Fallback()
+    internal static FallbackLlmProviderOptions Fallback()
     {
         var source = LlmTestOptions.Provider(LlmProviderType.AzureFoundry, "https://respaldo.example.com/");
         return new FallbackLlmProviderOptions
@@ -125,10 +150,14 @@ public sealed class LlmRegistrationTests
         };
     }
 
-    private static ServiceProvider BuildServices(
+    /// <summary>Retraso de reintento mínimo para que los tests no esperen.</summary>
+    internal static LlmResilienceOptions FastResilience() => new() { RetryDelayMilliseconds = LlmResilienceOptions.MinRetryDelayMilliseconds };
+
+    internal static ServiceProvider BuildServices(
         LlmOptions options,
         Func<string, FakeHttpMessageHandler> handlerFor,
-        CapturingLoggerProvider? logs = null)
+        CapturingLoggerProvider? logs = null,
+        LlmResilienceOptions? resilience = null)
     {
         var services = new ServiceCollection();
         services.AddLogging(logging =>
@@ -145,6 +174,7 @@ public sealed class LlmRegistrationTests
             configured.Fallback = options.Fallback;
         });
         services.AddOptions<LimitsOptions>();
+        services.AddSingleton(Microsoft.Extensions.Options.Options.Create(resilience ?? FastResilience()));
         services.AddInfrastructure();
         foreach (var name in new[] { LlmProviderFactory.PrimaryHttpClient, LlmProviderFactory.FallbackHttpClient })
         {
@@ -154,7 +184,7 @@ public sealed class LlmRegistrationTests
         return services.BuildServiceProvider();
     }
 
-    private sealed class CapturingLoggerProvider : ILoggerProvider
+    internal sealed class CapturingLoggerProvider : ILoggerProvider
     {
         private readonly ConcurrentQueue<string> _messages = new();
 

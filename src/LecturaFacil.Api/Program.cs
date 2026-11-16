@@ -26,6 +26,7 @@ app.UseApi();
 app.MapHealthEndpoints();
 app.MapDocumentEndpoints();
 app.MapLlmDiagnosticsEndpoints(app.Environment);
+app.MapLlmStatusEndpoints();
 
 if (app.Services.GetRequiredService<IOptions<DatabaseOptions>>().Value.ApplyMigrationsOnStartup)
 {

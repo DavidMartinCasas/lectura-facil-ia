@@ -7,6 +7,8 @@ using LecturaFacil.Infrastructure.Llm;
 using LecturaFacil.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 
 namespace LecturaFacil.Infrastructure;
@@ -14,6 +16,7 @@ namespace LecturaFacil.Infrastructure;
 public static class DependencyInjection
 {
     public const string DatabaseHealthCheckName = "database";
+    public const string LlmHealthCheckName = "llm-primary";
 
     /// <summary>
     /// Registra los adaptadores: base de datos y su comprobación de salud, documentos y proveedores de LLM.
@@ -36,20 +39,42 @@ public static class DependencyInjection
     {
         services.AddSingleton<IPromptLoader, EmbeddedPromptLoader>();
         services.AddSingleton<LlmProviderFactory>();
-        services.AddLlmHttpClient(LlmProviderFactory.PrimaryHttpClient);
+        services.AddLlmHttpClient(LlmProviderFactory.PrimaryHttpClient)
+            .AddResilienceHandler(LlmResiliencePipeline.Name, LlmResiliencePipeline.Configure);
         services.AddLlmHttpClient(LlmProviderFactory.FallbackHttpClient);
 
         // Transitorios: cada uso toma un HttpClient nuevo de IHttpClientFactory (rotación de conexiones y DNS).
         services.AddTransient(provider => LlmProviders.Create(
             provider.GetRequiredService<IOptions<LlmOptions>>(),
             provider.GetRequiredService<LlmProviderFactory>()));
-        services.AddTransient(provider => provider.GetRequiredService<LlmProviders>().Primary);
         services.AddTransient<LlmDiagnostics>();
+
+        // Los casos de uso solo ven el decorador con la política de respaldo.
+        services.AddSingleton(provider => new LlmAvailability(FallbackEnabled(provider)));
+        services.AddSingleton<ILlmAvailability>(provider => provider.GetRequiredService<LlmAvailability>());
+        services.AddTransient<ILlmProvider>(provider =>
+        {
+            var providers = provider.GetRequiredService<LlmProviders>();
+            return new ResilientLlmProvider(
+                providers.Primary,
+                providers.Fallback,
+                FallbackEnabled(provider),
+                provider.GetRequiredService<ILlmAvailability>());
+        });
+
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddHostedService(provider => ActivatorUtilities.CreateInstance<LlmHealthMonitor>(
+            provider,
+            new Func<LlmProviders>(provider.GetRequiredService<LlmProviders>)));
+        services.AddHealthChecks().AddCheck<LlmHealthCheck>(LlmHealthCheckName, HealthStatus.Degraded);
         return services;
     }
 
+    private static bool FallbackEnabled(IServiceProvider provider) =>
+        provider.GetRequiredService<IOptions<LlmOptions>>().Value.Fallback.Enabled;
+
     /// <summary>Tiempo máximo explícito, sin seguir redirecciones y sin registrar el valor de ninguna cabecera.</summary>
-    private static void AddLlmHttpClient(this IServiceCollection services, string name) =>
+    private static IHttpClientBuilder AddLlmHttpClient(this IServiceCollection services, string name) =>
         services.AddHttpClient(name, (provider, client) =>
                 client.Timeout = TimeSpan.FromSeconds(provider.GetRequiredService<IOptions<LimitsOptions>>().Value.LlmTimeoutSeconds))
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false })

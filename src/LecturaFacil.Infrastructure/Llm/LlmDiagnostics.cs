@@ -22,7 +22,7 @@ public sealed class LlmDiagnostics(LlmProviders providers, IPromptLoader prompts
         {
             foreach (var role in Enum.GetValues<LlmRole>())
             {
-                var request = new LlmRequest(role, systemPrompt, PingMessage, PingMaxOutputTokens);
+                var request = PingRequest(systemPrompt, role);
                 var result = await provider.CompleteStructuredAsync<PingReply>(request, cancellationToken);
                 results.Add(result.IsSuccess
                     ? LlmPingResult.Succeeded(role, result.Value)
@@ -32,6 +32,10 @@ public sealed class LlmDiagnostics(LlmProviders providers, IPromptLoader prompts
 
         return results;
     }
+
+    /// <summary>Petición mínima, sin ningún documento, para comprobar que un proveedor responde.</summary>
+    public static LlmRequest PingRequest(string systemPrompt, LlmRole role) =>
+        new(role, systemPrompt, PingMessage, PingMaxOutputTokens);
 }
 
 /// <summary>Respuesta esperada al ping.</summary>
