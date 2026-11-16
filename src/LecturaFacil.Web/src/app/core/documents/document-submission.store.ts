@@ -42,7 +42,8 @@ export class DocumentSubmissionStore {
 
   submit(submission: DocumentSubmission): void {
     this.stop();
-    this.lastSubmission = submission;
+    // El token anti-bots es de un solo uso: un reintento no lo reenvía (el formulario pide uno nuevo).
+    this.lastSubmission = { ...submission, humanToken: undefined };
     this._phase.set('submitting');
     this._status.set(null);
     this._documentId.set(null);

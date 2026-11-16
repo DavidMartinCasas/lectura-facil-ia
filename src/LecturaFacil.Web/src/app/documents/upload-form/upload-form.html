@@ -59,6 +59,10 @@
     </div>
   }
 
+  @if (turnstileSiteKey(); as siteKey) {
+    <app-turnstile-widget [siteKey]="siteKey" (token)="onHumanToken($event)" />
+  }
+
   @if (error(); as message) {
     <p id="upload-error" class="error" role="alert">{{ message }}</p>
   }

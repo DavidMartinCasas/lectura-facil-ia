@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
-import { APP_TEXTS, LIST_TEXTS, LOGIN_TEXTS, UPLOAD_TEXTS } from './core/ui-texts';
+import { APP_TEXTS, LIST_TEXTS, LOGIN_TEXTS, SAMPLES_TEXTS, UPLOAD_TEXTS } from './core/ui-texts';
 
 export const routes: Routes = [
   {
@@ -26,6 +26,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
     title: `${LIST_TEXTS.pageTitle} · ${APP_TEXTS.name}`,
     loadComponent: () => import('./documents/pages/documents-page').then((m) => m.DocumentsPage),
+  },
+  {
+    path: 'ejemplos',
+    canActivate: [authGuard],
+    title: `${SAMPLES_TEXTS.pageTitle} · ${APP_TEXTS.name}`,
+    loadComponent: () => import('./samples/samples-page').then((m) => m.SamplesPage),
   },
   {
     path: 'documentos/:id',

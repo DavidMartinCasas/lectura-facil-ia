@@ -5,6 +5,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { LOGIN_PATH } from './core/auth/auth.guard';
 import { AuthService } from './core/auth/auth.service';
+import { PublicConfigService } from './core/config/public-config.service';
 import { APP_TEXTS } from './core/ui-texts';
 
 @Component({
@@ -26,6 +27,13 @@ import { APP_TEXTS } from './core/ui-texts';
           ariaCurrentWhenActive="page"
           >{{ texts.navList }}</a
         >
+        <a
+          mat-button
+          routerLink="/ejemplos"
+          routerLinkActive="active"
+          ariaCurrentWhenActive="page"
+          >{{ texts.navSamples }}</a
+        >
       </nav>
       <div class="session">
         @if (auth.user(); as user) {
@@ -36,6 +44,11 @@ import { APP_TEXTS } from './core/ui-texts';
         }
       </div>
     </mat-toolbar>
+    @if (config.notice(); as notice) {
+      <p class="site-notice" role="note">
+        <strong>{{ texts.noticeLabel }}:</strong> {{ notice }}
+      </p>
+    }
     @if (logoutFailed()) {
       <p class="logout-error" role="alert">{{ texts.logoutFailed }}</p>
     }
@@ -75,6 +88,12 @@ import { APP_TEXTS } from './core/ui-texts';
     .user {
       font: var(--mat-sys-body-medium);
     }
+    .site-notice {
+      margin: 0;
+      padding: 0.75rem 1rem;
+      background: var(--mat-sys-tertiary-container);
+      color: var(--mat-sys-on-tertiary-container);
+    }
     .logout-error {
       margin: 0;
       padding: 0.75rem 1rem;
@@ -89,9 +108,14 @@ import { APP_TEXTS } from './core/ui-texts';
 })
 export class App {
   protected readonly auth = inject(AuthService);
+  protected readonly config = inject(PublicConfigService);
   private readonly router = inject(Router);
   protected readonly texts = APP_TEXTS;
   protected readonly logoutFailed = signal(false);
+
+  constructor() {
+    this.config.load();
+  }
 
   /** Cierra la sesión en el servidor y vuelve al login. Si el servidor no la cierra, lo dice y se queda aquí. */
   protected logout(): void {

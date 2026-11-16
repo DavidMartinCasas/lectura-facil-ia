@@ -31,6 +31,29 @@ describe('DocumentsApiService', () => {
     expect(await response).toEqual({ id: 'abc', status: 'Received' });
   });
 
+  it('sends the anti-bot token in its header, also with a PDF', async () => {
+    const file = new File(['%PDF-1.7'], 'bases.pdf', { type: 'application/pdf' });
+    const text = firstValueFrom(service.submit({ kind: 'text', text: 'Texto', humanToken: 't1' }));
+    const pdf = firstValueFrom(service.submit({ kind: 'pdf', file, humanToken: 't2' }));
+
+    const requests = controller.match('/api/documents');
+    expect(requests.map((request) => request.request.headers.get('X-Turnstile-Token'))).toEqual([
+      't1',
+      't2',
+    ]);
+    requests.forEach((request) => request.flush({ id: 'abc', status: 'Received' }));
+    await Promise.all([text, pdf]);
+  });
+
+  it('sends no anti-bot header without a token', async () => {
+    const response = firstValueFrom(service.submit({ kind: 'text', text: 'Texto' }));
+
+    const request = controller.expectOne('/api/documents');
+    expect(request.request.headers.has('X-Turnstile-Token')).toBe(false);
+    request.flush({ id: 'abc', status: 'Received' });
+    await response;
+  });
+
   it('sends an empty title as null', async () => {
     const response = firstValueFrom(service.submit({ kind: 'text', text: 'Texto', title: '   ' }));
 

@@ -31,6 +31,36 @@ describe('App', () => {
     expect(element.querySelector('main')).not.toBeNull();
   });
 
+  it('shows the configured notice as a banner on every screen', async () => {
+    const controller = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(App);
+    flushConfig(controller, 'Instancia de demostración: no subas datos personales.');
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('.site-notice')?.textContent).toContain(
+      'Instancia de demostración: no subas datos personales.',
+    );
+    controller.verify();
+  });
+
+  it('shows no banner when the notice is empty', async () => {
+    const controller = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(App);
+    flushConfig(controller, '   ');
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.site-notice')).toBeNull();
+  });
+
+  it('links to the samples page', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const links = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('nav a'));
+
+    expect(links.some((link) => link.getAttribute('href') === '/ejemplos')).toBe(true);
+  });
+
   it('shows who has logged in and a "Salir" button that closes the session', async () => {
     const controller = TestBed.inject(HttpTestingController);
     const auth = TestBed.inject(AuthService);
@@ -38,6 +68,7 @@ describe('App', () => {
     controller.expectOne('/api/auth/login').flush({ email: 'persona@example.org' });
     await login;
     const fixture = TestBed.createComponent(App);
+    flushConfig(controller);
     await fixture.whenStable();
     const element = fixture.nativeElement as HTMLElement;
 
@@ -61,6 +92,7 @@ describe('App', () => {
     controller.expectOne('/api/auth/login').flush({ email: 'persona@example.org' });
     await login;
     const fixture = TestBed.createComponent(App);
+    flushConfig(controller);
     await fixture.whenStable();
     const element = fixture.nativeElement as HTMLElement;
 
@@ -77,3 +109,9 @@ describe('App', () => {
     controller.verify();
   });
 });
+
+function flushConfig(controller: HttpTestingController, notice = ''): void {
+  controller
+    .expectOne('/api/config/public')
+    .flush({ notice, turnstileEnabled: false, turnstileSiteKey: '' });
+}

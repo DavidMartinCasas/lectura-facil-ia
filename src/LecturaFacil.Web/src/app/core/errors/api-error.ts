@@ -20,6 +20,7 @@ export class ApiError extends Error {
 const MESSAGES_BY_CODE: Readonly<Record<string, string>> = {
   'auth.invalid_credentials': ERROR_TEXTS.invalidCredentials,
   'auth.antiforgery': ERROR_TEXTS.pageExpired,
+  'human_verification.failed': ERROR_TEXTS.humanVerification,
   'document.not_found': ERROR_TEXTS.notFound,
   'document.file_too_large': ERROR_TEXTS.fileTooLarge,
   'document.invalid_file_type': ERROR_TEXTS.invalidFileType,

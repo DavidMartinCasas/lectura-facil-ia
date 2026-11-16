@@ -23,9 +23,13 @@ export function isAwaitingAdaptation(status: DocumentStatus): boolean {
 }
 
 /** Lo que el usuario envía: un texto pegado o un PDF. */
-export type DocumentSubmission =
+export type DocumentSubmission = (
   | { readonly kind: 'text'; readonly text: string; readonly title?: string }
-  | { readonly kind: 'pdf'; readonly file: File };
+  | { readonly kind: 'pdf'; readonly file: File }
+) & {
+  /** Token de un solo uso del desafío anti-bots (US-16), solo si está habilitado. */
+  readonly humanToken?: string;
+};
 
 /** Respuesta de POST /api/documents. */
 export interface SubmitDocumentResponse {
