@@ -56,6 +56,13 @@ public sealed class LimitsOptions
     [Range(1, 100, ErrorMessage = "Limits:MaxAdaptationChunksPerDocument debe estar entre {1} y {2}.")]
     public int MaxAdaptationChunksPerDocument { get; set; } = 10;
 
+    /// <summary>
+    /// Documentos que se aceptan por minuto en <c>POST /api/documents</c>, en total: cada uno genera llamadas al modelo
+    /// (OWASP LLM10). El límite por usuario llegará con la autenticación (US-15, US-16).
+    /// </summary>
+    [Range(1, 1_000, ErrorMessage = "Limits:DocumentSubmissionsPerMinute debe estar entre {1} y {2}.")]
+    public int DocumentSubmissionsPerMinute { get; set; } = 10;
+
     /// <summary>Documentos que se adaptan a la vez. Por defecto 1: el servidor local atiende una petición cada vez.</summary>
     [Range(1, 16, ErrorMessage = "Limits:AdaptationConcurrency debe estar entre {1} y {2}.")]
     public int AdaptationConcurrency { get; set; } = 1;

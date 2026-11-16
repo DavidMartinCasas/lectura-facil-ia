@@ -18,6 +18,9 @@ internal static partial class DocumentEndpoints
 {
     public const string Path = "/api/documents";
 
+    /// <summary>Cada documento recibido se adapta con el modelo: el envío tiene su propio límite de peticiones.</summary>
+    public const string SubmitRateLimitPolicy = "document-submit";
+
     private const string JsonContentType = "application/json";
     private const string MultipartContentType = "multipart/form-data";
 
@@ -37,11 +40,11 @@ internal static partial class DocumentEndpoints
     {
         // TODO(US-15): RequireAuthorization() y antiforgery cuando haya usuarios y cookies. El formulario se lee a mano,
         // así que Minimal APIs no añade la validación sola: hace falta .WithMetadata(new RequireAntiforgeryTokenAttribute()).
-        // TODO(US-16): límite de peticiones.
         var group = endpoints.MapGroup(Path).WithTags("Documentos");
         group.MapDocumentQueries();
 
         group.MapPost("/", SubmitAsync)
+            .RequireRateLimiting(SubmitRateLimitPolicy)
             .Accepts<SubmitTextRequest>(JsonContentType, MultipartContentType)
             .AddOpenApiOperationTransformer(DescribeMultipartBody)
             .Produces<SubmitDocumentResponse>(StatusCodes.Status202Accepted)
@@ -51,6 +54,7 @@ internal static partial class DocumentEndpoints
             .ProducesProblem(StatusCodes.Status415UnsupportedMediaType)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
             .WithName("SubmitDocument")
             .WithSummary("Sube un texto pegado o un PDF digital y crea un documento en estado Received.")
             .WithDescription(

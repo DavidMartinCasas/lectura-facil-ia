@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
+using System.Threading.RateLimiting;
 using LecturaFacil.Application.Common;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Options;
 
@@ -19,6 +21,22 @@ internal static class RequestLimits
     public const int MaxFormFields = 16;
 
     public static long MaxRequestBytes(LimitsOptions limits) => (long)limits.MaxFileSizeBytes + MultipartOverheadBytes;
+
+    /// <summary>
+    /// Límite global de documentos por minuto (TODO(US-16): por usuario cuando haya autenticación). Se lee de
+    /// <see cref="LimitsOptions.DocumentSubmissionsPerMinute"/>.
+    /// </summary>
+    public static RateLimiterOptions AddDocumentSubmitRateLimit(this RateLimiterOptions options) =>
+        options.AddPolicy(DocumentEndpoints.SubmitRateLimitPolicy, context =>
+        {
+            var limits = context.RequestServices.GetRequiredService<IOptions<LimitsOptions>>().Value;
+            return RateLimitPartition.GetFixedWindowLimiter(DocumentEndpoints.SubmitRateLimitPolicy, _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = limits.DocumentSubmissionsPerMinute,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            });
+        });
 
     public static IServiceCollection AddRequestLimits(this IServiceCollection services)
     {
