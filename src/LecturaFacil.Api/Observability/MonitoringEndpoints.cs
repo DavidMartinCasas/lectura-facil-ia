@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using System.Threading.RateLimiting;
+using LecturaFacil.Api.Security;
 using LecturaFacil.Infrastructure.Observability;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
@@ -46,18 +47,13 @@ internal static class MonitoringEndpoints
         options.AddPolicy(TunnelRateLimitPolicy, context =>
         {
             var observability = context.RequestServices.GetRequiredService<IOptions<ObservabilityOptions>>().Value;
-            return RateLimitPartition.GetFixedWindowLimiter(ClientKey(context), _ => new FixedWindowRateLimiterOptions
+            return RateLimitPartition.GetFixedWindowLimiter(ClientAddress.Of(context), _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = observability.FrontendReportsPerMinute,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
             });
         });
-
-    private static string ClientKey(HttpContext context) =>
-        context.Request.Headers["X-Forwarded-For"].ToString() is { Length: > 0 } forwarded
-            ? forwarded
-            : context.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
 
     /// <summary>
     /// Solo informes de la propia aplicación: si el navegador dice desde dónde llega la petición (<c>Sec-Fetch-Site</c>

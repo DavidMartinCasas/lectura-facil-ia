@@ -79,11 +79,11 @@ public sealed class LimitsOptions
     public int MaxKeyFactsPerVersion { get; set; } = 100;
 
     /// <summary>
-    /// Documentos que se aceptan por minuto en <c>POST /api/documents</c>, en total: cada uno genera llamadas al modelo
-    /// (OWASP LLM10). El límite por usuario llegará con la autenticación (US-15, US-16).
+    /// Documentos que puede enviar cada usuario por hora en <c>POST /api/documents</c> (US-16): cada uno genera llamadas
+    /// al modelo (OWASP API4 y LLM10). Al superarlo, 429 con <c>Retry-After</c>.
     /// </summary>
-    [Range(1, 1_000, ErrorMessage = "Limits:DocumentSubmissionsPerMinute debe estar entre {1} y {2}.")]
-    public int DocumentSubmissionsPerMinute { get; set; } = 10;
+    [Range(1, 1_000, ErrorMessage = "Limits:AdaptationsPerHour debe estar entre {1} y {2}.")]
+    public int AdaptationsPerHour { get; set; } = 10;
 
     /// <summary>Documentos que se adaptan a la vez. Por defecto 1: el servidor local atiende una petición cada vez.</summary>
     [Range(1, 16, ErrorMessage = "Limits:AdaptationConcurrency debe estar entre {1} y {2}.")]
@@ -109,8 +109,8 @@ public sealed class LimitsOptions
     public int MaxEditedCharacters { get; set; } = 40_000;
 
     /// <summary>
-    /// Exportaciones que se aceptan por minuto en <c>POST /api/documents/{id}/export</c>, en total (US-14). Generar un DOCX
-    /// o un PDF cuesta CPU y memoria. El límite por usuario llegará con la autenticación (US-15, US-16).
+    /// Exportaciones que puede pedir cada usuario por minuto en <c>POST /api/documents/{id}/export</c> (US-14, US-16).
+    /// Generar un DOCX o un PDF cuesta CPU y memoria.
     /// </summary>
     [Range(1, 1_000, ErrorMessage = "Limits:ExportsPerMinute debe estar entre {1} y {2}.")]
     public int ExportsPerMinute { get; set; } = 30;

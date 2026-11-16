@@ -25,7 +25,7 @@ public sealed class SubmitDocumentEndpointTests
     public async Task Submit_WhenTheSubmissionLimitIsReached_Returns429WithoutStoringTheDocument()
     {
         await using var factory = new DocumentsApiFactory();
-        await using var limited = factory.WithWebHostBuilder(builder => builder.UseSetting("Limits:DocumentSubmissionsPerMinute", "2"));
+        await using var limited = factory.WithWebHostBuilder(builder => builder.UseSetting("Limits:AdaptationsPerHour", "2"));
         using var client = await limited.CreateApiClientAsync();
 
         var statuses = new List<HttpStatusCode>();

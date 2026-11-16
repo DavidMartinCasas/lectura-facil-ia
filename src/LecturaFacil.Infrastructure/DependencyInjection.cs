@@ -5,15 +5,19 @@ using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Export;
 using LecturaFacil.Application.Llm;
 using LecturaFacil.Application.Readability;
+using LecturaFacil.Application.Samples;
+using LecturaFacil.Application.Security;
 using LecturaFacil.Application.Verification;
 using LecturaFacil.Infrastructure.Adaptation;
 using LecturaFacil.Infrastructure.Documents;
 using LecturaFacil.Infrastructure.Export;
 using LecturaFacil.Infrastructure.Guidelines;
+using LecturaFacil.Infrastructure.HumanVerification;
 using LecturaFacil.Infrastructure.Llm;
 using LecturaFacil.Infrastructure.Observability;
 using LecturaFacil.Infrastructure.Persistence;
 using LecturaFacil.Infrastructure.Readability;
+using LecturaFacil.Infrastructure.Samples;
 using LecturaFacil.Infrastructure.Verification;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,8 +51,26 @@ public static class DependencyInjection
         services.AddSingleton<ITextExtractor, PdfPigTextExtractor>();
         services.AddSingleton<IReadabilityCalculator, SzigrisztPazosReadabilityCalculator>();
         services.AddSingleton<IGuidelineChecker, GuidelineChecker>();
+        services.AddSingleton<ISampleTextCatalog, EmbeddedSampleTextCatalog>();
 
-        return services.AddAdaptation().AddExport().AddLlm().AddMonitoring();
+        return services.AddAdaptation().AddExport().AddLlm().AddMonitoring().AddHumanVerification();
+    }
+
+    /// <summary>
+    /// Cloudflare Turnstile solo si <see cref="TurnstileOptions.Enabled"/> (US-16). Deshabilitado, ninguna petición sale
+    /// hacia Cloudflare. El cliente HTTP tiene tiempo máximo, no sigue redirecciones ni registra cabeceras.
+    /// </summary>
+    private static IServiceCollection AddHumanVerification(this IServiceCollection services)
+    {
+        services.AddHttpClient<TurnstileVerifier>((provider, client) =>
+                client.Timeout = TimeSpan.FromSeconds(provider.GetRequiredService<IOptions<TurnstileOptions>>().Value.TimeoutSeconds))
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false })
+            .RedactLoggedHeaders(_ => true);
+        services.AddTransient<IHumanVerification>(provider =>
+            provider.GetRequiredService<IOptions<TurnstileOptions>>().Value.Enabled
+                ? provider.GetRequiredService<TurnstileVerifier>()
+                : new DisabledHumanVerification());
+        return services;
     }
 
     /// <summary>Reenvío a Sentry de los informes de errores del navegador (US-17), sin redirecciones ni cabeceras en los logs.</summary>

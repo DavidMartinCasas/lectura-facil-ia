@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-using System.Threading.RateLimiting;
 using LecturaFacil.Api.Auth;
 using LecturaFacil.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -52,21 +51,15 @@ internal static class AuthenticationConfiguration
         return services;
     }
 
-    /// <summary>Límite de intentos de inicio de sesión por dirección IP (OWASP API2).</summary>
+    /// <summary>
+    /// Límite de intentos de inicio de sesión por dirección IP del cliente (OWASP API2 y API4). Detrás del nginx del
+    /// despliegue, la IP es la que pone en <c>X-Forwarded-For</c> (<see cref="ClientAddress"/>).
+    /// </summary>
     public static RateLimiterOptions AddLoginRateLimit(this RateLimiterOptions options) =>
         options.AddPolicy(AuthEndpoints.LoginRateLimitPolicy, context =>
         {
             var auth = context.RequestServices.GetRequiredService<IOptions<AuthOptions>>().Value;
-
-            // TODO(US-16): IP real del cliente detrás del proxy (cabeceras reenviadas). Hasta entonces, detrás de nginx
-            // todas las peticiones comparten la IP del proxy y el límite es global.
-            var partition = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            return RateLimitPartition.GetFixedWindowLimiter(partition, _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = auth.LoginAttemptsPerMinute,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0,
-            });
+            return RateLimitPartitions.FixedWindow("ip:" + ClientAddress.Of(context), auth.LoginAttemptsPerMinute, TimeSpan.FromMinutes(1));
         });
 
     private static void ConfigureIdentity(IdentityOptions identity, AuthOptions auth)
