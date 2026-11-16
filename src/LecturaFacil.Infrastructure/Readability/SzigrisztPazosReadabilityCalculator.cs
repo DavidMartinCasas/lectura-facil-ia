@@ -6,7 +6,7 @@ using LecturaFacil.Domain.Readability;
 namespace LecturaFacil.Infrastructure.Readability;
 
 /// <summary>Índice de Szigriszt-Pazos con la escala INFLESZ. Las reglas viven en Domain; aquí solo se adaptan al puerto.</summary>
-public sealed class SzigrisztPazosReadabilityCalculator : IReadabilityCalculator
+internal sealed class SzigrisztPazosReadabilityCalculator : IReadabilityCalculator
 {
     public Result<ReadabilityScore> Calculate(string text)
     {

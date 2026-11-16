@@ -38,7 +38,7 @@ public sealed class LexicalEmbeddingProviderTests
 
         var vector = await provider.EmbedAsync("Hola", TestContext.Current.CancellationToken);
 
-        vector.ShouldBe(LexicalEmbeddingProvider.Embed("Hola"));
+        vector.Value.ShouldBe(LexicalEmbeddingProvider.Embed("Hola"));
     }
 }
 

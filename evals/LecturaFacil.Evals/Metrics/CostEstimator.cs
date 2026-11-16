@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Common;
 
 namespace LecturaFacil.Evals.Metrics;
 
 /// <summary>
-/// Cota superior del coste de evaluar un perfil, para pedir confirmación antes de usar un modelo de pago. Supone que
-/// cada texto agota sus reintentos, que cada respuesta llega a <see cref="LimitsOptions.MaxOutputTokens"/> y 4
-/// caracteres por token.
+/// Cota superior del coste de evaluar un perfil, para pedir confirmación antes de usar un modelo de pago. Sigue el peor
+/// caso de <see cref="AdaptDocument"/>: el texto se parte en trozos de
+/// <see cref="LimitsOptions.MaxCharactersPerAdaptationChunk"/>, cada trozo gasta sus
+/// <see cref="AdaptDocument.MaxAttemptsPerChunk"/> intentos en cada pasada (la primera y cada reintento por pautas), y
+/// cada respuesta llega a <see cref="LimitsOptions.MaxOutputTokens"/>. Cuenta 4 caracteres por token (a la baja en
+/// castellano, que suele tener más caracteres por token). Cada trampa son dos verificaciones (con y sin la alteración).
 /// </summary>
 public static class CostEstimator
 {
@@ -30,19 +34,23 @@ public static class CostEstimator
         ArgumentNullException.ThrowIfNull(pricing);
 
         long input = 0, output = 0;
-        var adapterCalls = 1 + limits.MaxAdaptationRetries;
+        var passes = 1 + limits.MaxAdaptationRetries;
+        var maxChunk = Math.Min(limits.MaxCharactersPerAdaptationChunk, limits.MaxCharacters);
         foreach (var length in originalLengths)
         {
-            input += adapterCalls * Tokens(adapterPromptLength + length);
+            var chunks = Math.Min((length + maxChunk - 1) / maxChunk, limits.MaxAdaptationChunksPerDocument);
+            var adapterCalls = (long)passes * chunks * AdaptDocument.MaxAttemptsPerChunk;
+            // Cada llamada lleva el prompt y, como mucho, un trozo entero.
+            input += adapterCalls * Tokens(adapterPromptLength + Math.Min(length, maxChunk));
             // El verificador recibe el original y una adaptación de tamaño parecido.
             input += Tokens(verifierPromptLength + (2 * length));
-            output += (adapterCalls + 1L) * limits.MaxOutputTokens;
+            output += (adapterCalls + 1) * limits.MaxOutputTokens;
         }
 
         foreach (var length in trapLengths)
         {
-            input += Tokens(verifierPromptLength + length);
-            output += limits.MaxOutputTokens;
+            input += 2 * Tokens(verifierPromptLength + length);
+            output += 2L * limits.MaxOutputTokens;
         }
 
         return EvalMetrics.Cost(input, output, pricing);

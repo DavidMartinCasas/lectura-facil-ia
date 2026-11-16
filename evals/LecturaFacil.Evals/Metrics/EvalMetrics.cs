@@ -23,9 +23,11 @@ public static class EvalMetrics
             ? null
             : (double)verification.ConservedCount / verification.KeyFacts.Count;
 
-    /// <summary>Datos clave cambiados, a revisar u omitidos: los avisos que la persona tendría que revisar.</summary>
-    public static int KeyFactWarnings(MeaningVerification? verification) =>
-        verification is null ? 0 : verification.ReviewCount + verification.OmittedCount;
+    /// <summary>Datos clave cambiados o con dudas (incluidas las conversiones calculadas) que una persona tiene que revisar.</summary>
+    public static int KeyFactsToReview(MeaningVerification? verification) => verification?.ReviewCount ?? 0;
+
+    /// <summary>Datos clave que no aparecen en la adaptación: el aviso más grave.</summary>
+    public static int KeyFactsOmitted(MeaningVerification? verification) => verification?.OmittedCount ?? 0;
 
     /// <summary>Similitud coseno entre dos vectores (−1 a 1). Si alguno es nulo, 0.</summary>
     public static double CosineSimilarity(IReadOnlyList<float> first, IReadOnlyList<float> second)

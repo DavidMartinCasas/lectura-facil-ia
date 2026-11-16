@@ -42,10 +42,12 @@ internal static class EvaluationServices
         services.AddSingleton<IAdaptationQueue, NoAdaptationQueue>();
         services.AddSingleton<IAdaptationTelemetry, NoAdaptationTelemetry>();
 
-        // Sin respaldo: cada perfil se evalúa solo con su proveedor, para que los resultados sean de ese modelo.
+        // Sin respaldo: cada perfil se evalúa solo con su proveedor, para que los resultados sean de ese modelo. Con la
+        // misma política de reintentos que el principal en producción: un fallo transitorio no cuenta contra el modelo.
         services.AddHttpClient(LlmProviderFactory.PrimaryHttpClient, client => client.Timeout = TimeSpan.FromSeconds(limits.LlmTimeoutSeconds))
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false })
-            .RedactLoggedHeaders(_ => true);
+            .RedactLoggedHeaders(_ => true)
+            .AddResilienceHandler(LlmResiliencePipeline.Name, LlmResiliencePipeline.Configure);
         services.AddSingleton<LlmProviderFactory>();
         services.AddSingleton(provider => new MeteredLlmProvider(llmProvider(provider)));
         services.AddSingleton<ILlmProvider>(provider => provider.GetRequiredService<MeteredLlmProvider>());

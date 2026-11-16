@@ -83,6 +83,6 @@ public sealed class EvaluationPiecesTests
         (await repository.FindForOwnerAsync(document.Id, OwnerId.From(Guid.NewGuid()), token)).ShouldBeNull();
         (await repository.FindStatusForOwnerAsync(document.Id, owner, token)).ShouldBe(DocumentStatus.Received);
         (await repository.ListAwaitingAdaptationAsync(token)).ShouldBe([document.Id]);
-        (await repository.ListForOwnerAsync(owner, 10, token)).ShouldBeEmpty();
+        await Should.ThrowAsync<NotSupportedException>(() => repository.ListForOwnerAsync(owner, 10, token));
     }
 }

@@ -2,6 +2,7 @@
 using System.Text.Json;
 using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Llm;
+using LecturaFacil.Evals.Metrics;
 using LecturaFacil.Testing;
 
 namespace LecturaFacil.Evals.DryRun;
@@ -17,7 +18,6 @@ public static class DryRunResponder
     public const string AdapterModel = "adaptador-simulado";
     public const string VerifierModel = "verificador-simulado";
 
-    private const int CharactersPerToken = 4;
     private const string EmptyVerification = """{"datos_clave": []}""";
     private static readonly char[] SentenceEnds = ['.', '\n', '?', '!', ';'];
 
@@ -25,14 +25,14 @@ public static class DryRunResponder
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var inputTokens = (request.SystemPrompt.Length + request.UserMessage.Length) / CharactersPerToken;
+        var inputTokens = (request.SystemPrompt.Length + request.UserMessage.Length) / CostEstimator.CharactersPerToken;
         if (request.Role == LlmRole.Verifier)
         {
-            return new LlmRecording(VerifierModel, EmptyVerification, inputTokens, EmptyVerification.Length / CharactersPerToken, 0);
+            return new LlmRecording(VerifierModel, EmptyVerification, inputTokens, EmptyVerification.Length / CostEstimator.CharactersPerToken, 0);
         }
 
         var content = JsonSerializer.Serialize(Adapt(DelimitedDocument(request.UserMessage)));
-        return new LlmRecording(AdapterModel, content, inputTokens, content.Length / CharactersPerToken, 0);
+        return new LlmRecording(AdapterModel, content, inputTokens, content.Length / CostEstimator.CharactersPerToken, 0);
     }
 
     private static AdaptationReply Adapt(string document)

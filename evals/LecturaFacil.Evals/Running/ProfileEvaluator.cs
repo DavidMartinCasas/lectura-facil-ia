@@ -17,7 +17,7 @@ namespace LecturaFacil.Evals.Running;
 /// <summary>
 /// Evalúa un perfil con los mismos casos de uso que producción: cada texto se recibe con <see cref="SubmitDocument"/>
 /// y se adapta con <see cref="AdaptDocument"/> (pautas, reintento y verificación incluidos); la legibilidad se mide con
-/// <see cref="CompareReadability"/>. Los textos trampa pasan solo por <see cref="VerifyMeaning"/>.
+/// <see cref="CompareReadability"/>. Los textos trampa pasan solo por <see cref="VerifyMeaning"/>, con y sin la alteración.
 /// Un texto que falla queda con su código de error y la evaluación sigue con el siguiente.
 /// </summary>
 internal sealed class ProfileEvaluator(
@@ -80,7 +80,8 @@ internal sealed class ProfileEvaluator(
             readability.IsSuccess ? readability.Value.Original.Value : null,
             readability.IsSuccess ? readability.Value.Adapted.Value : null,
             EvalMetrics.KeyFactRetention(version.MeaningVerification),
-            EvalMetrics.KeyFactWarnings(version.MeaningVerification),
+            EvalMetrics.KeyFactsToReview(version.MeaningVerification),
+            EvalMetrics.KeyFactsOmitted(version.MeaningVerification),
             similarity,
             duration,
             usage.InputTokens,
@@ -95,21 +96,24 @@ internal sealed class ProfileEvaluator(
     {
         using var scope = services.CreateScope();
         _meter.TakeUsage();
-        var content = ProfessionalAdaptation.ToContent(trap.AlteredAdaptation);
-        var verification = await scope.ServiceProvider.GetRequiredService<VerifyMeaning>()
-            .ExecuteAsync(trap.Source.Original, content, cancellationToken);
+        var verifyMeaning = scope.ServiceProvider.GetRequiredService<VerifyMeaning>();
+        // Grupo de control: la adaptación profesional sin alterar, para no contar avisos que no tienen que ver con la trampa.
+        var baseline = await verifyMeaning.ExecuteAsync(
+            trap.Source.Original, ProfessionalAdaptation.ToContent(trap.Source.ProfessionalAdaptation), cancellationToken);
+        var verification = await verifyMeaning.ExecuteAsync(
+            trap.Source.Original, ProfessionalAdaptation.ToContent(trap.AlteredAdaptation), cancellationToken);
         var usage = _meter.TakeUsage();
         return new TrapResult(
             trap.Source.Id,
             trap.OriginalFigure,
             trap.AlteredFigure,
-            TrapDetection.IsDetected(verification, trap),
+            TrapDetection.Classify(verification, baseline, trap),
             usage.InputTokens,
             usage.OutputTokens,
             EvalMetrics.Cost(usage.InputTokens, usage.OutputTokens, profile.Pricing));
     }
 
-    /// <summary><c>null</c> si no hay modelo de embeddings configurado.</summary>
+    /// <summary><c>null</c> si no hay modelo de embeddings configurado o no responde.</summary>
     private async Task<double?> SimilarityAsync(string adapted, string professional, CancellationToken cancellationToken)
     {
         if (embeddings is null)
@@ -118,8 +122,8 @@ internal sealed class ProfileEvaluator(
         }
 
         var first = await embeddings.EmbedAsync(adapted, cancellationToken);
-        var second = await embeddings.EmbedAsync(professional, cancellationToken);
-        return EvalMetrics.CosineSimilarity(first, second);
+        var second = first.IsSuccess ? await embeddings.EmbedAsync(professional, cancellationToken) : first;
+        return first.IsSuccess && second.IsSuccess ? EvalMetrics.CosineSimilarity(first.Value, second.Value) : null;
     }
 
     private TextResult Failed(EvalText text, string errorCode, long started)
@@ -132,6 +136,7 @@ internal sealed class ProfileEvaluator(
             null,
             null,
             null,
+            0,
             0,
             null,
             timeProvider.GetElapsedTime(started),

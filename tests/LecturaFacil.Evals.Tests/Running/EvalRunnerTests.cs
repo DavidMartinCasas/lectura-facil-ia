@@ -43,9 +43,10 @@ public sealed class EvalRunnerTests : IDisposable
         var traps = csv.Where(line => line.Contains(",trap,", StringComparison.Ordinal)).ToList();
         traps.Count.ShouldBe(2);
         // "40 de cada 100" → "41 de cada 100": el 40 del original desaparece y la comprobación de cifras por código lo avisa sin verificador.
-        traps.ShouldContain(line => line.Contains("\"ayuda-alquiler\"", StringComparison.Ordinal) && line.EndsWith(",40,41,true", StringComparison.Ordinal));
-        report.ShouldContain("| simulado | ayuda-alquiler | 40 → 41 | Sí |");
-        report.ShouldContain("de 2) |");
+        traps.ShouldContain(line => line.Contains("\"ayuda-alquiler\"", StringComparison.Ordinal) && line.EndsWith(",40,41,true,code", StringComparison.Ordinal));
+        report.ShouldContain("| simulado | ayuda-alquiler | 40 → 41 | Sí (solo código) |");
+        // El verificador simulado no lista nada: su recall es 0 y todo lo detecta el código.
+        report.ShouldContain("| 50,0 % (1 de 2) | 0,0 % (0 de 2) |");
     }
 
     [Fact]

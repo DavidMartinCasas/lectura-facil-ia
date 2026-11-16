@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using LecturaFacil.Evals.Metrics;
+using LecturaFacil.Evals.Traps;
 
 namespace LecturaFacil.Evals.Reporting;
 
@@ -11,15 +12,22 @@ public sealed record ModelSummary(
     double? GuidelineCompliance,
     double? InfleszDelta,
     double? KeyFactRetention,
-    int KeyFactWarnings,
+    int KeyFactsToReview,
+    int KeyFactsOmitted,
     double? Similarity,
     TimeSpan? MeanDuration,
     double? TokensPerSecond,
     decimal Cost,
     int TrapsDetected,
-    int TrapsIntroduced)
+    int TrapsDetectedByVerifier,
+    int TrapsVerified,
+    int TrapsNotVerified)
 {
-    public double? VerifierRecall => EvalMetrics.Recall(TrapsDetected, TrapsIntroduced);
+    /// <summary>Trampas avisadas (por el verificador o por la comprobación de cifras) / trampas verificadas.</summary>
+    public double? Recall => EvalMetrics.Recall(TrapsDetected, TrapsVerified);
+
+    /// <summary>Trampas en las que el verificador listó el dato cambiado / trampas verificadas: lo que aporta el modelo.</summary>
+    public double? VerifierRecall => EvalMetrics.Recall(TrapsDetectedByVerifier, TrapsVerified);
 
     /// <summary>Medias de los textos adaptados; el coste y el tiempo cuentan también los que fallan y las trampas.</summary>
     public static ModelSummary From(ModelEvaluation evaluation)
@@ -37,12 +45,15 @@ public sealed record ModelSummary(
             EvalMetrics.Mean(succeeded.Select(text => text.GuidelineCompliance)),
             EvalMetrics.Mean(succeeded.Select(text => text.InfleszDelta)),
             EvalMetrics.Mean(succeeded.Select(text => text.KeyFactRetention)),
-            succeeded.Sum(text => text.KeyFactWarnings),
+            succeeded.Sum(text => text.KeyFactsToReview),
+            succeeded.Sum(text => text.KeyFactsOmitted),
             EvalMetrics.Mean(succeeded.Select(text => text.Similarity)),
             texts.Count == 0 ? null : TimeSpan.FromTicks((long)texts.Average(text => text.Duration.Ticks)),
             EvalMetrics.TokensPerSecond(outputTokens, llmDuration),
             texts.Sum(text => text.Cost) + evaluation.Traps.Sum(trap => trap.Cost),
             evaluation.Traps.Count(trap => trap.Detected),
-            evaluation.Traps.Count);
+            evaluation.Traps.Count(trap => trap.Outcome == TrapOutcome.DetectedByVerifier),
+            evaluation.Traps.Count(trap => trap.Outcome != TrapOutcome.NotVerified),
+            evaluation.Traps.Count(trap => trap.Outcome == TrapOutcome.NotVerified));
     }
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 using System.Globalization;
 using System.Text;
+using LecturaFacil.Evals.Traps;
 
 namespace LecturaFacil.Evals.Reporting;
 
@@ -11,7 +12,7 @@ namespace LecturaFacil.Evals.Reporting;
 public static class CsvReport
 {
     public const string Header =
-        "model,kind,text_id,result,guideline_compliance,inflesz_original,inflesz_adapted,inflesz_delta,key_fact_retention,key_fact_warnings,similarity,duration_ms,input_tokens,output_tokens,llm_duration_ms,cost,trap_original_figure,trap_altered_figure,trap_detected";
+        "model,kind,text_id,result,guideline_compliance,inflesz_original,inflesz_adapted,inflesz_delta,key_fact_retention,key_facts_to_review,key_facts_omitted,similarity,duration_ms,input_tokens,output_tokens,llm_duration_ms,cost,trap_original_figure,trap_altered_figure,trap_detected,trap_outcome";
 
     private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
 
@@ -27,21 +28,29 @@ public static class CsvReport
             {
                 Row(csv, Text(model), "text", Text(text.TextId), Text(text.ErrorCode ?? "ok"), Number(text.GuidelineCompliance),
                     Number(text.InfleszOriginal), Number(text.InfleszAdapted), Number(text.InfleszDelta), Number(text.KeyFactRetention),
-                    Number(text.KeyFactWarnings), Number(text.Similarity), Number((long)text.Duration.TotalMilliseconds),
+                    Number(text.KeyFactsToReview), Number(text.KeyFactsOmitted), Number(text.Similarity), Number((long)text.Duration.TotalMilliseconds),
                     Number(text.InputTokens), Number(text.OutputTokens), Number((long)text.LlmDuration.TotalMilliseconds),
-                    Number(text.Cost), string.Empty, string.Empty, string.Empty);
+                    Number(text.Cost), string.Empty, string.Empty, string.Empty, string.Empty);
             }
 
             foreach (var trap in evaluation.Traps)
             {
                 Row(csv, Text(model), "trap", Text(trap.TextId), Text("ok"), string.Empty, string.Empty, string.Empty, string.Empty,
-                    string.Empty, string.Empty, string.Empty, string.Empty, Number(trap.InputTokens), Number(trap.OutputTokens),
-                    string.Empty, Number(trap.Cost), Number(trap.OriginalFigure), Number(trap.AlteredFigure), trap.Detected ? "true" : "false");
+                    string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, Number(trap.InputTokens), Number(trap.OutputTokens),
+                    string.Empty, Number(trap.Cost), Number(trap.OriginalFigure), Number(trap.AlteredFigure), trap.Detected ? "true" : "false", OutcomeCode(trap.Outcome));
             }
         }
 
         return csv.ToString();
     }
+
+    private static string OutcomeCode(TrapOutcome outcome) => outcome switch
+    {
+        TrapOutcome.DetectedByVerifier => "verifier",
+        TrapOutcome.DetectedByCode => "code",
+        TrapOutcome.NotVerified => "not_verified",
+        _ => "missed",
+    };
 
     private static void Row(StringBuilder csv, params string[] fields) => csv.AppendJoin(',', fields).Append('\n');
 

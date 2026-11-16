@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 using System.Globalization;
 using System.Text;
+using LecturaFacil.Application.Common;
 
 namespace LecturaFacil.Evals.Similarity;
 
@@ -18,11 +19,11 @@ public sealed class LexicalEmbeddingProvider : IEmbeddingProvider
 
     public string Model => "léxico (simulado)";
 
-    public Task<IReadOnlyList<float>> EmbedAsync(string text, CancellationToken cancellationToken)
+    public Task<Result<IReadOnlyList<float>>> EmbedAsync(string text, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(text);
         cancellationToken.ThrowIfCancellationRequested();
-        return Task.FromResult(Embed(text));
+        return Task.FromResult(Result<IReadOnlyList<float>>.Success(Embed(text)));
     }
 
     public static IReadOnlyList<float> Embed(string text)

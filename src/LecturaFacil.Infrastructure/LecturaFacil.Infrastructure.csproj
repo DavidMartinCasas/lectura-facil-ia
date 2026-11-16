@@ -18,6 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- La evaluación de modelos (US-18) compone los mismos adaptadores internos que la API, con la misma resiliencia. -->
+    <InternalsVisibleTo Include="LecturaFacil.Evals" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="Llm\Prompts\*.md" LogicalName="LecturaFacil.Infrastructure.Llm.Prompts.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Export\Fonts\*.ttf" LogicalName="LecturaFacil.Infrastructure.Export.Fonts.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Guidelines\Lists\*.json" LogicalName="LecturaFacil.Infrastructure.Guidelines.Lists.%(Filename)%(Extension)" />

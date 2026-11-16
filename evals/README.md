@@ -35,9 +35,14 @@ nombra las variables de entorno de las que se leen. Se valida con las mismas reg
 hacia localhost o una red privada).
 
 - El verificador debe ser de **otra familia** que el adaptador (ADR 0002): por eso el perfil `qwen` verifica con Gemma.
+  Si quiere comparar el "% de datos conservados" entre adaptadores sin mezclarlo con lo estricto que es cada
+  verificador, configure **el mismo verificador** en todos los perfiles (de otra familia que todos los adaptadores).
+- Los límites (`MaxOutputTokens`, reintentos, tamaño de los trozos…) son los valores por defecto de la API
+  (`LimitsOptions`), y el informe los registra.
 - `embeddings` es opcional. Sin él no se mide la similitud. Es el mismo modelo para todos los perfiles.
-- **Límite de gasto:** si algún perfil tiene precio, la herramienta muestra una cota superior del coste y pide
-  confirmación antes de llamar a nada. `--yes` la omite.
+- **Límite de gasto:** si algún perfil tiene precio, la herramienta muestra una cota superior del coste (todos los
+  trozos, intentos y reintentos con la respuesta máxima) y pide confirmación antes de llamar a nada. `--yes` la omite.
+  Los embeddings no entran en la estimación: si usa un modelo de embeddings de pago, téngalo en cuenta.
 
 ## Dataset (`evals/datasets/`)
 
@@ -54,7 +59,8 @@ Un JSON por texto, en la carpeta `evals/datasets/` (las subcarpetas no se leen):
 ```
 
 - **Solo textos públicos** o sin datos personales, con su **fuente y licencia**.
-- Como mucho 20 textos (el alcance son 10). Si un fichero no es válido no se evalúa nada.
+- Como mucho 20 textos (el alcance son 10, "ampliable a 20" según la sección 18 del diseño). Si un fichero no es
+  válido no se evalúa nada.
 - `evals/datasets/ejemplos/` tiene dos textos **inventados** para la simulación y los tests. No son adaptaciones
   profesionales y no deben usarse para sacar conclusiones.
 
@@ -65,13 +71,25 @@ Un JSON por texto, en la carpeta `evals/datasets/` (las subcarpetas no se leen):
 | Pautas cumplidas | Revisor determinista sobre la adaptación guardada |
 | Δ INFLESZ | INFLESZ de la adaptación − INFLESZ del original |
 | Datos clave conservados | Conservados / datos listados por la verificación (verificador + cifras por código) |
+| Datos a revisar / omitidos | Avisos de la verificación, por separado (los omitidos son los más graves) |
 | Similitud | Coseno de los embeddings de la adaptación y la adaptación profesional |
-| Tiempo y coste | Tiempo de reloj por texto; tokens de todas las llamadas × precio del perfil |
-| Recall del verificador | Textos trampa con aviso / textos trampa |
+| Tiempo y coste | Tiempo de reloj por texto; tokens de las respuestas válidas × precio del perfil (coste mínimo) |
+| Recall total | Textos trampa con aviso del cambio / textos trampa verificados (incluye la comprobación por código) |
+| Recall del verificador LLM | Textos trampa en los que el modelo verificador listó el dato cambiado / textos trampa verificados |
 
 **Textos trampa:** en la adaptación profesional de los 5 primeros textos que tengan una cifra entera escrita con
 dígitos, esa cifra se cambia por la siguiente (`15 días` → `16 días`). Se pasa la adaptación alterada por la
-verificación y se comprueba si algún aviso cita la cifra original o la cambiada.
+verificación y se comprueba si algún aviso cita la cifra cambiada, o la original cuando la adaptación sin alterar (grupo
+de control) no tenía ya ese aviso. Si el verificador no responde, todas las cifras quedan "a revisar" por fallo seguro:
+eso **no** cuenta como detección y la trampa sale como "sin verificar".
+
+Si la cifra original desaparece de la adaptación, la comprobación por código ya avisa sin el modelo; por eso el informe
+separa el recall total del recall del verificador LLM. Hay un caso que solo puede ver el modelo: si la cifra original
+sigue en otra parte del texto (en `cita-previa`, "10 minutos" → "11 minutos" con el teléfono "010" todavía presente),
+el código no avisa.
+
+Ninguna métrica demuestra que un texto sea de lectura fácil: la **validación con personas lectoras** sigue siendo
+necesaria. La similitud tampoco mide si se conservan los datos ("15 días" y "16 días" son casi iguales para un embedding).
 
 **Criterio eliminatorio:** un modelo que cambie o pierda un dato clave sin aviso queda descartado. La herramienta no
 puede detectar lo que nadie ha avisado: hay que revisar a mano una muestra de los datos marcados como conservados.

@@ -44,12 +44,14 @@ public sealed class EvalMetricsTests
     }
 
     [Fact]
-    public void KeyFactWarnings_WhenFactsAreChangedOrOmitted_CountsThem()
+    public void KeyFactsToReviewAndOmitted_WhenFactsAreChangedOrOmitted_CountsThemSeparately()
     {
-        var verification = Verification(KeyFactStatus.Conserved, KeyFactStatus.Review, KeyFactStatus.Omitted);
+        var verification = Verification(KeyFactStatus.Conserved, KeyFactStatus.Review, KeyFactStatus.Review, KeyFactStatus.Omitted);
 
-        EvalMetrics.KeyFactWarnings(verification).ShouldBe(2);
-        EvalMetrics.KeyFactWarnings(null).ShouldBe(0);
+        EvalMetrics.KeyFactsToReview(verification).ShouldBe(2);
+        EvalMetrics.KeyFactsOmitted(verification).ShouldBe(1);
+        EvalMetrics.KeyFactsToReview(null).ShouldBe(0);
+        EvalMetrics.KeyFactsOmitted(null).ShouldBe(0);
     }
 
     [Fact]

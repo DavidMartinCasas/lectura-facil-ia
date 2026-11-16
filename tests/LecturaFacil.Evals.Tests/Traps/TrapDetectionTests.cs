@@ -10,42 +10,63 @@ public sealed class TrapDetectionTests
     private static readonly Trap Trap = TrapGenerator.Create(
         new EvalText("plazo", "El plazo es de quince días.", "Tiene 15 días.", "Texto inventado", "CC0-1.0"))!;
 
-    [Fact]
-    public void IsDetected_WhenAWarningQuotesTheOriginalFigure_ReturnsTrue()
-    {
-        var verification = Verification(Fact("quince días", null, KeyFactStatus.Omitted, KeyFactReason.FigureNotInAdaptation));
+    private static readonly MeaningVerification CleanBaseline = Verification();
 
-        TrapDetection.IsDetected(verification, Trap).ShouldBeTrue();
+    [Fact]
+    public void Classify_WhenOnlyTheCodeWarnsAboutTheMissingOriginalFigure_ReturnsDetectedByCode()
+    {
+        var verification = Verification(Fact("quince", null, KeyFactStatus.Review, KeyFactReason.FigureNotInAdaptation));
+
+        TrapDetection.Classify(verification, CleanBaseline, Trap).ShouldBe(TrapOutcome.DetectedByCode);
     }
 
     [Fact]
-    public void IsDetected_WhenAWarningQuotesTheAlteredFigure_ReturnsTrue()
+    public void Classify_WhenTheVerifierListsTheChangedFigure_ReturnsDetectedByVerifier()
     {
-        var verification = Verification(Fact("plazo", "Tiene 16 días", KeyFactStatus.Review, KeyFactReason.ValueChanged));
+        var verification = Verification(Fact("quince días", "Tiene 16 días", KeyFactStatus.Review, KeyFactReason.ValueChanged));
 
-        TrapDetection.IsDetected(verification, Trap).ShouldBeTrue();
+        TrapDetection.Classify(verification, CleanBaseline, Trap).ShouldBe(TrapOutcome.DetectedByVerifier);
     }
 
     [Fact]
-    public void IsDetected_WhenTheFigureIsMarkedAsConserved_ReturnsFalse()
+    public void Classify_WhenTheFigureIsMarkedAsConserved_ReturnsMissed()
     {
         var verification = Verification(Fact("quince días", "Tiene 16 días", KeyFactStatus.Conserved, KeyFactReason.None));
 
-        TrapDetection.IsDetected(verification, Trap).ShouldBeFalse();
+        TrapDetection.Classify(verification, CleanBaseline, Trap).ShouldBe(TrapOutcome.Missed);
     }
 
     [Fact]
-    public void IsDetected_WhenWarningsAreAboutOtherFigures_ReturnsFalse()
+    public void Classify_WhenWarningsAreAboutOtherFigures_ReturnsMissed()
     {
         var verification = Verification(Fact("250 euros", null, KeyFactStatus.Omitted, KeyFactReason.NotInAdaptation));
 
-        TrapDetection.IsDetected(verification, Trap).ShouldBeFalse();
+        TrapDetection.Classify(verification, CleanBaseline, Trap).ShouldBe(TrapOutcome.Missed);
     }
 
     [Fact]
-    public void IsDetected_WhenThereIsNoWarning_ReturnsFalse()
+    public void Classify_WhenTheOriginalFigureWasAlreadyWarnedWithoutTheTrap_DoesNotCountThatWarning()
     {
-        TrapDetection.IsDetected(Verification(), Trap).ShouldBeFalse();
+        var warning = Fact("quince días", "Tiene 15 días", KeyFactStatus.Review, KeyFactReason.QualifierChanged);
+
+        TrapDetection.Classify(Verification(warning), Verification(warning), Trap).ShouldBe(TrapOutcome.Missed);
+    }
+
+    [Fact]
+    public void Classify_WhenAWarningQuotesTheAlteredFigure_CountsItEvenIfTheBaselineWarned()
+    {
+        var baseline = Verification(Fact("quince días", "Tiene 15 días", KeyFactStatus.Review, KeyFactReason.QualifierChanged));
+        var verification = Verification(Fact("quince días", "Tiene 16 días", KeyFactStatus.Review, KeyFactReason.ValueChanged));
+
+        TrapDetection.Classify(verification, baseline, Trap).ShouldBe(TrapOutcome.DetectedByVerifier);
+    }
+
+    [Fact]
+    public void Classify_WhenTheVerifierDidNotAnswer_ReturnsNotVerifiedEvenThoughEveryFigureIsWarned()
+    {
+        var verification = MeaningVerification.NotVerified("El plazo es de quince días.", maxKeyFacts: 100);
+
+        TrapDetection.Classify(verification, CleanBaseline, Trap).ShouldBe(TrapOutcome.NotVerified);
     }
 
     private static KeyFact Fact(string original, string? adapted, KeyFactStatus status, KeyFactReason reason) =>
