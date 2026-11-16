@@ -4,9 +4,14 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatTabsModule } from '@angular/material/tabs';
 import { map } from 'rxjs';
-import { ManualEdit, ReviewableDocument } from '../../../core/documents/document.models';
+import {
+  ExportFormat,
+  ManualEdit,
+  ReviewableDocument,
+} from '../../../core/documents/document.models';
 import { REVIEW_TEXTS } from '../../../core/ui-texts';
 import { AdaptedTextComponent } from '../adapted-text/adapted-text';
+import { ExportPanelComponent } from '../export-panel/export-panel';
 import { GuidelinesPanelComponent } from '../guidelines-panel/guidelines-panel';
 import { KeyFactsPanelComponent } from '../key-facts-panel/key-facts-panel';
 import { OriginalTextComponent } from '../original-text/original-text';
@@ -17,13 +22,14 @@ export const SMALL_SCREEN_QUERY = '(max-width: 47.99rem)';
 
 /**
  * Revisión de un borrador: original y adaptación lado a lado (o en pestañas en pantallas pequeñas) y los paneles de
- * pautas, legibilidad y datos clave. Solo coordina: cada parte es un componente, y las acciones (guardar una edición,
- * marcar un dato revisado) las hace la página a través de su store.
+ * pautas, legibilidad y datos clave, y la exportación. Solo coordina: cada parte es un componente, y las acciones (guardar
+ * una edición, marcar un dato revisado, exportar) las hace la página a través de su store.
  */
 @Component({
   selector: 'app-document-review',
   imports: [
     AdaptedTextComponent,
+    ExportPanelComponent,
     GuidelinesPanelComponent,
     KeyFactsPanelComponent,
     MatTabsModule,
@@ -37,8 +43,10 @@ export const SMALL_SCREEN_QUERY = '(max-width: 47.99rem)';
 export class DocumentReviewComponent {
   readonly document = input.required<ReviewableDocument>();
   readonly saving = input(false);
+  readonly exporting = input(false);
   readonly save = output<ManualEdit>();
   readonly acknowledge = output<number>();
+  readonly exportAdaptation = output<ExportFormat>();
 
   protected readonly texts = REVIEW_TEXTS;
   protected readonly smallScreen = toSignal(

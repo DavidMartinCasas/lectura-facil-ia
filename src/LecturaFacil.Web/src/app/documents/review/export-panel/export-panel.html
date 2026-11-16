@@ -1,0 +1,27 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<section aria-labelledby="export-title">
+  <h2 id="export-title">{{ texts.exportTitle }}</h2>
+  <mat-radio-group
+    class="formats"
+    [attr.aria-label]="texts.exportFormatLabel"
+    [value]="format()"
+    (change)="format.set($event.value)"
+  >
+    @for (option of formats; track option) {
+      <mat-radio-button [value]="option">{{ labels[option] }}</mat-radio-button>
+    }
+  </mat-radio-group>
+  <p class="hint" id="export-hint">{{ texts.exportHint }}</p>
+  @if (!canExport()) {
+    <p class="hint" id="export-blocked">{{ blockedMessage() }}</p>
+  }
+  <button
+    mat-flat-button
+    type="button"
+    [disabled]="!canExport() || exporting()"
+    [attr.aria-describedby]="canExport() ? 'export-hint' : 'export-blocked'"
+    (click)="submit()"
+  >
+    {{ exporting() ? texts.exporting : texts.exportButton }}
+  </button>
+</section>

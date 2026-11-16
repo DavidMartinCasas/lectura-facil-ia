@@ -28,7 +28,9 @@
         [document]="reviewable"
         [saving]="store.saving()"
         (save)="store.saveEdit($event)"
+        [exporting]="store.exporting()"
         (acknowledge)="store.acknowledgeKeyFact($event)"
+        (exportAdaptation)="store.exportAdaptation($event)"
       />
     }
     <p class="visually-hidden" role="status" aria-live="polite">{{ announcement() }}</p>
