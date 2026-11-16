@@ -17,6 +17,8 @@ internal static class ApiConfiguration
         services.AddScoped<ICurrentUser, FixedCurrentUser>();
         services.AddSingleton<IValidator<SubmitTextRequest>, SubmitTextRequestValidator>();
         services.AddSingleton<IValidator<SubmitPdfForm>, SubmitPdfFormValidator>();
+        services.AddSingleton<IValidator<ManualEditRequest>, ManualEditRequestValidator>();
+        services.AddSingleton<IValidator<AcknowledgeKeyFactRequest>, AcknowledgeKeyFactRequestValidator>();
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

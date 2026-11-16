@@ -34,6 +34,9 @@ public sealed class MeaningVerification
 
     public int OmittedCount => Count(KeyFactStatus.Omitted);
 
+    /// <summary>Avisos que nadie ha marcado todavía como revisados. Mientras haya alguno, no se puede exportar.</summary>
+    public int PendingAcknowledgementCount => KeyFacts.Count(fact => fact.RequiresAcknowledgement);
+
     /// <summary>Por ejemplo, "5 conservados, 1 a revisar, 1 omitido".</summary>
     public string Summary => string.Create(
         CultureInfo.InvariantCulture,
@@ -97,6 +100,57 @@ public sealed class MeaningVerification
     {
         ArgumentNullException.ThrowIfNull(keyFacts);
         return new MeaningVerification(status, keyFacts.ToList().AsReadOnly(), metadata);
+    }
+
+    /// <summary>
+    /// La misma verificación con el dato número <paramref name="index"/> (desde 0, en el orden de <see cref="KeyFacts"/>)
+    /// marcado como revisado por una persona. No cambia ningún estado: el aviso se sigue mostrando.
+    /// </summary>
+    public MeaningVerification AcknowledgeKeyFact(int index)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, KeyFacts.Count);
+
+        var facts = KeyFacts.Select((fact, position) => position == index ? fact.AsAcknowledged() : fact).ToList();
+        return new MeaningVerification(Status, facts.AsReadOnly(), Metadata);
+    }
+
+    /// <summary>
+    /// Vuelve a comprobar con código los datos clave después de una edición manual, sin llamar al verificador (US-13).
+    /// Igual que en <see cref="Combine"/>, el código solo puede añadir avisos: cada dato queda con el más grave entre su
+    /// estado anterior y la comprobación de su cita en el texto editado, y cada cifra del original que ya no está en la
+    /// adaptación se añade como aviso. Un aviso revisado sigue revisado solo si su veredicto y su cita no han cambiado.
+    /// Un dato sin cita en la adaptación (omitido o sin verificar) no se puede volver a comprobar y se queda como estaba.
+    /// </summary>
+    /// <param name="adaptedText">El texto editado completo, como lo leerá la persona (con el glosario).</param>
+    public MeaningVerification RecheckAfterEdit(string originalText, string adaptedText, int maxKeyFacts)
+    {
+        ArgumentNullException.ThrowIfNull(originalText);
+        ArgumentNullException.ThrowIfNull(adaptedText);
+
+        var inAdaptation = NumberNormalizer.Values(adaptedText);
+        var rechecked = KeyFacts.Select(fact => Recheck(fact, originalText, adaptedText, inAdaptation)).ToList();
+        var listed = rechecked
+            .Where(fact => NumericConsistencyCheck.Quotes(originalText, fact.OriginalValue))
+            .SelectMany(fact => NumberNormalizer.Values(fact.OriginalValue))
+            .ToHashSet();
+        var missing = FiguresOf(originalText)
+            .Where(mention => !listed.Contains(mention.Value) && !inAdaptation.Contains(mention.Value))
+            .Select(mention => FigureFact(mention, KeyFactReason.FigureNotInAdaptation));
+        return new MeaningVerification(Status, Bounded(missing.Concat(rechecked), maxKeyFacts), Metadata);
+    }
+
+    private static KeyFact Recheck(KeyFact fact, string originalText, string adaptedText, IReadOnlySet<NumericValue> inAdaptation)
+    {
+        if (fact.AdaptedValue is null)
+        {
+            return fact;
+        }
+
+        var verdict = KeyFactVerdict.MostSevere(CodeVerdict(fact, originalText, adaptedText, inAdaptation), fact.Verdict);
+        var updated = fact.WithVerdict(verdict);
+        var unchanged = verdict == fact.Verdict && NumericConsistencyCheck.Quotes(adaptedText, fact.AdaptedValue);
+        return fact.Acknowledged && unchanged ? updated.AsAcknowledged() : updated;
     }
 
     /// <summary>Un dato cuya cita no está en el original es una invención del verificador: siempre se revisa.</summary>

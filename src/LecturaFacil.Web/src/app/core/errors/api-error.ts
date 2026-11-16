@@ -16,7 +16,7 @@ export class ApiError extends Error {
   }
 }
 
-/** Códigos de error de la API (DocumentErrors) con su mensaje para el usuario. */
+/** Códigos de error de la API (DocumentErrors y ReviewErrors) con su mensaje para el usuario. */
 const MESSAGES_BY_CODE: Readonly<Record<string, string>> = {
   'document.not_found': ERROR_TEXTS.notFound,
   'document.file_too_large': ERROR_TEXTS.fileTooLarge,
@@ -27,12 +27,18 @@ const MESSAGES_BY_CODE: Readonly<Record<string, string>> = {
   'document.busy': ERROR_TEXTS.unavailable,
   'document.text_too_short': ERROR_TEXTS.textTooShort,
   'document.text_too_long': ERROR_TEXTS.textTooLong,
+  'review.version_conflict': ERROR_TEXTS.conflict,
+  'review.not_editable': ERROR_TEXTS.notEditable,
+  'review.incomplete_edit': ERROR_TEXTS.incompleteEdit,
+  'review.edit_too_long': ERROR_TEXTS.editTooLong,
+  'review.key_fact_not_found': ERROR_TEXTS.keyFactNotFound,
 };
 
 const MESSAGES_BY_STATUS: Readonly<Record<number, string>> = {
   0: ERROR_TEXTS.offline,
   400: ERROR_TEXTS.invalidRequest,
   404: ERROR_TEXTS.notFound,
+  409: ERROR_TEXTS.conflict,
   413: ERROR_TEXTS.fileTooLarge,
   415: ERROR_TEXTS.unsupported,
   422: ERROR_TEXTS.unprocessable,

@@ -1,0 +1,56 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<section aria-labelledby="key-facts-title">
+  <h2 id="key-facts-title">{{ texts.keyFactsTitle }}</h2>
+  @if (verification(); as verification) {
+    <p class="summary">{{ verification.summary }}</p>
+    @if (verification.status === 'NotVerified') {
+      <p class="hint">{{ texts.notVerified }}</p>
+    }
+    <p class="hint">{{ texts.keyFactsHint }}</p>
+    <ul>
+      @for (fact of verification.keyFacts; track fact.id) {
+        <li
+          class="item"
+          [class.item--warning]="fact.requiresAcknowledgement"
+          [class.item--done]="fact.acknowledged"
+        >
+          <p>
+            <span class="status">{{ statusLabels[fact.status] }}</span>
+            · {{ typeLabels[fact.type] }}
+            @if (fact.acknowledged) {
+              · <span class="status">✓ {{ texts.acknowledged }}</span>
+            }
+          </p>
+          <p>{{ texts.original }} «{{ fact.originalValue }}»</p>
+          <p>
+            {{ texts.adapted }}
+            @if (fact.adaptedValue; as adapted) {
+              «{{ adapted }}»
+            } @else {
+              {{ texts.notInAdaptation }}
+            }
+          </p>
+          @if (fact.reasonMessage) {
+            <p class="reason">{{ fact.reasonMessage }}</p>
+          }
+          @if (fact.requiresAcknowledgement && editable()) {
+            <button
+              mat-flat-button
+              type="button"
+              [attr.aria-label]="texts.acknowledge + ': ' + fact.originalValue"
+              [disabled]="saving()"
+              (click)="acknowledge.emit(fact.id)"
+            >
+              {{ texts.acknowledge }}
+            </button>
+          }
+        </li>
+      }
+    </ul>
+    @if (verification.keyFacts.length === 0) {
+      <p class="hint">{{ texts.noKeyFacts }}</p>
+    }
+  } @else {
+    <p class="hint">{{ texts.noKeyFacts }}</p>
+  }
+</section>

@@ -19,7 +19,19 @@
     <mat-card appearance="outlined" role="note">
       <mat-card-content>{{ draftNotice }}</mat-card-content>
     </mat-card>
-    <p>{{ texts.adaptationComing }}</p>
+
+    @if (store.actionError(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+    @if (reviewable(); as reviewable) {
+      <app-document-review
+        [document]="reviewable"
+        [saving]="store.saving()"
+        (save)="store.saveEdit($event)"
+        (acknowledge)="store.acknowledgeKeyFact($event)"
+      />
+    }
+    <p class="visually-hidden" role="status" aria-live="polite">{{ announcement() }}</p>
   } @else {
     <h1 id="page-title" class="visually-hidden">{{ texts.loading }}</h1>
     @if (store.loading()) {

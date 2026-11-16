@@ -3,9 +3,11 @@ using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Llm;
+using LecturaFacil.Application.Readability;
 using LecturaFacil.Application.Users;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Readability;
 
 namespace LecturaFacil.Application.Tests.Documents;
 
@@ -31,6 +33,9 @@ internal sealed class InMemoryDocumentRepository : IDocumentRepository
 
     public Task<Document?> FindForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
         Task.FromResult(Added.Find(document => document.Id == id && document.OwnerId == ownerId));
+
+    public Task<Document?> FindForOwnerToUpdateAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
+        FindForOwnerAsync(id, ownerId, cancellationToken);
 
     public Task<DocumentStatus?> FindStatusForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken)
     {
@@ -60,9 +65,18 @@ internal sealed class InMemoryDocumentRepository : IDocumentRepository
                 .Take(maxCount)
                 .Select(DocumentSummary.From)]);
 
+    /// <summary>Simula que otra petición ha cambiado el documento antes de guardar.</summary>
+    public bool FailNextSaveWithConflict { get; set; }
+
     public Task SaveAsync(Document document, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (FailNextSaveWithConflict)
+        {
+            FailNextSaveWithConflict = false;
+            throw new ConcurrentUpdateException();
+        }
+
         SavedStatuses.Add(document.Status);
         return Task.CompletedTask;
     }
@@ -127,5 +141,23 @@ internal sealed class StubGuidelineChecker(int findingsPerText = 1) : IGuideline
         CheckedTexts.Add(text);
         var finding = Finding.At(GuidelineCatalog.Find(GuidelineCodes.ShortSentences), text, 0, 5, "Divide la frase.");
         return new GuidelineAnalysis([.. Enumerable.Repeat(finding, findingsPerText)], []);
+    }
+}
+
+/// <summary>El índice real de Domain, para comprobar que la legibilidad se recalcula sobre el texto editado.</summary>
+internal sealed class DomainReadabilityCalculator : IReadabilityCalculator
+{
+    public List<string> CalculatedTexts { get; } = [];
+
+    public static DescribeDocument Describe(DomainReadabilityCalculator? calculator = null) =>
+        new(new CompareReadability(calculator ?? new DomainReadabilityCalculator()));
+
+    public Result<ReadabilityScore> Calculate(string text)
+    {
+        CalculatedTexts.Add(text);
+        var statistics = TextStatistics.From(text);
+        return statistics.HasWords
+            ? Result<ReadabilityScore>.Success(SzigrisztPazosCalculator.Calculate(statistics))
+            : Result<ReadabilityScore>.Failure(ReadabilityErrors.NoWords);
     }
 }

@@ -1,0 +1,58 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<div class="review">
+  <div class="banner" role="region" [attr.aria-label]="texts.draftLabel">
+    <strong class="draft">{{ texts.draftLabel }}</strong>
+    <span>
+      {{ texts.processedBy }} <strong>{{ adaptation().provider }}</strong> · {{ texts.version }}
+      {{ adaptation().version }}
+    </span>
+    <span class="export" [class.export--blocked]="!adaptation().canExport">{{
+      exportMessage()
+    }}</span>
+  </div>
+
+  @if (smallScreen()) {
+    <mat-tab-group [attr.aria-label]="texts.tabsLabel" mat-stretch-tabs>
+      <mat-tab [label]="texts.originalTitle">
+        <app-original-text
+          headingId="original-title-tab"
+          [text]="document().original.text"
+          [findings]="document().original.findings"
+        />
+      </mat-tab>
+      <mat-tab [label]="texts.adaptedTitle">
+        <app-adapted-text
+          headingId="adapted-title-tab"
+          [adaptation]="adaptation()"
+          [editable]="editable()"
+          [saving]="saving()"
+          (save)="save.emit($event)"
+        />
+      </mat-tab>
+    </mat-tab-group>
+  } @else {
+    <div class="columns">
+      <app-original-text
+        [text]="document().original.text"
+        [findings]="document().original.findings"
+      />
+      <app-adapted-text
+        [adaptation]="adaptation()"
+        [editable]="editable()"
+        [saving]="saving()"
+        (save)="save.emit($event)"
+      />
+    </div>
+  }
+
+  <div class="panels">
+    <app-key-facts-panel
+      [verification]="adaptation().verification"
+      [editable]="editable()"
+      [saving]="saving()"
+      (acknowledge)="acknowledge.emit($event)"
+    />
+    <app-guidelines-panel [report]="adaptation().guidelines" />
+    <app-readability-panel [readability]="document().readability" />
+  </div>
+</div>

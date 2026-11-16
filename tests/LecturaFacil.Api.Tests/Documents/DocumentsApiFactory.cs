@@ -48,6 +48,9 @@ public sealed class RecordingDocumentRepository : IDocumentRepository
     public Task<Document?> FindForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
         Task.FromResult(_added.FirstOrDefault(document => document.Id == id && document.OwnerId == ownerId));
 
+    public Task<Document?> FindForOwnerToUpdateAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
+        FindForOwnerAsync(id, ownerId, cancellationToken);
+
     public async Task<DocumentStatus?> FindStatusForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
         (await FindForOwnerAsync(id, ownerId, cancellationToken))?.Status;
 

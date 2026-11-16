@@ -2,6 +2,7 @@
 using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Readability;
+using LecturaFacil.Application.Review;
 using LecturaFacil.Application.Verification;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -18,6 +19,7 @@ public static class DependencyInjection
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<SubmitDocument>();
         services.AddScoped<CompareReadability>();
+        services.AddScoped<DescribeDocument>();
         services.AddScoped<GetDocument>();
         services.AddScoped<ListDocuments>();
         services.AddScoped<WatchDocument>();
@@ -25,6 +27,8 @@ public static class DependencyInjection
         services.AddScoped<VerifyMeaning>();
         services.AddScoped<AdaptDocument>();
         services.AddScoped<RequeuePendingAdaptations>();
+        services.AddScoped<SaveManualEdit>();
+        services.AddScoped<AcknowledgeKeyFact>();
         return services;
     }
 }

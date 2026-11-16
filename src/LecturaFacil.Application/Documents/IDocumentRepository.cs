@@ -17,6 +17,12 @@ public interface IDocumentRepository
     /// <summary>Documento de solo lectura si existe y es de <paramref name="ownerId"/>; si no, <c>null</c> (BOLA).</summary>
     Task<Document?> FindForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Documento completo para modificarlo si existe y es de <paramref name="ownerId"/>; si no, <c>null</c> (BOLA). Los
+    /// cambios se guardan con <see cref="SaveAsync"/>.
+    /// </summary>
+    Task<Document?> FindForOwnerToUpdateAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken);
+
     /// <summary>Solo el estado actual, si el documento existe y es de <paramref name="ownerId"/>.</summary>
     Task<DocumentStatus?> FindStatusForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken);
 
@@ -29,6 +35,9 @@ public interface IDocumentRepository
     /// </summary>
     Task<IReadOnlyList<DocumentSummary>> ListForOwnerAsync(OwnerId ownerId, int maxCount, CancellationToken cancellationToken);
 
-    /// <summary>Guarda los cambios de un documento obtenido con <see cref="FindAsync"/>.</summary>
+    /// <summary>
+    /// Guarda los cambios de un documento obtenido con <see cref="FindAsync"/> o <see cref="FindForOwnerToUpdateAsync"/>.
+    /// Lanza <see cref="ConcurrentUpdateException"/> si otra petición lo ha cambiado mientras tanto.
+    /// </summary>
     Task SaveAsync(Document document, CancellationToken cancellationToken);
 }

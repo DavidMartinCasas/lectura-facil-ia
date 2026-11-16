@@ -59,6 +59,7 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
                         .HasColumnName("title");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 

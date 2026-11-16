@@ -42,6 +42,7 @@ internal static partial class DocumentEndpoints
         // así que Minimal APIs no añade la validación sola: hace falta .WithMetadata(new RequireAntiforgeryTokenAttribute()).
         var group = endpoints.MapGroup(Path).WithTags("Documentos");
         group.MapDocumentQueries();
+        group.MapDocumentReview();
 
         group.MapPost("/", SubmitAsync)
             .RequireRateLimiting(SubmitRateLimitPolicy)

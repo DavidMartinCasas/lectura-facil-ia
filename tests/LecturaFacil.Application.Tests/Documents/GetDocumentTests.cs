@@ -2,8 +2,10 @@
 using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Llm;
+using LecturaFacil.Application.Readability;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Readability;
 using LecturaFacil.Domain.Verification;
 
 namespace LecturaFacil.Application.Tests.Documents;
@@ -47,6 +49,41 @@ public sealed class GetDocumentTests
 
         result.Value.Status.ShouldBe(DocumentStatus.Draft);
         result.Value.Adaptation.ShouldBe(version);
+    }
+
+    [Fact]
+    public void Describe_WhenTheDocumentIsInDraft_ReturnsTheOriginalWithItsFindingsAndTheReadabilityOfBothTexts()
+    {
+        var calculator = new DomainReadabilityCalculator();
+        var document = Add(Owner);
+        var finding = Finding.At(GuidelineCatalog.Find(GuidelineCodes.ShortSentences), document.OriginalText.Value, 0, 5, "Divide la frase.");
+        document.RecordOriginalFindings([finding]);
+        document.StartProcessing(Now);
+        var version = document.CompleteAdaptation(
+            AdaptedContent.TryCreate("Ayudas", [new AdaptedSectionDraft("¿Qué es?", ["Una ayuda."])], [])!,
+            new AdaptationMetadata("Proveedor", "modelo", "adapter.v1", 1, 1, TimeSpan.FromSeconds(1)),
+            GuidelineReport.Create(new GuidelineAnalysis([], []), [], 10),
+            MeaningVerification.NotVerified("Una ayuda de 250 €.", 10),
+            Now);
+
+        var details = new DescribeDocument(new CompareReadability(calculator)).Execute(document);
+
+        details.OriginalText.ShouldBe(document.OriginalText.Value);
+        details.OriginalFindings.ShouldBe([finding]);
+        var readability = details.Readability.ShouldNotBeNull();
+        calculator.CalculatedTexts.ShouldBe([document.OriginalText.Value, version.PlainText]);
+        readability.Adapted.ShouldBe(SzigrisztPazosCalculator.Calculate(TextStatistics.From(version.PlainText)));
+    }
+
+    [Fact]
+    public async Task Get_WhenThereIsNoAdaptation_DoesNotMeasureReadability()
+    {
+        var document = Add(Owner);
+
+        var result = await CreateUseCase().ExecuteAsync(document.Id, Token);
+
+        result.Value.Readability.ShouldBeNull();
+        result.Value.OriginalText.ShouldBe(document.OriginalText.Value);
     }
 
     [Theory]
@@ -102,5 +139,5 @@ public sealed class GetDocumentTests
         return document;
     }
 
-    private GetDocument CreateUseCase() => new(_repository, new FixedCurrentUser(Owner));
+    private GetDocument CreateUseCase() => new(_repository, new FixedCurrentUser(Owner), DomainReadabilityCalculator.Describe());
 }

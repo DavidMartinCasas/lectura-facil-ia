@@ -3,7 +3,8 @@ namespace LecturaFacil.Domain.Verification;
 
 /// <summary>
 /// Dato clave del original (plazo, importe, requisito…) y cómo ha quedado en la adaptación (<c>DATO_CLAVE</c> del
-/// modelo de datos). Solo informa: nunca cambia la adaptación.
+/// modelo de datos). Solo informa: nunca cambia la adaptación. Un aviso (estado distinto de
+/// <see cref="KeyFactStatus.Conserved"/>) lo tiene que marcar como revisado una persona antes de exportar (US-13).
 /// </summary>
 public sealed record KeyFact
 {
@@ -36,6 +37,12 @@ public sealed record KeyFact
 
     public KeyFactVerdict Verdict => new(Status, Reason);
 
+    /// <summary>Una persona ha marcado el aviso como revisado. Nunca cambia el estado ni el motivo.</summary>
+    public bool Acknowledged { get; private init; }
+
+    /// <summary>Es un aviso que nadie ha marcado todavía como revisado: impide exportar.</summary>
+    public bool RequiresAcknowledgement => Status != KeyFactStatus.Conserved && !Acknowledged;
+
     /// <summary>Crea un dato clave. El veredicto se normaliza con <see cref="KeyFactVerdict.Create"/>.</summary>
     public static KeyFact Create(KeyFactType type, string originalValue, string? adaptedValue, KeyFactVerdict verdict)
     {
@@ -63,5 +70,12 @@ public sealed record KeyFact
         return value[..length];
     }
 
+    /// <summary>
+    /// El mismo dato marcado como revisado por una persona. Un dato conservado no tiene aviso que revisar y se devuelve
+    /// tal cual.
+    /// </summary>
+    public KeyFact AsAcknowledged() => Status == KeyFactStatus.Conserved ? this : this with { Acknowledged = true };
+
+    /// <summary>El dato con otro veredicto. Un veredicto nuevo es un aviso nuevo: pierde la marca de revisado.</summary>
     internal KeyFact WithVerdict(KeyFactVerdict verdict) => Create(Type, OriginalValue, AdaptedValue, verdict);
 }

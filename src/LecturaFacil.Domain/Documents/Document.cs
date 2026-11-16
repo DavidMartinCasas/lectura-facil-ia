@@ -115,6 +115,39 @@ public sealed class Document
         return version;
     }
 
+    /// <summary>
+    /// Solo se edita y se revisa un borrador ya adaptado: después, el documento está en manos de quien lo valida.
+    /// </summary>
+    public bool IsEditable => Status == DocumentStatus.Draft && LatestAdaptedVersion is not null;
+
+    /// <summary>
+    /// Guarda una edición manual como una versión nueva, con su propio informe de pautas y sus datos clave recalculados
+    /// (US-13). El documento sigue en <see cref="DocumentStatus.Draft"/>: una edición nunca valida nada.
+    /// </summary>
+    public AdaptedVersion SaveManualEdit(
+        AdaptedContent content,
+        AdaptationMetadata metadata,
+        GuidelineReport guidelineReport,
+        MeaningVerification meaningVerification,
+        DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(guidelineReport);
+        ArgumentNullException.ThrowIfNull(meaningVerification);
+        var latest = EnsureEditable();
+
+        var version = AdaptedVersion.Create(latest.Number + 1, content, metadata, guidelineReport, meaningVerification, now);
+        _adaptedVersions.Add(version);
+        TransitionTo(DocumentStatus.Draft, now);
+        return version;
+    }
+
+    /// <summary>Marca como revisado un aviso de los datos clave de la última versión.</summary>
+    public void AcknowledgeKeyFact(int keyFactIndex, DateTimeOffset now)
+    {
+        EnsureEditable().AcknowledgeKeyFact(keyFactIndex);
+        TransitionTo(DocumentStatus.Draft, now);
+    }
+
     /// <summary>La adaptación ha fallado. <paramref name="failureCode"/> es un código estable, sin detalles internos.</summary>
     public void FailProcessing(string failureCode, DateTimeOffset now)
     {
@@ -141,4 +174,7 @@ public sealed class Document
         Status = next;
         UpdatedAt = now;
     }
+
+    private AdaptedVersion EnsureEditable() =>
+        IsEditable ? LatestAdaptedVersion! : throw new InvalidOperationException($"A document in {Status} cannot be edited.");
 }

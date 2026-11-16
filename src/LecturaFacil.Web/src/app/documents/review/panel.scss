@@ -1,0 +1,52 @@
+// SPDX-License-Identifier: Apache-2.0
+// Estilos comunes de los paneles de la revisión (pautas, legibilidad y datos clave).
+:host {
+  display: block;
+  padding: 1rem;
+  border-radius: var(--mat-sys-corner-medium);
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+}
+
+h2 {
+  font: var(--mat-sys-title-large);
+  margin: 0 0 0.5rem;
+}
+
+p {
+  margin: 0 0 0.5rem;
+}
+
+.hint {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.item {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--mat-sys-corner-small);
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface);
+  overflow-wrap: anywhere;
+}
+
+.item--warning {
+  border: 2px solid var(--mat-sys-error);
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+
+.item--done {
+  border-style: dashed;
+}
+
+.status {
+  font-weight: 600;
+}

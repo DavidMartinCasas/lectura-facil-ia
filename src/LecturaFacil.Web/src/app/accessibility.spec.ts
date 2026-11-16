@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-// Comprobación automática de accesibilidad (axe-core, reglas WCAG 2.x A y AA) de las tres pantallas de la US-12.
+// Comprobación automática de accesibilidad (axe-core, reglas WCAG 2.x A y AA) de las pantallas de la US-12 y de la
+// revisión lado a lado de la US-13.
 // jsdom no calcula estilos, así que el contraste de color queda para la revisión manual y el E2E.
 import { Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -12,6 +13,7 @@ import { DocumentsApiService } from './core/documents/documents-api.service';
 import { DocumentPage } from './documents/pages/document-page';
 import { DocumentsPage } from './documents/pages/documents-page';
 import { NewDocumentPage } from './documents/pages/new-document-page';
+import { documentFixture } from './testing/document-fixtures';
 
 const documents: readonly DocumentListItem[] = [
   {
@@ -24,15 +26,7 @@ const documents: readonly DocumentListItem[] = [
   },
 ];
 
-const processing: DocumentDetails = {
-  id: 'doc-1',
-  title: 'Bases de la convocatoria',
-  status: 'Processing',
-  createdAt: '2026-11-16T10:00:00Z',
-  updatedAt: '2026-11-16T10:00:00Z',
-  error: null,
-  adaptation: null,
-};
+const processing: DocumentDetails = documentFixture('Processing');
 
 async function violations<T>(
   component: Type<T>,
@@ -80,6 +74,14 @@ describe('accessibility (axe)', () => {
   });
 
   it('the document view has no violations', async () => {
+    expect(await violations(DocumentPage, { id: 'doc-1' })).toEqual([]);
+  });
+
+  it('the side-by-side review of a draft has no violations', async () => {
+    TestBed.overrideProvider(DocumentsApiService, {
+      useValue: { get: () => of(documentFixture('Draft')) },
+    });
+
     expect(await violations(DocumentPage, { id: 'doc-1' })).toEqual([]);
   });
 });
