@@ -16,6 +16,11 @@ public static class DocumentErrors
 
     private static readonly CultureInfo Spanish = CultureInfo.GetCultureInfo("es-ES");
 
+    /// <summary>No existe o no es del usuario: las dos cosas se responden igual para no revelar que existe (BOLA).</summary>
+    public static readonly Error NotFound = new(
+        "document.not_found",
+        "No se ha encontrado el documento.");
+
     public static readonly Error InvalidFileType = new(
         "document.invalid_file_type",
         "El fichero no es un PDF. Solo se admiten ficheros PDF con texto.");

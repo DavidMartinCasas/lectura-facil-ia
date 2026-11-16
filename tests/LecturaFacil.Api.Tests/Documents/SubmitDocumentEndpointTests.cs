@@ -7,6 +7,7 @@ using System.Text.Json;
 using LecturaFacil.Api.Security;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Testing;
+using Microsoft.AspNetCore.Hosting;
 
 namespace LecturaFacil.Api.Tests.Documents;
 
@@ -19,6 +20,24 @@ public sealed class SubmitDocumentEndpointTests
     private static readonly Uri DocumentsUri = new("/api/documents", UriKind.Relative);
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
+
+    [Fact]
+    public async Task Submit_WhenTheSubmissionLimitIsReached_Returns429WithoutStoringTheDocument()
+    {
+        await using var factory = new DocumentsApiFactory();
+        await using var limited = factory.WithWebHostBuilder(builder => builder.UseSetting("Limits:DocumentSubmissionsPerMinute", "2"));
+        using var client = limited.CreateClient();
+
+        var statuses = new List<HttpStatusCode>();
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            using var response = await client.PostAsJsonAsync(DocumentsUri, new { text = ValidText }, Token);
+            statuses.Add(response.StatusCode);
+        }
+
+        statuses.ShouldBe([HttpStatusCode.Accepted, HttpStatusCode.Accepted, HttpStatusCode.TooManyRequests]);
+        factory.Repository.Added.Count.ShouldBe(2);
+    }
 
     [Fact]
     public async Task SubmitText_WhenTextIsValid_Returns202WithTheIdOfAReceivedDocument()
