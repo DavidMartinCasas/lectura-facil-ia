@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<SubmitDocument>();
         services.AddScoped<CompareReadability>();
         services.AddScoped<GetDocument>();
+        services.AddScoped<ListDocuments>();
         services.AddScoped<WatchDocument>();
         services.AddScoped<ReviewAdaptation>();
         services.AddScoped<VerifyMeaning>();

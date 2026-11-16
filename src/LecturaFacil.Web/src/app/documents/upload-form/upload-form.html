@@ -1,0 +1,71 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<form class="upload" (submit)="submit($event)" novalidate>
+  <mat-button-toggle-group
+    [value]="mode()"
+    (change)="changeMode($event.value)"
+    [attr.aria-label]="texts.modeLabel"
+    hideSingleSelectionIndicator
+  >
+    <mat-button-toggle value="text">{{ texts.modeText }}</mat-button-toggle>
+    <mat-button-toggle value="pdf">{{ texts.modePdf }}</mat-button-toggle>
+  </mat-button-toggle-group>
+
+  @if (mode() === 'text') {
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ texts.titleLabel }}</mat-label>
+      <input
+        matInput
+        name="title"
+        [attr.maxlength]="maxTitleLength"
+        [value]="title()"
+        (input)="onTitleInput($event)"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ texts.textLabel }}</mat-label>
+      <textarea
+        matInput
+        name="text"
+        rows="12"
+        [value]="text()"
+        (input)="onTextInput($event)"
+        [attr.aria-invalid]="error() ? true : null"
+        [attr.aria-describedby]="error() ? 'upload-error' : null"
+      ></textarea>
+    </mat-form-field>
+  } @else {
+    <div
+      class="drop-zone"
+      [class.drop-zone--active]="dragging()"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave()"
+      (drop)="onDrop($event)"
+    >
+      <label for="upload-file" class="file-label">{{ texts.fileLabel }}</label>
+      <p id="upload-file-hint" class="hint">{{ texts.dropHint }}</p>
+      <input
+        id="upload-file"
+        type="file"
+        name="file"
+        accept="application/pdf,.pdf"
+        (change)="onFileChange($event)"
+        [attr.aria-invalid]="error() ? true : null"
+        [attr.aria-describedby]="error() ? 'upload-file-hint upload-error' : 'upload-file-hint'"
+      />
+      @if (file(); as selected) {
+        <p class="selected">{{ texts.selectedFile }} {{ selected.name }}</p>
+      }
+    </div>
+  }
+
+  @if (error(); as message) {
+    <p id="upload-error" class="error" role="alert">{{ message }}</p>
+  }
+
+  <div class="actions">
+    <button mat-flat-button type="submit" [attr.aria-disabled]="busy() ? true : null">
+      {{ busy() ? texts.submitting : texts.submit }}
+    </button>
+  </div>
+</form>

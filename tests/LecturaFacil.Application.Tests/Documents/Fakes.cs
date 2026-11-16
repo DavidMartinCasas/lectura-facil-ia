@@ -53,6 +53,13 @@ internal sealed class InMemoryDocumentRepository : IDocumentRepository
         Task.FromResult<IReadOnlyList<DocumentId>>(
             [.. Added.Where(document => DocumentStatusTransitions.IsAwaitingAdaptation(document.Status)).Select(document => document.Id)]);
 
+    public Task<IReadOnlyList<DocumentSummary>> ListForOwnerAsync(OwnerId ownerId, int maxCount, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<DocumentSummary>>(
+            [.. Added.Where(document => document.OwnerId == ownerId)
+                .OrderByDescending(document => document.CreatedAt)
+                .Take(maxCount)
+                .Select(DocumentSummary.From)]);
+
     public Task SaveAsync(Document document, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

@@ -23,6 +23,12 @@ public interface IDocumentRepository
     /// <summary>Documentos que esperan su adaptación (recibidos o a medias tras un reinicio), del más antiguo al más nuevo.</summary>
     Task<IReadOnlyList<DocumentId>> ListAwaitingAdaptationAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Resumen de los documentos de <paramref name="ownerId"/>, del más nuevo al más antiguo, como mucho
+    /// <paramref name="maxCount"/>. Nunca devuelve documentos de otro usuario (BOLA).
+    /// </summary>
+    Task<IReadOnlyList<DocumentSummary>> ListForOwnerAsync(OwnerId ownerId, int maxCount, CancellationToken cancellationToken);
+
     /// <summary>Guarda los cambios de un documento obtenido con <see cref="FindAsync"/>.</summary>
     Task SaveAsync(Document document, CancellationToken cancellationToken);
 }

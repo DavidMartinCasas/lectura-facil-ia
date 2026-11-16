@@ -97,5 +97,9 @@ public sealed class LimitsOptions
     [Range(10, 3_600, ErrorMessage = "Limits:DocumentEventsMaxSeconds debe estar entre {1} y {2}.")]
     public int DocumentEventsMaxSeconds { get; set; } = 600;
 
+    /// <summary>Documentos que devuelve como mucho <c>GET /api/documents</c> (los más recientes). Acota la respuesta.</summary>
+    [Range(10, 1_000, ErrorMessage = "Limits:MaxDocumentsPerList debe estar entre {1} y {2}.")]
+    public int MaxDocumentsPerList { get; set; } = 100;
+
     public TextLengthLimits TextLengthLimits => new(MinCharacters, MaxCharacters);
 }

@@ -1,0 +1,40 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<section class="page" aria-labelledby="page-title">
+  @if (store.document(); as document) {
+    <h1 id="page-title">{{ document.title }}</h1>
+    @if (store.status(); as status) {
+      <p>
+        <strong>{{ texts.statusLabel }}</strong> {{ statusLabels[status] }}
+      </p>
+      @if (isAwaitingAdaptation(status) || status === 'Error') {
+        @if (store.steps(); as steps) {
+          <app-progress-steps [steps]="steps" />
+        }
+      }
+      @if (status === 'Error') {
+        <p class="error" role="alert">{{ texts.adaptationFailed }}</p>
+      }
+    }
+
+    <mat-card appearance="outlined" role="note">
+      <mat-card-content>{{ draftNotice }}</mat-card-content>
+    </mat-card>
+    <p>{{ texts.adaptationComing }}</p>
+  } @else {
+    <h1 id="page-title" class="visually-hidden">{{ texts.loading }}</h1>
+    @if (store.loading()) {
+      <p role="status">{{ texts.loading }}</p>
+    }
+  }
+
+  @if (store.error(); as message) {
+    <div class="error" role="alert">
+      <p>{{ message }}</p>
+      <div class="actions">
+        <button mat-flat-button type="button" (click)="store.load(id())">{{ texts.retry }}</button>
+      </div>
+    </div>
+  }
+
+  <a mat-stroked-button routerLink="/documentos">{{ texts.backToList }}</a>
+</section>

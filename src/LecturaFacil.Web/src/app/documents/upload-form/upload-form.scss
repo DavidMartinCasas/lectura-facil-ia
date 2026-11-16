@@ -1,0 +1,45 @@
+// SPDX-License-Identifier: Apache-2.0
+.upload {
+  display: grid;
+  gap: 1rem;
+}
+
+.field {
+  inline-size: 100%;
+}
+
+.drop-zone {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  border: 2px dashed var(--mat-sys-outline);
+  border-radius: var(--mat-sys-corner-medium);
+}
+
+.drop-zone--active {
+  border-color: var(--mat-sys-primary);
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+}
+
+.file-label {
+  font: var(--mat-sys-title-medium);
+}
+
+.hint,
+.selected {
+  margin: 0;
+}
+
+.error {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--mat-sys-corner-small);
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+}
