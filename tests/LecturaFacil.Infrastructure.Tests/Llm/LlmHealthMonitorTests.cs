@@ -67,6 +67,32 @@ public sealed class LlmHealthMonitorTests
     }
 
     [Fact]
+    public async Task Run_WhenTheCheckThrowsUnexpectedly_KeepsRunningWithTheLastKnownState()
+    {
+        var probed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var availability = new LlmAvailability(fallbackEnabled: false);
+        using var monitor = new LlmHealthMonitor(
+            () =>
+            {
+                probed.TrySetResult();
+                throw new InvalidOperationException("fallo inesperado");
+            },
+            new EmbeddedPromptLoader(),
+            availability,
+            Options.Create(new LlmResilienceOptions()),
+            TimeProvider.System,
+            NullLogger<LlmHealthMonitor>.Instance);
+
+        await monitor.StartAsync(TestContext.Current.CancellationToken);
+        await probed.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+
+        monitor.ExecuteTask!.IsFaulted.ShouldBeFalse();
+        availability.Current.PrimaryAvailable.ShouldBeTrue();
+        await monitor.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
     public void Availability_BeforeTheFirstCheck_AssumesTheConfiguredProvidersAreAvailable()
     {
         new LlmAvailability(fallbackEnabled: true).Current.ShouldBe(new LlmAvailabilityStatus(true, true));

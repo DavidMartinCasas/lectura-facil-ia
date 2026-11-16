@@ -48,9 +48,25 @@ public sealed partial class LlmHealthMonitor(
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(settings.HealthCheckIntervalSeconds), timeProvider);
         do
         {
-            await ProbeAsync(stoppingToken);
+            await ProbeSafelyAsync(stoppingToken);
         }
         while (await timer.WaitForNextTickAsync(stoppingToken));
+    }
+
+    /// <summary>
+    /// Un fallo inesperado de la comprobación no puede parar la API: se registra solo su tipo (el mensaje podría
+    /// contener datos) y se conserva el último estado conocido hasta la siguiente comprobación.
+    /// </summary>
+    private async Task ProbeSafelyAsync(CancellationToken stoppingToken)
+    {
+        try
+        {
+            await ProbeAsync(stoppingToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            LogProbeFailed(exception.GetType().Name);
+        }
     }
 
     /// <summary>Una respuesta que no cumple el esquema también cuenta: el proveedor está ahí y responde.</summary>
@@ -72,4 +88,7 @@ public sealed partial class LlmHealthMonitor(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "LLM provider availability changed. Provider: {Provider}; available: {Available}")]
     private partial void LogAvailabilityChanged(string provider, bool available);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "LLM health check failed unexpectedly; keeping the last known state. Reason: {Reason}")]
+    private partial void LogProbeFailed(string reason);
 }

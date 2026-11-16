@@ -11,6 +11,7 @@ internal static class LlmStatusEndpoints
     /// Si el principal y el respaldo (solo si está habilitado) están disponibles, según la última comprobación de salud.
     /// No llama a ningún proveedor y no expone URLs, IPs, nombres de modelos ni mensajes internos.
     /// </summary>
+    // TODO(US-15): exigir sesión, como el resto de rutas /api, cuando exista la autenticación.
     public static IEndpointRouteBuilder MapLlmStatusEndpoints(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet(Path, (ILlmAvailability availability) => TypedResults.Ok(LlmStatusResponse.From(availability.Current)))
