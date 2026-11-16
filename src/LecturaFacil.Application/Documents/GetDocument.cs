@@ -1,38 +1,31 @@
 // SPDX-License-Identifier: Apache-2.0
-using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Users;
 using LecturaFacil.Domain.Documents;
+using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Readability;
 
 namespace LecturaFacil.Application.Documents;
 
 /// <summary>Estado de un documento del usuario actual y, si ya está adaptado, su última versión.</summary>
-public sealed class GetDocument(IDocumentRepository repository, ICurrentUser currentUser)
+public sealed class GetDocument(IDocumentRepository repository, ICurrentUser currentUser, DescribeDocument describeDocument)
 {
     public async Task<Result<DocumentDetails>> ExecuteAsync(DocumentId id, CancellationToken cancellationToken)
     {
         var document = await repository.FindForOwnerAsync(id, currentUser.OwnerId, cancellationToken);
-        if (document is null)
-        {
-            return Result<DocumentDetails>.Failure(DocumentErrors.NotFound);
-        }
-
-        var failure = document.Status == DocumentStatus.Error && document.FailureCode is { } code
-            ? AdaptationErrors.FromFailureCode(code)
-            : null;
-        return Result<DocumentDetails>.Success(new DocumentDetails(
-            document.Id,
-            document.Title.Value,
-            document.Status,
-            document.CreatedAt,
-            document.UpdatedAt,
-            failure,
-            document.LatestAdaptedVersion));
+        return document is null
+            ? Result<DocumentDetails>.Failure(DocumentErrors.NotFound)
+            : Result<DocumentDetails>.Success(describeDocument.Execute(document));
     }
 }
 
 /// <param name="Failure">Motivo genérico, para el usuario, si la adaptación ha fallado.</param>
 /// <param name="Adaptation">Última versión adaptada, si la hay. Siempre es un borrador pendiente de validación humana.</param>
+/// <param name="OriginalText">El texto original, al que se refieren las posiciones de <paramref name="OriginalFindings"/>.</param>
+/// <param name="OriginalFindings">Problemas de lectura fácil del original.</param>
+/// <param name="Readability">
+/// Índice INFLESZ del original y de la última versión; <c>null</c> si aún no hay adaptación o no se puede calcular.
+/// </param>
 public sealed record DocumentDetails(
     DocumentId Id,
     string Title,
@@ -40,4 +33,7 @@ public sealed record DocumentDetails(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     Error? Failure,
-    AdaptedVersion? Adaptation);
+    AdaptedVersion? Adaptation,
+    string OriginalText,
+    IReadOnlyList<Finding> OriginalFindings,
+    ReadabilityComparison? Readability);

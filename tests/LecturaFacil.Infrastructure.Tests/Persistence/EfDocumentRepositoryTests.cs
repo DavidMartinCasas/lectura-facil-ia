@@ -123,6 +123,52 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
     }
 
     [Fact]
+    public async Task Save_WhenAKeyFactIsAcknowledgedAndTheDraftIsEdited_PersistsTheMarkAndTheNewVersion()
+    {
+        var content = AdaptedContent.TryCreate("Ayudas", [new AdaptedSectionDraft("¿Quién?", ["Primera frase."])], [])!;
+        var metadata = new AdaptationMetadata("Servidor propio", "modelo", "adapter.v1", 10, 20, TimeSpan.FromSeconds(1));
+        var report = GuidelineReport.Create(new GuidelineAnalysis([], []), [], 10);
+        var verification = MeaningVerification.Restore(
+            VerificationStatus.Verified,
+            [KeyFact.Create(KeyFactType.Amount, "250 €", null, new KeyFactVerdict(KeyFactStatus.Omitted, KeyFactReason.NotInAdaptation))],
+            null);
+        var document = await StoreAsync(OwnerId.From(Guid.NewGuid()), seeded =>
+        {
+            seeded.StartProcessing(DateTimeOffset.UtcNow);
+            seeded.CompleteAdaptation(content, metadata, report, verification, DateTimeOffset.UtcNow);
+        });
+
+        await using (var context = CreateContext())
+        {
+            var repository = new EfDocumentRepository(context);
+            (await repository.FindForOwnerToUpdateAsync(document.Id, OwnerId.From(Guid.NewGuid()), Token)).ShouldBeNull();
+            var tracked = (await repository.FindForOwnerToUpdateAsync(document.Id, document.OwnerId, Token))!;
+            tracked.AcknowledgeKeyFact(0, DateTimeOffset.UtcNow);
+            await repository.SaveAsync(tracked, Token);
+        }
+
+        await using (var context = CreateContext())
+        {
+            var repository = new EfDocumentRepository(context);
+            var tracked = (await repository.FindForOwnerToUpdateAsync(document.Id, document.OwnerId, Token))!;
+            tracked.LatestAdaptedVersion!.MeaningVerification!.KeyFacts[0].Acknowledged.ShouldBeTrue();
+            var edited = AdaptedContent.TryCreate("Ayudas", [new AdaptedSectionDraft("¿Quién?", ["Frase editada."])], [])!;
+            tracked.SaveManualEdit(edited, metadata with { PromptVersion = "manual" }, report, tracked.LatestAdaptedVersion.MeaningVerification, DateTimeOffset.UtcNow);
+            await repository.SaveAsync(tracked, Token);
+        }
+
+        await using var readContext = CreateContext();
+        var stored = (await new EfDocumentRepository(readContext).FindForOwnerAsync(document.Id, document.OwnerId, Token))!;
+        stored.AdaptedVersions.Select(version => version.Number).ShouldBe([1, 2]);
+        stored.AdaptedVersions[0].Sections[0].Sentences.ShouldBe(["Primera frase."]);
+        stored.AdaptedVersions[0].MeaningVerification!.KeyFacts[0].Acknowledged.ShouldBeTrue();
+        stored.LatestAdaptedVersion!.Sections[0].Sentences.ShouldBe(["Frase editada."]);
+        stored.LatestAdaptedVersion.Metadata.PromptVersion.ShouldBe("manual");
+        stored.LatestAdaptedVersion.PendingKeyFactCount.ShouldBe(0);
+        stored.Status.ShouldBe(DocumentStatus.Draft);
+    }
+
+    [Fact]
     public async Task Save_WhenTheAdaptationFails_PersistsTheFailureCode()
     {
         var document = await StoreAsync(OwnerId.From(Guid.NewGuid()));

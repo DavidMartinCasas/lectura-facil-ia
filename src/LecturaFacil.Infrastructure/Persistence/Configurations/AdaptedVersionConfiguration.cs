@@ -12,7 +12,8 @@ namespace LecturaFacil.Infrastructure.Persistence.Configurations;
 
 /// <summary>
 /// Versiones adaptadas (<c>VERSION_ADAPTADA</c> del modelo de datos), una fila por versión. Las secciones, el glosario
-/// el informe de pautas y la verificación del significado se guardan como <c>jsonb</c>: no cambian y siempre se leen y escriben junto a su versión.
+/// el informe de pautas y la verificación del significado se guardan como <c>jsonb</c>: siempre se leen y escriben junto a
+/// su versión. Lo único que cambia después es la marca de revisado de los datos clave (US-13), dentro de su <c>jsonb</c>.
 /// </summary>
 internal static class AdaptedVersionConfiguration
 {
@@ -130,10 +131,11 @@ internal static class AdaptedVersionConfiguration
             new(verification.Status.ToString(), verification.Metadata, [.. verification.KeyFacts.Select(StoredKeyFact.From)]);
     }
 
-    private sealed record StoredKeyFact(string Type, string OriginalValue, string? AdaptedValue, string Status, string Reason)
+    /// <summary>Un dato guardado antes de la US-13 no trae <see cref="Acknowledged"/> y se lee sin revisar.</summary>
+    private sealed record StoredKeyFact(string Type, string OriginalValue, string? AdaptedValue, string Status, string Reason, bool Acknowledged)
     {
         public static StoredKeyFact From(KeyFact fact) =>
-            new(fact.Type.ToString(), fact.OriginalValue, fact.AdaptedValue, fact.Status.ToString(), fact.Reason.ToString());
+            new(fact.Type.ToString(), fact.OriginalValue, fact.AdaptedValue, fact.Status.ToString(), fact.Reason.ToString(), fact.Acknowledged);
 
         public KeyFact? ToKeyFact()
         {
@@ -145,7 +147,8 @@ internal static class AdaptedVersionConfiguration
             var type = Enum.TryParse<KeyFactType>(Type, out var parsedType) ? parsedType : KeyFactType.Other;
             var status = Enum.TryParse<KeyFactStatus>(Status, out var parsedStatus) ? parsedStatus : KeyFactStatus.Review;
             var reason = Enum.TryParse<KeyFactReason>(Reason, out var parsedReason) ? parsedReason : KeyFactReason.NeedsReview;
-            return KeyFact.Create(type, KeyFact.Truncate(OriginalValue), AdaptedValue is null ? null : KeyFact.Truncate(AdaptedValue), KeyFactVerdict.Create(status, reason));
+            var fact = KeyFact.Create(type, KeyFact.Truncate(OriginalValue), AdaptedValue is null ? null : KeyFact.Truncate(AdaptedValue), KeyFactVerdict.Create(status, reason));
+            return Acknowledged ? fact.AsAcknowledged() : fact;
         }
     }
 

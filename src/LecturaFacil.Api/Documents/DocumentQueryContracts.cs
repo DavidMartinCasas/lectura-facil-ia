@@ -2,6 +2,7 @@
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Readability;
 using LecturaFacil.Domain.Verification;
 
 namespace LecturaFacil.Api.Documents;
@@ -11,6 +12,8 @@ namespace LecturaFacil.Api.Documents;
 /// debe interpretarlo como HTML ni Markdown.
 /// </summary>
 /// <param name="Error">Motivo genérico si la adaptación ha fallado.</param>
+/// <param name="Original">El texto original con sus problemas de lectura fácil.</param>
+/// <param name="Readability">Índice INFLESZ del original y de la última versión; <c>null</c> si aún no hay adaptación.</param>
 public sealed record DocumentResponse(
     Guid Id,
     string Title,
@@ -18,7 +21,9 @@ public sealed record DocumentResponse(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     DocumentErrorResponse? Error,
-    AdaptationResponse? Adaptation)
+    AdaptationResponse? Adaptation,
+    OriginalTextResponse Original,
+    ReadabilityComparisonResponse? Readability)
 {
     public static DocumentResponse From(DocumentDetails details)
     {
@@ -30,7 +35,76 @@ public sealed record DocumentResponse(
             details.CreatedAt,
             details.UpdatedAt,
             details.Failure is { } failure ? new DocumentErrorResponse(failure.Code, failure.Message) : null,
-            details.Adaptation is { } version ? AdaptationResponse.From(version, details.Status) : null);
+            details.Adaptation is { } version ? AdaptationResponse.From(version, details.Status) : null,
+            OriginalTextResponse.From(details.OriginalText, details.OriginalFindings),
+            details.Readability is { } readability ? ReadabilityComparisonResponse.From(readability) : null);
+    }
+}
+
+/// <summary>
+/// Texto original y sus problemas. Las posiciones son índices de carácter (UTF-16, fin excluido) sobre
+/// <paramref name="Text"/>, que es texto plano: el cliente lo parte en trozos y nunca lo interpreta como HTML.
+/// </summary>
+public sealed record OriginalTextResponse(string Text, IReadOnlyList<OriginalFindingResponse> Findings)
+{
+    public static OriginalTextResponse From(string text, IReadOnlyList<Finding> findings)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(findings);
+        return new OriginalTextResponse(text, [.. findings.Select(OriginalFindingResponse.From)]);
+    }
+}
+
+/// <param name="Guideline">Descripción de la pauta que incumple, por ejemplo "Frases cortas".</param>
+/// <param name="Suggestion">Qué hacer para cumplirla.</param>
+public sealed record OriginalFindingResponse(
+    string GuidelineCode,
+    string Guideline,
+    string Fragment,
+    int Start,
+    int End,
+    string Severity,
+    string Suggestion)
+{
+    public static OriginalFindingResponse From(Finding finding)
+    {
+        ArgumentNullException.ThrowIfNull(finding);
+        return new OriginalFindingResponse(
+            finding.GuidelineCode,
+            GuidelineCatalog.Find(finding.GuidelineCode).Description,
+            finding.Fragment,
+            finding.Start,
+            finding.End,
+            finding.Severity.ToString(),
+            finding.Suggestion);
+    }
+}
+
+/// <summary>Legibilidad (INFLESZ) antes y después. Es un valor aproximado.</summary>
+/// <param name="Improvement">Puntos que gana la adaptación; negativo si es más difícil.</param>
+public sealed record ReadabilityComparisonResponse(
+    ReadabilityScoreResponse Original,
+    ReadabilityScoreResponse Adapted,
+    double Improvement)
+{
+    public static ReadabilityComparisonResponse From(ReadabilityComparison comparison)
+    {
+        ArgumentNullException.ThrowIfNull(comparison);
+        return new ReadabilityComparisonResponse(
+            ReadabilityScoreResponse.From(comparison.Original),
+            ReadabilityScoreResponse.From(comparison.Adapted),
+            comparison.Improvement);
+    }
+}
+
+/// <param name="Grade"><c>VeryDifficult</c>, <c>SomewhatDifficult</c>, <c>Normal</c>, <c>QuiteEasy</c> o <c>VeryEasy</c>.</param>
+/// <param name="GradeLabel">El grado para mostrarlo, por ejemplo "Bastante fácil".</param>
+public sealed record ReadabilityScoreResponse(double Value, string Grade, string GradeLabel)
+{
+    public static ReadabilityScoreResponse From(ReadabilityScore score)
+    {
+        ArgumentNullException.ThrowIfNull(score);
+        return new ReadabilityScoreResponse(score.Value, score.Grade.ToString(), score.GradeLabel);
     }
 }
 
@@ -63,7 +137,13 @@ public sealed record DocumentListItemResponse(
 public sealed record DocumentErrorResponse(string Code, string Message);
 
 /// <param name="PendingHumanValidation">Siempre <c>true</c> hasta que una persona la valide: es un borrador.</param>
-/// <param name="PromptVersion">Versión del prompt que la generó. El modelo y el proveedor se guardan, pero no se exponen.</param>
+/// <param name="PromptVersion">Versión del prompt que la generó (<c>manual</c> si es una edición a mano). El modelo no se expone.</param>
+/// <param name="Provider">
+/// Nombre visible del proveedor que hizo la adaptación ("Servidor propio", "Azure (UE)"…), el que configura quien
+/// despliega. Una edición a mano conserva el de la versión que se editó. El modelo no se expone.
+/// </param>
+/// <param name="PendingKeyFactCount">Avisos de datos clave sin marcar como revisados.</param>
+/// <param name="CanExport"><c>false</c> mientras quede algún aviso de datos clave sin marcar como revisado.</param>
 /// <param name="Guidelines">Informe de pautas de la versión; <c>null</c> si se creó antes de existir el revisor.</param>
 /// <param name="Verification">Datos clave del original y su estado; <c>null</c> si se creó antes de existir el verificador.</param>
 public sealed record AdaptationResponse(
@@ -75,7 +155,10 @@ public sealed record AdaptationResponse(
     string PromptVersion,
     DateTimeOffset CreatedAt,
     GuidelineReportResponse? Guidelines,
-    MeaningVerificationResponse? Verification)
+    MeaningVerificationResponse? Verification,
+    string Provider,
+    int PendingKeyFactCount,
+    bool CanExport)
 {
     public static AdaptationResponse From(AdaptedVersion version, DocumentStatus status)
     {
@@ -89,7 +172,10 @@ public sealed record AdaptationResponse(
             version.Metadata.PromptVersion,
             version.CreatedAt,
             version.GuidelineReport is { } report ? GuidelineReportResponse.From(report) : null,
-            version.MeaningVerification is { } verification ? MeaningVerificationResponse.From(verification) : null);
+            version.MeaningVerification is { } verification ? MeaningVerificationResponse.From(verification) : null,
+            version.Metadata.Provider,
+            version.PendingKeyFactCount,
+            version.PendingKeyFactCount == 0);
     }
 }
 
@@ -170,28 +256,37 @@ public sealed record MeaningVerificationResponse(
             verification.ConservedCount,
             verification.ReviewCount,
             verification.OmittedCount,
-            [.. verification.KeyFacts.Select(fact => new KeyFactResponse(
+            [.. verification.KeyFacts.Select((fact, index) => new KeyFactResponse(
+                index,
                 fact.Type.ToString(),
                 fact.OriginalValue,
                 fact.AdaptedValue,
                 fact.Status.ToString(),
                 fact.Reason.ToString(),
-                fact.ReasonMessage))]);
+                fact.ReasonMessage,
+                fact.Acknowledged,
+                fact.RequiresAcknowledgement))]);
     }
 }
 
+/// <param name="Id">Posición del dato en la lista de su versión (desde 0): es el <c>factId</c> para marcarlo como revisado.</param>
 /// <param name="Type"><c>Deadline</c>, <c>Amount</c>, <c>Requirement</c>, <c>Date</c>, <c>Place</c>, <c>Document</c>, <c>Reference</c>, <c>Figure</c> (cifra que ha encontrado el código) u <c>Other</c>.</param>
 /// <param name="AdaptedValue">Dónde está en la adaptación; <c>null</c> si no aparece.</param>
 /// <param name="Status"><c>Conserved</c>, <c>Review</c> u <c>Omitted</c>.</param>
 /// <param name="Reason">Código estable del motivo (<c>None</c> si se conserva).</param>
 /// <param name="ReasonMessage">El motivo para mostrarlo, por ejemplo "El valor ha cambiado". Vacío si se conserva.</param>
+/// <param name="Acknowledged">Una persona ha marcado el aviso como revisado.</param>
+/// <param name="RequiresAcknowledgement">Es un aviso sin marcar como revisado: impide exportar.</param>
 public sealed record KeyFactResponse(
+    int Id,
     string Type,
     string OriginalValue,
     string? AdaptedValue,
     string Status,
     string Reason,
-    string ReasonMessage);
+    string ReasonMessage,
+    bool Acknowledged,
+    bool RequiresAcknowledgement);
 
 /// <summary>Evento SSE <c>status</c>: el estado actual del documento.</summary>
 public sealed record DocumentStatusEvent(Guid Id, string Status);

@@ -209,6 +209,9 @@ public sealed class AdaptationWorkerTests(PostgreSqlFixture database) : IClassFi
         public Task<Document?> FindForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
             inner.FindForOwnerAsync(id, ownerId, cancellationToken);
 
+        public Task<Document?> FindForOwnerToUpdateAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
+            inner.FindForOwnerToUpdateAsync(id, ownerId, cancellationToken);
+
         public Task<DocumentStatus?> FindStatusForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
             inner.FindStatusForOwnerAsync(id, ownerId, cancellationToken);
 

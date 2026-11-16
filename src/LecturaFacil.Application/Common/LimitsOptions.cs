@@ -101,5 +101,12 @@ public sealed class LimitsOptions
     [Range(10, 1_000, ErrorMessage = "Limits:MaxDocumentsPerList debe estar entre {1} y {2}.")]
     public int MaxDocumentsPerList { get; set; } = 100;
 
+    /// <summary>
+    /// Caracteres como mucho de una adaptación editada a mano (título, preguntas, frases y glosario) en
+    /// <c>PUT /api/documents/{id}/versions/{n}</c>. Una adaptación ocupa más que el original porque explica más.
+    /// </summary>
+    [Range(1_000, 400_000, ErrorMessage = "Limits:MaxEditedCharacters debe estar entre {1} y {2}.")]
+    public int MaxEditedCharacters { get; set; } = 40_000;
+
     public TextLengthLimits TextLengthLimits => new(MinCharacters, MaxCharacters);
 }

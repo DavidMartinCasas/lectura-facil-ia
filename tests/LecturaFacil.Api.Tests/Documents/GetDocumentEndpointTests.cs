@@ -4,6 +4,7 @@ using System.Text.Json;
 using LecturaFacil.Api.Security;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Readability;
 using LecturaFacil.Domain.Verification;
 
 namespace LecturaFacil.Api.Tests.Documents;
@@ -33,7 +34,7 @@ public sealed class GetDocumentEndpointTests
     }
 
     [Fact]
-    public async Task Get_WhenTheDocumentIsInDraft_ReturnsTheAdaptationAsAPendingDraftWithoutModelNames()
+    public async Task Get_WhenTheDocumentIsInDraft_ReturnsTheAdaptationAsAPendingDraftWithItsProviderButWithoutModelNames()
     {
         await using var factory = new DocumentsApiFactory();
         var document = Seed(factory, FixedCurrentUser.DevelopmentOwner, Adapt);
@@ -54,8 +55,10 @@ public sealed class GetDocumentEndpointTests
         section.GetProperty("question").GetString().ShouldBe("¿Quién puede pedirla?");
         section.GetProperty("sentences")[0].GetString().ShouldBe("Quien vive de alquiler.");
         adaptation.GetProperty("glossary")[0].GetProperty("term").GetString().ShouldBe("Solicitud");
+        adaptation.GetProperty("provider").GetString().ShouldBe("Servidor interno");
+        adaptation.GetProperty("pendingKeyFactCount").GetInt32().ShouldBe(2);
+        adaptation.GetProperty("canExport").GetBoolean().ShouldBeFalse();
         body.ShouldNotContain("modelo-secreto");
-        body.ShouldNotContain("Servidor interno");
     }
 
     [Fact]
@@ -108,6 +111,10 @@ public sealed class GetDocumentEndpointTests
         var items = verification.GetProperty("keyFacts").EnumerateArray().ToList();
         items.Count.ShouldBe(3);
         var amount = items[1];
+        amount.GetProperty("id").GetInt32().ShouldBe(1);
+        amount.GetProperty("acknowledged").GetBoolean().ShouldBeFalse();
+        amount.GetProperty("requiresAcknowledgement").GetBoolean().ShouldBeTrue();
+        items[0].GetProperty("requiresAcknowledgement").GetBoolean().ShouldBeFalse();
         amount.GetProperty("type").GetString().ShouldBe("Amount");
         amount.GetProperty("originalValue").GetString().ShouldBe("40 % de la renta");
         amount.GetProperty("adaptedValue").GetString().ShouldBe("La ayuda paga el 40 % del alquiler");
@@ -118,6 +125,36 @@ public sealed class GetDocumentEndpointTests
         items[0].GetProperty("reason").GetString().ShouldBe("None");
         body.ShouldNotContain("modelo-verificador-secreto");
         body.ShouldNotContain("Verificador interno");
+    }
+
+    [Fact]
+    public async Task Get_WhenTheDocumentIsInDraft_IncludesTheOriginalWithItsFindingsAndTheReadabilityOfBothTexts()
+    {
+        await using var factory = new DocumentsApiFactory();
+        var document = Seed(factory, FixedCurrentUser.DevelopmentOwner, seeded =>
+        {
+            seeded.RecordOriginalFindings([Finding.At(
+                GuidelineCatalog.Find(GuidelineCodes.ShortSentences), seeded.OriginalText.Value, 0, 5, "Divide la frase.")]);
+            Adapt(seeded);
+        });
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync(DocumentUri(document.Id.Value), Token);
+
+        using var json = await ReadJsonAsync(response);
+        var original = json.RootElement.GetProperty("original");
+        original.GetProperty("text").GetString().ShouldBe(document.OriginalText.Value);
+        var finding = original.GetProperty("findings").EnumerateArray().ShouldHaveSingleItem();
+        finding.GetProperty("guidelineCode").GetString().ShouldBe(GuidelineCodes.ShortSentences);
+        finding.GetProperty("guideline").GetString().ShouldBe(GuidelineCatalog.Find(GuidelineCodes.ShortSentences).Description);
+        finding.GetProperty("fragment").GetString().ShouldBe("Texto");
+        finding.GetProperty("start").GetInt32().ShouldBe(0);
+        finding.GetProperty("end").GetInt32().ShouldBe(5);
+        finding.GetProperty("suggestion").GetString().ShouldBe("Divide la frase.");
+        var readability = json.RootElement.GetProperty("readability");
+        readability.GetProperty("original").GetProperty("gradeLabel").GetString().ShouldNotBeNullOrEmpty();
+        readability.GetProperty("adapted").GetProperty("value").GetDouble().ShouldBe(
+            SzigrisztPazosCalculator.Calculate(document.LatestAdaptedVersion!.PlainText).Value);
     }
 
     [Fact]
@@ -201,7 +238,7 @@ public sealed class GetDocumentEndpointTests
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
-    private static void Adapt(Document document)
+    internal static void Adapt(Document document)
     {
         var content = AdaptedContent.TryCreate(
             "Ayudas para el alquiler",
@@ -234,7 +271,7 @@ public sealed class GetDocumentEndpointTests
             Now);
     }
 
-    private static Document Seed(DocumentsApiFactory factory, OwnerId owner, Action<Document>? prepare = null)
+    internal static Document Seed(DocumentsApiFactory factory, OwnerId owner, Action<Document>? prepare = null)
     {
         var document = Document.Submit(
             owner,
@@ -246,7 +283,7 @@ public sealed class GetDocumentEndpointTests
         return document;
     }
 
-    private static string WithoutTraceId(string problem)
+    internal static string WithoutTraceId(string problem)
     {
         var json = System.Text.Json.Nodes.JsonNode.Parse(problem)!.AsObject();
         json.Remove("traceId");

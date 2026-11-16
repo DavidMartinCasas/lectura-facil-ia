@@ -23,6 +23,9 @@ public sealed class EfDocumentRepository(AppDbContext context) : IDocumentReposi
         Documents.AsNoTracking()
             .FirstOrDefaultAsync(document => document.Id == id && document.OwnerId == ownerId, cancellationToken);
 
+    public Task<Document?> FindForOwnerToUpdateAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
+        Documents.FirstOrDefaultAsync(document => document.Id == id && document.OwnerId == ownerId, cancellationToken);
+
     public Task<DocumentStatus?> FindStatusForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
         Documents.AsNoTracking()
             .Where(document => document.Id == id && document.OwnerId == ownerId)

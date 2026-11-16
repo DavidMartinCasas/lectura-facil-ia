@@ -6,7 +6,8 @@ namespace LecturaFacil.Domain.Documents;
 
 /// <summary>
 /// Versión adaptada de un documento (<c>VERSION_ADAPTADA</c> del modelo de datos). Es un borrador: siempre necesita la
-/// validación de una persona. No cambia una vez creada; una edición o una nueva adaptación crean otra versión.
+/// validación de una persona. Su contenido no cambia una vez creada; una edición o una nueva adaptación crean otra
+/// versión. Lo único que cambia es qué avisos de sus datos clave ha marcado como revisados una persona.
 /// </summary>
 public sealed class AdaptedVersion
 {
@@ -73,7 +74,10 @@ public sealed class AdaptedVersion
     /// Datos clave del original y su estado en esta versión (US-11). <c>null</c> en las versiones creadas antes de que
     /// existiera el verificador.
     /// </summary>
-    public MeaningVerification? MeaningVerification { get; }
+    public MeaningVerification? MeaningVerification { get; private set; }
+
+    /// <summary>Avisos de datos clave sin marcar como revisados. Mientras haya alguno, la versión no se puede exportar.</summary>
+    public int PendingKeyFactCount => MeaningVerification?.PendingAcknowledgementCount ?? 0;
 
     /// <inheritdoc cref="AdaptedContent.PlainText"/>
     public string PlainText => AdaptedContent.ToPlainText(Title, Sections);
@@ -91,6 +95,14 @@ public sealed class AdaptedVersion
         MeaningVerification? meaningVerification,
         DateTimeOffset createdAt) =>
         new(number, AdaptedContent.Restore(title, sections, glossary), metadata, guidelineReport, meaningVerification, createdAt);
+
+    /// <summary>Marca como revisado el aviso del dato clave número <paramref name="keyFactIndex"/> (desde 0).</summary>
+    internal void AcknowledgeKeyFact(int keyFactIndex)
+    {
+        var verification = MeaningVerification
+            ?? throw new InvalidOperationException("This version has no key facts to acknowledge.");
+        MeaningVerification = verification.AcknowledgeKeyFact(keyFactIndex);
+    }
 
     internal static AdaptedVersion Create(
         int number,
