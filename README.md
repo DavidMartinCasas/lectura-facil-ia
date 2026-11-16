@@ -84,7 +84,7 @@ La aplicación habla con los modelos a través de un único puerto (`ILlmProvide
 - **`OpenAICompatible`**: cualquier servidor con la API de chat de OpenAI. `ENDPOINT` es la URL base de la API (la que acaba en `/v1`) y la clave se envía en la cabecera `Authorization`.
 - **`AzureFoundry`**: Azure AI Foundry con su API v1 compatible con OpenAI. `ENDPOINT` es la URL del recurso (la aplicación añade `/openai/v1`) y los "modelos" son los **nombres de los despliegues**.
 
-Cada llamada pide la respuesta en JSON con esquema, sin herramientas, con `LIMITS__MAXOUTPUTTOKENS` y `LIMITS__LLMTIMEOUTSECONDS` como tope, sin reintentos ni redirecciones. La respuesta se valida contra el esquema antes de usarse.
+Cada llamada pide la respuesta en JSON con esquema, sin herramientas, con `LIMITS__MAXOUTPUTTOKENS` y `LIMITS__LLMTIMEOUTSECONDS` como tope y sin redirecciones. La respuesta se valida contra el esquema antes de usarse.
 
 **Ollama** (en otra máquina de tu red; dentro de Docker `localhost` es el contenedor de la API):
 
@@ -125,6 +125,36 @@ Para comprobar la configuración, arranca la API en `Development` y llama a `GET
 ```bash
 curl -s http://localhost:5125/dev/llm/ping   # dotnet run, perfil http
 ```
+
+### Principal, respaldo y privacidad
+
+La aplicación funciona siempre igual: **quien la despliega decide** con la configuración qué proveedores se usan, y con ello el equilibrio entre privacidad y disponibilidad. **Por defecto el respaldo está deshabilitado.**
+
+| Configuración | Variables | Qué pasa con los documentos |
+|---|---|---|
+| **Solo principal local** (por defecto) | `LLM__PRIMARY__*` hacia tu servidor; `LLM__FALLBACK__ENABLED=false` | Ningún documento sale de tu infraestructura. Si el principal cae, **no se llama a ningún otro proveedor**: la llamada falla con "no disponible" y el documento debe esperar a que vuelva (la cola y su reproceso llegan con la adaptación, US-06) |
+| **Principal local + respaldo en la nube** | `LLM__PRIMARY__*` hacia tu servidor; `LLM__FALLBACK__ENABLED=true` y `LLM__FALLBACK__*` hacia la nube | Normalmente todo se procesa en tu servidor. Si el principal no responde, los documentos **salen hacia el proveedor de respaldo** mientras dure la caída. Revisa dónde procesa los datos (por ejemplo, Azure con Data Zone EU) |
+| **Solo nube** | `LLM__PRIMARY__*` hacia el proveedor en la nube; sin respaldo | Todos los documentos se procesan en ese proveedor |
+
+Cómo se decide en cada llamada:
+
+- El cliente del **principal** tiene un reintento corto ante errores transitorios y un **circuit breaker**: si falla varias veces seguidas, deja de llamarlo durante `LLM__RESILIENCE__BREAKDURATIONSECONDS` y luego deja pasar una petición de prueba. Los umbrales están en `deploy/.env.example` (`LLM__RESILIENCE__*`).
+- Cada `LLM__RESILIENCE__HEALTHCHECKINTERVALSECONDS` segundos se comprueba con una petición mínima, **sin ningún documento**, si el principal (y el respaldo, si está habilitado) responde. Si el respaldo está en un proveedor de pago, cada comprobación consume unos pocos tokens; puedes alargar el intervalo o desactivarla con `LLM__RESILIENCE__HEALTHCHECKENABLED=false`.
+- Con el respaldo habilitado, si el principal falla o la última comprobación dice que no responde, la llamada va al respaldo; en cuanto el principal vuelve a responder, las llamadas vuelven a él. La respuesta indica qué proveedor la generó con su `DISPLAYNAME`.
+- Con el respaldo **deshabilitado**, nunca se le llama, aunque esté configurado (tiene test propio).
+
+Estado visible:
+
+- `GET /health` devuelve `Degraded` (HTTP 200) si el principal no responde; `Unhealthy` (503) solo si falla la base de datos.
+- `GET /api/status/llm` devuelve solo si cada proveedor está disponible, sin URLs, IPs ni modelos:
+
+  ```json
+  {"primary":{"available":true},"fallback":{"available":true}}
+  ```
+
+  `fallback` es `null` si el respaldo no está habilitado.
+
+La decisión está en [ADR 0003](docs/adr/0003-proveedores-configurables.md).
 
 ## Documentación
 
