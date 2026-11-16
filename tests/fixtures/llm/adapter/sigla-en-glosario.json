@@ -1,0 +1,7 @@
+{
+  "model": "modelo-adaptador-falso",
+  "content": "{\"titulo\": \"Ayudas para pagar el alquiler\", \"secciones\": [{\"pregunta\": \"¿Qué es esta ayuda?\", \"frases\": [\"El Ayuntamiento da ayudas para pagar el alquiler de su casa.\"]}, {\"pregunta\": \"¿Dónde se publica?\", \"frases\": [\"El anuncio sale en el BOP.\"]}], \"glosario\": [{\"termino\": \"BOP\", \"definicion\": \"Boletín Oficial de la Provincia. Es el periódico donde se publican los anuncios.\"}]}",
+  "inputTokens": 1100,
+  "outputTokens": 850,
+  "durationMs": 3100
+}

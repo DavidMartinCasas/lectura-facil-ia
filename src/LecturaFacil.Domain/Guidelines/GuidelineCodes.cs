@@ -15,4 +15,5 @@ public static class GuidelineCodes
     public const string DifficultWords = "PALABRAS_DIFICILES";
     public const string LegalJargon = "SIN_EXPRESIONES_JURIDICAS";
     public const string NumericDate = "FECHAS_COMPLETAS";
+    public const string ClearHeadings = "TITULOS_CLAROS";
 }

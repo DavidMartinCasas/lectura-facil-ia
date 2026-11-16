@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using LecturaFacil.Domain.Documents;
+using LecturaFacil.Domain.Guidelines;
 
 namespace LecturaFacil.Domain.Tests.Documents;
 
@@ -7,6 +8,7 @@ public sealed class DocumentAdaptationTests
 {
     private static readonly DateTimeOffset Now = new(2026, 11, 16, 10, 0, 0, TimeSpan.Zero);
     private static readonly AdaptationMetadata Metadata = new("Proveedor", "modelo", "adapter.v1", 100, 50, TimeSpan.FromSeconds(2));
+    private static readonly GuidelineReport Report = GuidelineReport.Create(new GuidelineAnalysis([], []), [], 10);
 
     [Fact]
     public void StartProcessing_WhenReceived_MovesToProcessing()
@@ -48,7 +50,7 @@ public sealed class DocumentAdaptationTests
     {
         var document = Submit();
         document.StartProcessing(Now);
-        document.CompleteAdaptation(Content(), Metadata, Now);
+        document.CompleteAdaptation(Content(), Metadata, Report, Now);
 
         Should.Throw<InvalidOperationException>(() => document.StartProcessing(Now));
     }
@@ -60,7 +62,7 @@ public sealed class DocumentAdaptationTests
         document.StartProcessing(Now);
         var content = Content();
 
-        var version = document.CompleteAdaptation(content, Metadata, Now.AddMinutes(2));
+        var version = document.CompleteAdaptation(content, Metadata, Report, Now.AddMinutes(2));
 
         document.Status.ShouldBe(DocumentStatus.Draft);
         document.AdaptedVersions.ShouldBe([version]);
@@ -70,12 +72,13 @@ public sealed class DocumentAdaptationTests
         version.Sections.ShouldBe(content.Sections);
         version.Glossary.ShouldBe(content.Glossary);
         version.Metadata.ShouldBe(Metadata);
+        version.GuidelineReport.ShouldBe(Report);
         version.CreatedAt.ShouldBe(Now.AddMinutes(2));
     }
 
     [Fact]
     public void CompleteAdaptation_WhenNotProcessing_Throws() =>
-        Should.Throw<InvalidOperationException>(() => Submit().CompleteAdaptation(Content(), Metadata, Now));
+        Should.Throw<InvalidOperationException>(() => Submit().CompleteAdaptation(Content(), Metadata, Report, Now));
 
     [Fact]
     public void FailProcessing_MovesToErrorWithTheReason()
@@ -112,10 +115,12 @@ public sealed class DocumentAdaptationTests
     {
         var content = Content();
 
-        var version = AdaptedVersion.Restore(3, content.Title, content.Sections, content.Glossary, Metadata, Now);
+        var version = AdaptedVersion.Restore(3, content.Title, content.Sections, content.Glossary, Metadata, Report, Now);
 
         version.Number.ShouldBe(3);
         version.Sections.ShouldBe(content.Sections);
+        version.GuidelineReport.ShouldBe(Report);
+        version.PlainText.ShouldBe(content.PlainText);
     }
 
     private static AdaptedContent Content() =>

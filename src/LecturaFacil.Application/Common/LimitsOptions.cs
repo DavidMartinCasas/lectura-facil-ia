@@ -31,6 +31,10 @@ public sealed class LimitsOptions
     [Range(5, 50, ErrorMessage = "Limits:MaxWordsPerSentence debe estar entre {1} y {2}.")]
     public int MaxWordsPerSentence { get; set; } = 15;
 
+    /// <summary>Palabras como mucho del título del documento y de cada sección de la adaptación (pauta TITULOS_CLAROS).</summary>
+    [Range(3, 20, ErrorMessage = "Limits:MaxWordsPerHeading debe estar entre {1} y {2}.")]
+    public int MaxWordsPerHeading { get; set; } = 8;
+
     /// <summary>Conectores que abren otra oración ("cuyo", "siempre que"…) a partir de los que una frase une varias ideas.</summary>
     [Range(1, 10, ErrorMessage = "Limits:MaxConnectorsPerSentence debe estar entre {1} y {2}.")]
     public int MaxConnectorsPerSentence { get; set; } = 1;
@@ -55,6 +59,13 @@ public sealed class LimitsOptions
     /// <summary>Partes como máximo en que se divide un documento para adaptarlo. Acota las llamadas al modelo (OWASP LLM10).</summary>
     [Range(1, 100, ErrorMessage = "Limits:MaxAdaptationChunksPerDocument debe estar entre {1} y {2}.")]
     public int MaxAdaptationChunksPerDocument { get; set; } = 10;
+
+    /// <summary>
+    /// Nuevas adaptaciones que se piden como mucho cuando la adaptación incumple pautas de gravedad alta (US-07). Cada
+    /// una vuelve a adaptar el documento entero y se guarda la mejor versión. 0 desactiva el reintento (OWASP LLM10).
+    /// </summary>
+    [Range(0, 3, ErrorMessage = "Limits:MaxAdaptationRetries debe estar entre {1} y {2}.")]
+    public int MaxAdaptationRetries { get; set; } = 1;
 
     /// <summary>
     /// Documentos que se aceptan por minuto en <c>POST /api/documents</c>, en total: cada uno genera llamadas al modelo

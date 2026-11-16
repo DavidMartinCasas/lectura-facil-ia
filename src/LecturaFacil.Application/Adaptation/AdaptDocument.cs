@@ -15,22 +15,38 @@ namespace LecturaFacil.Application.Adaptation;
 /// Adapta un documento a lectura fácil con el modelo adaptador: "Recibido" → "Procesando" → "Borrador", o "Error" con
 /// un motivo genérico. Un texto largo se adapta por partes (<see cref="TextChunker"/>) y se une. Cada parte tiene un
 /// solo reintento si la respuesta no cumple el esquema; si el proveedor falla, no se reintenta aquí.
+/// Después se revisan las pautas de la adaptación (<see cref="ReviewAdaptation"/>). Si incumple pautas de gravedad alta,
+/// se pide otra adaptación (como mucho <see cref="LimitsOptions.MaxAdaptationRetries"/>) indicando qué pautas incumplió,
+/// y se guarda la mejor según <see cref="BestVersionPolicy"/>. Si el reintento falla, se guarda la primera.
 /// </summary>
 public sealed class AdaptDocument(
     IDocumentRepository repository,
     ILlmProvider llm,
     IPromptLoader prompts,
+    ReviewAdaptation reviewAdaptation,
     IOptions<LimitsOptions> limits,
     TimeProvider timeProvider)
 {
     /// <summary>Prompt de sistema del adaptador. Se guarda con cada versión para saber cuál la generó.</summary>
     public const string PromptName = "adapter.v1";
 
+    /// <summary>Instrucciones que se añaden al prompt del adaptador cuando se pide otra adaptación por incumplir pautas.</summary>
+    public const string RetryPromptName = "adapter-retry.v1";
+
+    /// <summary>Versión de prompt que se guarda con una versión que sale de un reintento.</summary>
+    public const string RetryPromptVersion = $"{PromptName}+{RetryPromptName}";
+
     /// <summary>Marcador del prompt donde van las pautas que incumple el original (texto del catálogo, nunca del usuario).</summary>
     public const string GuidelinesPlaceholder = "{{PAUTAS_DETECTADAS}}";
 
     /// <summary>Marcador del prompt para <see cref="LimitsOptions.MaxWordsPerSentence"/>, el mismo umbral que usa el revisor de pautas.</summary>
     public const string MaxWordsPlaceholder = "{{MAX_PALABRAS_POR_FRASE}}";
+
+    /// <summary>Marcador del prompt de reintento donde van las pautas que incumplió la adaptación (texto del catálogo).</summary>
+    public const string RetryPlaceholder = "{{PAUTAS_INCUMPLIDAS}}";
+
+    /// <summary>Marcador del prompt de reintento para <see cref="LimitsOptions.MaxWordsPerHeading"/>.</summary>
+    public const string MaxHeadingWordsPlaceholder = "{{MAX_PALABRAS_POR_TITULO}}";
 
     public const string NoFindingsLine = "- No se ha detectado ningún problema concreto. Aplica igualmente todas las pautas.";
 
@@ -55,7 +71,7 @@ public sealed class AdaptDocument(
         document.StartProcessing(timeProvider.GetUtcNow());
         await repository.SaveAsync(document, cancellationToken);
 
-        var adaptation = await AdaptAsync(document, cancellationToken);
+        var adaptation = await AdaptAndReviewAsync(document, cancellationToken);
         if (adaptation.IsFailure)
         {
             document.FailProcessing(adaptation.Error!.Code, timeProvider.GetUtcNow());
@@ -63,8 +79,8 @@ public sealed class AdaptDocument(
             return Result<AdaptedVersion>.Failure(adaptation.Error);
         }
 
-        var (content, metadata) = adaptation.Value;
-        var version = document.CompleteAdaptation(content, metadata, timeProvider.GetUtcNow());
+        var (content, metadata, report) = adaptation.Value;
+        var version = document.CompleteAdaptation(content, metadata, report, timeProvider.GetUtcNow());
         await repository.SaveAsync(document, cancellationToken);
         return Result<AdaptedVersion>.Success(version);
     }
@@ -85,14 +101,67 @@ public sealed class AdaptDocument(
         await repository.SaveAsync(document, cancellationToken);
     }
 
+    /// <summary>Adapta, revisa las pautas y, si incumple alguna grave, reintenta y se queda con la mejor versión.</summary>
+    private async Task<Result<ReviewedAdaptation>> AdaptAndReviewAsync(Document document, CancellationToken cancellationToken)
+    {
+        var first = await AdaptAsync(document, SystemPrompt(document.OriginalFindings), new Usage(), cancellationToken);
+        if (first.IsFailure)
+        {
+            return Result<ReviewedAdaptation>.Failure(first.Error!);
+        }
+
+        var best = Review(first.Value);
+        var last = best;
+        var cost = best.Metadata;
+        for (var retry = 0; retry < _limits.MaxAdaptationRetries && last.Report.HasHighSeverityViolations; retry++)
+        {
+            // Lo que cuestan las respuestas válidas del reintento se suma aunque el reintento acabe fallando en otra parte.
+            var retryUsage = new Usage();
+            var attempt = await AdaptAsync(document, RetrySystemPrompt(document.OriginalFindings, last.Report), retryUsage, cancellationToken);
+            cost = AddCost(cost, retryUsage);
+            if (attempt.IsFailure)
+            {
+                // La versión que ya hay es válida: un reintento fallido no tira el trabajo hecho.
+                break;
+            }
+
+            last = Review(attempt.Value);
+            if (BestVersionPolicy.PrefersRetry(best.Content, best.Report, last.Content, last.Report))
+            {
+                best = last;
+            }
+        }
+
+        // La versión guardada indica el prompt que la generó y lo que han costado todos los intentos.
+        var metadata = best.Metadata with
+        {
+            InputTokens = cost.InputTokens,
+            OutputTokens = cost.OutputTokens,
+            Duration = cost.Duration,
+        };
+        return Result<ReviewedAdaptation>.Success(best with { Metadata = metadata });
+    }
+
+    private ReviewedAdaptation Review((AdaptedContent Content, AdaptationMetadata Metadata) adaptation) =>
+        new(adaptation.Content, adaptation.Metadata, reviewAdaptation.Execute(adaptation.Content));
+
+    private static AdaptationMetadata AddCost(AdaptationMetadata total, Usage attempt) =>
+        total with
+        {
+            InputTokens = total.InputTokens + attempt.InputTokens,
+            OutputTokens = total.OutputTokens + attempt.OutputTokens,
+            Duration = total.Duration + attempt.Duration,
+        };
+
+    /// <param name="usage">Acumula lo que cuestan las respuestas válidas, también si el intento acaba fallando.</param>
     private async Task<Result<(AdaptedContent Content, AdaptationMetadata Metadata)>> AdaptAsync(
         Document document,
+        Prompt systemPrompt,
+        Usage usage,
         CancellationToken cancellationToken)
     {
-        var systemPrompt = SystemPrompt(document.OriginalFindings);
         var maxChunk = Math.Min(_limits.MaxCharactersPerAdaptationChunk, _limits.MaxCharacters);
         var parts = new List<AdaptedContent>();
-        var usage = new Usage();
         var chunks = TextChunker.Split(document.OriginalText.Value, maxChunk);
         if (chunks.Count > _limits.MaxAdaptationChunksPerDocument)
         {
@@ -158,23 +227,47 @@ public sealed class AdaptDocument(
     private Prompt SystemPrompt(IReadOnlyList<Finding> findings)
     {
         var prompt = prompts.Load(PromptName);
-        var lines = new StringBuilder();
         var groups = findings
             .GroupBy(finding => finding.GuidelineCode, StringComparer.Ordinal)
             .Select(group => (Guideline: GuidelineCatalog.Find(group.Key), Count: group.Count()))
             .OrderByDescending(group => group.Guideline.DefaultSeverity)
             .ThenByDescending(group => group.Count);
-        foreach (var (guideline, count) in groups)
-        {
-            lines.AppendLine(CultureInfo.InvariantCulture, $"- {guideline.Description}: {count}");
-        }
-
-        var guidelines = lines.Length == 0 ? NoFindingsLine : lines.ToString().TrimEnd();
+        var lines = GuidelineLines(groups);
+        var guidelines = lines.Length == 0 ? NoFindingsLine : lines;
         var text = prompt.Text
             .Replace(GuidelinesPlaceholder, guidelines, StringComparison.Ordinal)
             .Replace(MaxWordsPlaceholder, _limits.MaxWordsPerSentence.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
         return prompt with { Text = text };
     }
+
+    /// <summary>
+    /// El prompt del adaptador más las pautas que incumplió la adaptación anterior. Igual que en el primero, solo lleva
+    /// descripciones fijas del catálogo y números, nunca fragmentos del documento ni de la respuesta del modelo.
+    /// </summary>
+    private Prompt RetrySystemPrompt(IReadOnlyList<Finding> originalFindings, GuidelineReport report)
+    {
+        var basePrompt = SystemPrompt(originalFindings);
+        var retry = prompts.Load(RetryPromptName);
+        var violations = GuidelineLines(report.Violations.Select(result => (result.Guideline, result.FindingCount)));
+        var instructions = retry.Text
+            .Replace(RetryPlaceholder, violations, StringComparison.Ordinal)
+            .Replace(MaxHeadingWordsPlaceholder, _limits.MaxWordsPerHeading.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        return new Prompt(RetryPromptVersion, $"{basePrompt.Text}\n\n{instructions}");
+    }
+
+    private static string GuidelineLines(IEnumerable<(Guideline Guideline, int Count)> groups)
+    {
+        var lines = new StringBuilder();
+        foreach (var (guideline, count) in groups)
+        {
+            lines.AppendLine(CultureInfo.InvariantCulture, $"- {guideline.Description}: {count}");
+        }
+
+        return lines.ToString().TrimEnd();
+    }
+
+    /// <summary>Una adaptación con su informe de pautas.</summary>
+    private sealed record ReviewedAdaptation(AdaptedContent Content, AdaptationMetadata Metadata, GuidelineReport Report);
 
     /// <summary>Suma de lo que han costado las respuestas válidas de todas las partes.</summary>
     private sealed class Usage

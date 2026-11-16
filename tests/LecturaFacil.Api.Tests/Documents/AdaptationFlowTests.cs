@@ -34,6 +34,9 @@ public sealed class AdaptationFlowTests(AdaptationFlowTests.WorkerApiFactory fac
         adaptation.GetProperty("title").GetString().ShouldBe("Ayudas para pagar el alquiler");
         adaptation.GetProperty("sections").GetArrayLength().ShouldBe(4);
         adaptation.GetProperty("pendingHumanValidation").GetBoolean().ShouldBeTrue();
+        var guidelines = adaptation.GetProperty("guidelines");
+        guidelines.GetProperty("items").GetArrayLength().ShouldBe(guidelines.GetProperty("totalCount").GetInt32());
+        guidelines.GetProperty("summary").GetString().ShouldEndWith("pautas cumplidas");
         var request = factory.Llm.Requests.ShouldHaveSingleItem();
         request.UserMessage.ShouldContain("2,5 veces el IPREM");
         request.SystemPrompt.ShouldContain("Sin siglas sin explicar: ");

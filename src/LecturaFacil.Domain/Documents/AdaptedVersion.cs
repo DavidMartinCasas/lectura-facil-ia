@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Domain.Guidelines;
+
 namespace LecturaFacil.Domain.Documents;
 
 /// <summary>
@@ -7,7 +9,12 @@ namespace LecturaFacil.Domain.Documents;
 /// </summary>
 public sealed class AdaptedVersion
 {
-    private AdaptedVersion(int number, AdaptedContent content, AdaptationMetadata metadata, DateTimeOffset createdAt)
+    private AdaptedVersion(
+        int number,
+        AdaptedContent content,
+        AdaptationMetadata metadata,
+        GuidelineReport? guidelineReport,
+        DateTimeOffset createdAt)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(number);
         ArgumentNullException.ThrowIfNull(content);
@@ -18,6 +25,7 @@ public sealed class AdaptedVersion
         Sections = content.Sections;
         Glossary = content.Glossary;
         Metadata = metadata;
+        GuidelineReport = guidelineReport;
         CreatedAt = createdAt;
     }
 
@@ -27,6 +35,7 @@ public sealed class AdaptedVersion
         string title,
         IReadOnlyList<AdaptedSection> sections,
         IReadOnlyList<GlossaryTerm> glossary,
+        GuidelineReport? guidelineReport,
         DateTimeOffset createdAt)
     {
         Number = number;
@@ -34,6 +43,7 @@ public sealed class AdaptedVersion
         Sections = sections;
         Glossary = glossary;
         Metadata = null!;
+        GuidelineReport = guidelineReport;
         CreatedAt = createdAt;
     }
 
@@ -48,6 +58,15 @@ public sealed class AdaptedVersion
 
     public AdaptationMetadata Metadata { get; }
 
+    /// <summary>
+    /// Pautas que cumple la versión, con posiciones sobre <see cref="PlainText"/>. <c>null</c> en las versiones creadas
+    /// antes de que existiera el revisor de pautas.
+    /// </summary>
+    public GuidelineReport? GuidelineReport { get; }
+
+    /// <inheritdoc cref="AdaptedContent.PlainText"/>
+    public string PlainText => AdaptedContent.ToPlainText(Title, Sections);
+
     public DateTimeOffset CreatedAt { get; }
 
     /// <summary>Reconstruye una versión ya guardada.</summary>
@@ -57,9 +76,15 @@ public sealed class AdaptedVersion
         IReadOnlyList<AdaptedSection> sections,
         IReadOnlyList<GlossaryTerm> glossary,
         AdaptationMetadata metadata,
+        GuidelineReport? guidelineReport,
         DateTimeOffset createdAt) =>
-        new(number, AdaptedContent.Restore(title, sections, glossary), metadata, createdAt);
+        new(number, AdaptedContent.Restore(title, sections, glossary), metadata, guidelineReport, createdAt);
 
-    internal static AdaptedVersion Create(int number, AdaptedContent content, AdaptationMetadata metadata, DateTimeOffset createdAt) =>
-        new(number, content, metadata, createdAt);
+    internal static AdaptedVersion Create(
+        int number,
+        AdaptedContent content,
+        AdaptationMetadata metadata,
+        GuidelineReport guidelineReport,
+        DateTimeOffset createdAt) =>
+        new(number, content, metadata, guidelineReport, createdAt);
 }

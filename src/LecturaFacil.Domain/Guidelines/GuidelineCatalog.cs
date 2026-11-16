@@ -17,6 +17,7 @@ public static class GuidelineCatalog
         new(GuidelineCodes.DifficultWords, "Palabras difíciles explicadas", Severity.Medium),
         new(GuidelineCodes.LegalJargon, "Sin expresiones jurídicas complejas", Severity.High),
         new(GuidelineCodes.NumericDate, "Fechas completas", Severity.Low),
+        new(GuidelineCodes.ClearHeadings, "Títulos claros", Severity.Low),
     ];
 
     private static readonly Dictionary<string, Guideline> ByCode = All.ToDictionary(guideline => guideline.Code, StringComparer.Ordinal);

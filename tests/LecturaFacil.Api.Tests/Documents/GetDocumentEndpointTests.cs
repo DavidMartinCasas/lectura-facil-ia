@@ -3,6 +3,7 @@ using System.Net;
 using System.Text.Json;
 using LecturaFacil.Api.Security;
 using LecturaFacil.Domain.Documents;
+using LecturaFacil.Domain.Guidelines;
 
 namespace LecturaFacil.Api.Tests.Documents;
 
@@ -54,6 +55,38 @@ public sealed class GetDocumentEndpointTests
         adaptation.GetProperty("glossary")[0].GetProperty("term").GetString().ShouldBe("Solicitud");
         body.ShouldNotContain("modelo-secreto");
         body.ShouldNotContain("Servidor interno");
+    }
+
+    [Fact]
+    public async Task Get_WhenTheDocumentIsInDraft_IncludesTheGuidelineReportOfTheAdaptation()
+    {
+        await using var factory = new DocumentsApiFactory();
+        var document = Seed(factory, FixedCurrentUser.DevelopmentOwner, Adapt);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync(DocumentUri(document.Id.Value), Token);
+
+        using var json = await ReadJsonAsync(response);
+        var report = json.RootElement.GetProperty("adaptation").GetProperty("guidelines");
+        var total = GuidelineCatalog.All.Count;
+        report.GetProperty("summary").GetString().ShouldBe($"{total - 1} de {total} pautas cumplidas");
+        report.GetProperty("compliantCount").GetInt32().ShouldBe(total - 1);
+        report.GetProperty("totalCount").GetInt32().ShouldBe(total);
+        var items = report.GetProperty("items").EnumerateArray().ToList();
+        items.Count.ShouldBe(total);
+        var percentages = items.Single(item => item.GetProperty("code").GetString() == GuidelineCodes.Percentages);
+        percentages.GetProperty("description").GetString().ShouldBe("Sin porcentajes");
+        percentages.GetProperty("status").GetString().ShouldBe("NotCompliant");
+        percentages.GetProperty("severity").GetString().ShouldBe("Medium");
+        percentages.GetProperty("findingCount").GetInt32().ShouldBe(1);
+        var finding = percentages.GetProperty("findings").EnumerateArray().ShouldHaveSingleItem();
+        finding.GetProperty("fragment").GetString().ShouldBe("40 %");
+        finding.GetProperty("start").GetInt32().ShouldBe(
+            "Ayudas para el alquiler\n¿Quién puede pedirla?\nQuien vive de alquiler.\nLa ayuda paga el ".Length);
+        finding.GetProperty("end").GetInt32().ShouldBe(finding.GetProperty("start").GetInt32() + 4);
+        finding.GetProperty("suggestion").GetString().ShouldBe("Explica la cantidad sin porcentajes.");
+        items.Where(item => item.GetProperty("code").GetString() != GuidelineCodes.Percentages)
+            .ShouldAllBe(item => item.GetProperty("status").GetString() == "Compliant");
     }
 
     [Fact]
@@ -139,13 +172,18 @@ public sealed class GetDocumentEndpointTests
 
     private static void Adapt(Document document)
     {
+        var content = AdaptedContent.TryCreate(
+            "Ayudas para el alquiler",
+            [new AdaptedSectionDraft("¿Quién puede pedirla?", ["Quien vive de alquiler.", "La ayuda paga el 40 % del alquiler."])],
+            [new GlossaryTermDraft("Solicitud", "Papel que se rellena para pedir algo.")])!;
+        var start = content.PlainText.IndexOf("40 %", StringComparison.Ordinal);
+        var percentage = Finding.At(
+            GuidelineCatalog.Find(GuidelineCodes.Percentages), content.PlainText, start, start + 4, "Explica la cantidad sin porcentajes.");
         document.StartProcessing(Now);
         document.CompleteAdaptation(
-            AdaptedContent.TryCreate(
-                "Ayudas para el alquiler",
-                [new AdaptedSectionDraft("¿Quién puede pedirla?", ["Quien vive de alquiler."])],
-                [new GlossaryTermDraft("Solicitud", "Papel que se rellena para pedir algo.")])!,
+            content,
             new AdaptationMetadata("Servidor interno", "modelo-secreto", "adapter.v1", 10, 20, TimeSpan.FromSeconds(1)),
+            GuidelineReport.Create(new GuidelineAnalysis([percentage], []), [], 10),
             Now);
     }
 
