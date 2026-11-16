@@ -39,12 +39,20 @@ public abstract partial class ChatClientLlmProvider : ILlmProvider
 
     private TimeSpan Timeout => TimeSpan.FromSeconds(_limits.LlmTimeoutSeconds);
 
+    /// <summary>
+    /// El adaptador recibe un documento (o una parte); el verificador, el original y la adaptación juntos, con su propio
+    /// límite (<see cref="LimitsOptions.MaxCharactersPerVerification"/>). Cualquier otra cosa se rechaza (OWASP LLM10).
+    /// </summary>
+    private int MaxUserMessageLength(LlmRole role) => role == LlmRole.Verifier
+        ? _limits.MaxCharactersPerVerification + LlmRequest.ComparisonEnvelopeLength
+        : _limits.MaxCharacters + LlmRequest.DocumentEnvelopeLength;
+
     public async Task<Result<LlmResponse<T>>> CompleteStructuredAsync<T>(LlmRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         var model = ModelFor(request.Role);
-        if (request.UserMessage.Length > _limits.MaxCharacters + LlmRequest.DocumentEnvelopeLength)
+        if (request.UserMessage.Length > MaxUserMessageLength(request.Role))
         {
             LogInputTooLong(Name, request.Role, model, request.UserMessage.Length);
             return Result<LlmResponse<T>>.Failure(LlmErrors.InputTooLong);

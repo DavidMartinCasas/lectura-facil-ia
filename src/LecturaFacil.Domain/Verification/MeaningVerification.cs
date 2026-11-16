@@ -10,6 +10,9 @@ namespace LecturaFacil.Domain.Verification;
 /// </summary>
 public sealed class MeaningVerification
 {
+    /// <summary>Valor original del aviso de <see cref="Unreadable"/>.</summary>
+    public const string WholeDocument = "Todo el documento";
+
     private MeaningVerification(VerificationStatus status, IReadOnlyList<KeyFact> keyFacts, VerificationMetadata? metadata)
     {
         Status = status;
@@ -41,7 +44,7 @@ public sealed class MeaningVerification
     /// grave (<see cref="KeyFactVerdict.MostSevere"/>). Además, cada cifra del original que el verificador no ha listado
     /// y que no está en la adaptación se añade como aviso.
     /// </summary>
-    /// <param name="maxKeyFacts">Datos que se guardan como mucho; los avisos van primero para no perder ninguno.</param>
+    /// <param name="maxKeyFacts">Datos conservados que se guardan como mucho. Los avisos se guardan siempre todos.</param>
     public static MeaningVerification Combine(
         string originalText,
         string adaptedText,
@@ -54,16 +57,19 @@ public sealed class MeaningVerification
         ArgumentNullException.ThrowIfNull(verifierFacts);
         ArgumentNullException.ThrowIfNull(metadata);
 
+        var inAdaptation = NumberNormalizer.Values(adaptedText);
         var checkedFacts = verifierFacts
             .Select(fact => fact.WithVerdict(KeyFactVerdict.MostSevere(
-                NumericConsistencyCheck.Check(fact.OriginalValue, fact.AdaptedValue, adaptedText),
+                CodeVerdict(fact, originalText, adaptedText, inAdaptation),
                 fact.Verdict)))
             .ToList();
-        var listed = checkedFacts.SelectMany(fact => NumberNormalizer.Values(fact.OriginalValue)).ToHashSet();
-        var inAdaptation = NumberNormalizer.Values(adaptedText);
+        var listed = checkedFacts
+            .Where(fact => NumericConsistencyCheck.Quotes(originalText, fact.OriginalValue))
+            .SelectMany(fact => NumberNormalizer.Values(fact.OriginalValue))
+            .ToHashSet();
         var missing = FiguresOf(originalText)
             .Where(mention => !listed.Contains(mention.Value) && !inAdaptation.Contains(mention.Value))
-            .Select(mention => FigureFact(mention, KeyFactReason.NotInAdaptation));
+            .Select(mention => FigureFact(mention, KeyFactReason.FigureNotInAdaptation));
         return new MeaningVerification(VerificationStatus.Verified, Bounded(missing.Concat(checkedFacts), maxKeyFacts), metadata);
     }
 
@@ -76,12 +82,30 @@ public sealed class MeaningVerification
         return new MeaningVerification(VerificationStatus.NotVerified, Bounded(facts, maxKeyFacts), null);
     }
 
+    /// <summary>
+    /// Fallo seguro cuando ni siquiera se han podido leer las cifras del texto (por ejemplo, un texto anómalo que agota
+    /// el tiempo de búsqueda): un único aviso para que una persona revise todo el documento.
+    /// </summary>
+    public static MeaningVerification Unreadable() =>
+        new(
+            VerificationStatus.NotVerified,
+            [KeyFact.Create(KeyFactType.Other, WholeDocument, null, new KeyFactVerdict(KeyFactStatus.Review, KeyFactReason.NotVerified))],
+            null);
+
     /// <summary>Reconstruye una verificación ya guardada.</summary>
     public static MeaningVerification Restore(VerificationStatus status, IEnumerable<KeyFact> keyFacts, VerificationMetadata? metadata)
     {
         ArgumentNullException.ThrowIfNull(keyFacts);
         return new MeaningVerification(status, keyFacts.ToList().AsReadOnly(), metadata);
     }
+
+    /// <summary>Un dato cuya cita no está en el original es una invención del verificador: siempre se revisa.</summary>
+    private static KeyFactVerdict CodeVerdict(KeyFact fact, string originalText, string adaptedText, IReadOnlySet<NumericValue> inAdaptation) =>
+        NumericConsistencyCheck.Quotes(originalText, fact.OriginalValue)
+            ? NumericConsistencyCheck.Check(fact.OriginalValue, fact.AdaptedValue, adaptedText, inAdaptation)
+            : KeyFactVerdict.MostSevere(
+                new KeyFactVerdict(KeyFactStatus.Review, KeyFactReason.NeedsReview),
+                NumericConsistencyCheck.Check(fact.OriginalValue, fact.AdaptedValue, adaptedText, inAdaptation));
 
     private int Count(KeyFactStatus status) => KeyFacts.Count(fact => fact.Status == status);
 
@@ -94,9 +118,16 @@ public sealed class MeaningVerification
     private static KeyFact FigureFact(NumberMention mention, KeyFactReason reason) =>
         KeyFact.Create(KeyFactType.Figure, mention.Text, null, new KeyFactVerdict(KeyFactStatus.Review, reason));
 
+    /// <summary>
+    /// Los avisos van primero y nunca se descartan (están acotados por el tamaño del texto y la respuesta del modelo);
+    /// solo se limita cuántos datos conservados se guardan.
+    /// </summary>
     private static IReadOnlyList<KeyFact> Bounded(IEnumerable<KeyFact> facts, int maxKeyFacts)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(maxKeyFacts);
-        return facts.OrderByDescending(fact => fact.Status).Take(maxKeyFacts).ToList().AsReadOnly();
+        var ordered = facts.OrderByDescending(fact => fact.Status).ToList();
+        var warnings = ordered.Where(fact => fact.Status != KeyFactStatus.Conserved);
+        var conserved = ordered.Where(fact => fact.Status == KeyFactStatus.Conserved).Take(maxKeyFacts);
+        return warnings.Concat(conserved).ToList().AsReadOnly();
     }
 }

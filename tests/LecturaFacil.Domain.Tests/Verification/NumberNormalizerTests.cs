@@ -91,9 +91,37 @@ public sealed class NumberNormalizerTests
     public void Find_WhenTheTextHasADate_ReturnsOneDateWhateverTheFormat(string text) =>
         NumberNormalizer.Values(text).ShouldBe([NumericValue.Of(new DateOnly(2026, 12, 15))]);
 
+    [Theory]
+    [InlineData("15.12.2026")]
+    [InlineData("15/12/26")]
+    public void Find_ReadsDatesWithDotsOrTwoDigitYears(string text) =>
+        NumberNormalizer.Values(text).ShouldBe([NumericValue.Of(new DateOnly(2026, 12, 15))]);
+
     [Fact]
-    public void Find_WhenADateHasNoYear_ReturnsOnlyTheDay() =>
-        NumberNormalizer.Values("hasta el 15 de diciembre").ShouldBe([NumericValue.Of(15)]);
+    public void Find_WhenADateHasNoYear_KeepsTheDayAndTheMonth()
+    {
+        NumberNormalizer.Values("hasta el 15 de diciembre").ShouldBe([NumericValue.OfMonthDay(12, 15)]);
+        NumberNormalizer.Values("hasta el 15 de noviembre").ShouldNotBe(NumberNormalizer.Values("hasta el 15 de diciembre"));
+    }
+
+    [Theory]
+    [InlineData("15 000 euros", 15000)]
+    [InlineData("15 mil euros", 15000)]
+    [InlineData("1,5 millones de euros", 1500000)]
+    [InlineData("el 40 por 100", 40)]
+    [InlineData("el 40 por cien", 40)]
+    [InlineData("una multa por cien euros", 100)]
+    [InlineData("en el plazo de un mes", 1)]
+    [InlineData("una semana", 1)]
+    public void Find_ReadsOtherCommonFormats(string text, decimal expected) =>
+        SingleNumber(text).ShouldBe(expected);
+
+    [Fact]
+    public void Find_WhenYJoinsTwoNumbersThatAreNotTensAndUnits_ReadsTwoFigures()
+    {
+        NumberNormalizer.Values("entre diez y quince días").ShouldBe([NumericValue.Of(10), NumericValue.Of(15)], ignoreOrder: true);
+        NumberNormalizer.Values("treinta y uno").ShouldBe([NumericValue.Of(31)]);
+    }
 
     [Fact]
     public void Find_WhenTheNumericDateIsImpossible_ReadsItsParts() =>

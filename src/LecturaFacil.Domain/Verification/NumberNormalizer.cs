@@ -7,12 +7,16 @@ namespace LecturaFacil.Domain.Verification;
 
 /// <summary>
 /// Encuentra las cifras de un texto en castellano y las normaliza para poder compararlas: "quince" → 15,
-/// "250 €" → 250, "1.500" → 1500, "2,5" → 2.5, "40 %" → 40, y "15 de diciembre de 2026" y "15/12/2026" → la misma fecha.
-/// Los números con letras se leen hasta los millones; "un", "una" y "uno" sueltos no cuentan porque casi siempre son artículos.
+/// "250 €" → 250, "1.500" y "1 500" → 1500, "15 mil" → 15000, "2,5" → 2.5, "40 %" y "40 por 100" → 40, y
+/// "15 de diciembre de 2026", "15/12/2026" y "15.12.26" → la misma fecha ("15 de diciembre", sin año, guarda el día y el mes).
+/// Los números con letras se leen hasta los millones. "Un" y "una" sueltos solo cuentan delante de una unidad de tiempo
+/// ("un mes"); si no, casi siempre son artículos. La "y" solo une decenas y unidades: "diez y quince" son dos cifras.
 /// </summary>
 public static partial class NumberNormalizer
 {
     private const string ForPrefix = "por ";
+    private const int TwoDigitYearBase = 2000;
+    private const int LeapYear = 2000;
     private const int ThousandValue = 1_000;
     private const int MillionValue = 1_000_000;
 
@@ -110,9 +114,10 @@ public static partial class NumberNormalizer
         ArgumentNullException.ThrowIfNull(text);
 
         var mentions = new List<NumberMention>();
-        AddDates(text, mentions);
-        AddNumbers(text, DigitsPattern(), ParseDigits, mentions);
-        AddNumbers(text, WordsPattern(), ParseWords, mentions);
+        var taken = new bool[text.Length];
+        AddDates(text, mentions, taken);
+        AddDigits(text, mentions, taken);
+        AddWords(text, mentions, taken);
         return mentions.OrderBy(mention => mention.Start).ToList().AsReadOnly();
     }
 
@@ -120,13 +125,13 @@ public static partial class NumberNormalizer
     public static IReadOnlySet<NumericValue> Values(string? text) =>
         string.IsNullOrWhiteSpace(text) ? new HashSet<NumericValue>() : Find(text).Select(mention => mention.Value).ToHashSet();
 
-    private static void AddDates(string text, List<NumberMention> mentions)
+    private static void AddDates(string text, List<NumberMention> mentions, bool[] taken)
     {
         foreach (Match match in NumericDatePattern().Matches(text))
         {
-            if (TryDate(match.Groups["year"].Value, match.Groups["month"].Value, match.Groups["day"].Value) is { } date)
+            if (TryDate(FullYear(match.Groups["year"].Value), match.Groups["month"].Value, match.Groups["day"].Value) is { } date)
             {
-                mentions.Add(new NumberMention(NumericValue.Of(date), match.Value, match.Index));
+                Add(mentions, taken, new NumberMention(NumericValue.Of(date), match.Value, match.Index));
             }
         }
 
@@ -134,28 +139,101 @@ public static partial class NumberNormalizer
         {
             var month = Months[match.Groups["month"].Value];
             var day = ParseDay(match.Groups["day"].Value);
-            if (!Overlaps(mentions, match.Index, match.Length)
-                && day is not null
-                && TryDate(match.Groups["year"].Value, month.ToString(CultureInfo.InvariantCulture), day) is { } date)
-            {
-                mentions.Add(new NumberMention(NumericValue.Of(date), match.Value, match.Index));
-            }
-        }
-    }
-
-    private static void AddNumbers(string text, Regex pattern, Func<string, decimal?> parse, List<NumberMention> mentions)
-    {
-        foreach (Match match in pattern.Matches(text))
-        {
-            var number = match.Groups["number"];
-            if (Overlaps(mentions, match.Index, match.Length) || IsPercentageHundred(text, number) || parse(number.Value) is not { } value)
+            if (Overlaps(taken, match.Index, match.Length) || day is null)
             {
                 continue;
             }
 
-            mentions.Add(new NumberMention(NumericValue.Of(value), match.Value, match.Index));
+            var year = match.Groups["year"];
+            var monthText = month.ToString(CultureInfo.InvariantCulture);
+            var value = year.Success
+                ? TryDate(year.Value, monthText, day) is { } date ? NumericValue.Of(date) : (NumericValue?)null
+                : TryDate(LeapYear.ToString(CultureInfo.InvariantCulture), monthText, day) is not null
+                    ? NumericValue.OfMonthDay(month, int.Parse(day, CultureInfo.InvariantCulture))
+                    : null;
+            if (value is { } found)
+            {
+                Add(mentions, taken, new NumberMention(found, match.Value, match.Index));
+            }
         }
     }
+
+    private static void AddDigits(string text, List<NumberMention> mentions, bool[] taken)
+    {
+        foreach (Match match in DigitsPattern().Matches(text))
+        {
+            if (Overlaps(taken, match.Index, match.Length) || ParseDigits(match.Groups["number"].Value) is not { } value)
+            {
+                continue;
+            }
+
+            var scale = match.Groups["scale"];
+            var multiplier = scale.Success ? NumberWords[scale.Value] : 1;
+            Add(mentions, taken, new NumberMention(NumericValue.Of(value * multiplier), match.Value, match.Index));
+        }
+    }
+
+    private static void AddWords(string text, List<NumberMention> mentions, bool[] taken)
+    {
+        foreach (Match match in WordsPattern().Matches(text))
+        {
+            var number = match.Groups["number"];
+            if (Overlaps(taken, match.Index, match.Length) || IsPercentageHundred(text, number))
+            {
+                continue;
+            }
+
+            var segments = Segments(number.Value);
+            for (var i = 0; i < segments.Count; i++)
+            {
+                var (start, length) = segments[i];
+                var isLast = i == segments.Count - 1;
+                var segmentText = number.Value.Substring(start, length);
+                var mentionLength = isLast ? match.Index + match.Length - (number.Index + start) : length;
+                var value = ParseWords(segmentText)
+                    ?? (IsArticleBeforeTimeUnit(segmentText, text, number.Index + start + length) ? 1 : null);
+                if (value is { } found)
+                {
+                    Add(mentions, taken, new NumberMention(NumericValue.Of(found), text.Substring(number.Index + start, mentionLength), number.Index + start));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Parte una secuencia de palabras numéricas por cada "y" que no une una decena con una unidad: "treinta y uno" es una
+    /// cifra, "diez y quince" son dos. Devuelve el inicio y la longitud de cada parte dentro de la secuencia.
+    /// </summary>
+    private static List<(int Start, int Length)> Segments(string words)
+    {
+        var tokens = WordTokenPattern().Matches(words).ToList();
+        var segments = new List<(int Start, int Length)>();
+        var start = tokens[0].Index;
+        for (var i = 1; i < tokens.Count - 1; i++)
+        {
+            if (!tokens[i].Value.Equals("y", StringComparison.OrdinalIgnoreCase) || JoinsTensAndUnits(tokens[i - 1].Value, tokens[i + 1].Value))
+            {
+                continue;
+            }
+
+            var previous = tokens[i - 1];
+            segments.Add((start, previous.Index + previous.Length - start));
+            start = tokens[i + 1].Index;
+        }
+
+        var last = tokens[^1];
+        segments.Add((start, last.Index + last.Length - start));
+        return segments;
+    }
+
+    private static bool JoinsTensAndUnits(string tens, string units) =>
+        NumberWords.GetValueOrDefault(tens) is >= 30 and <= 90 && NumberWords.GetValueOrDefault(units) is >= 1 and <= 9;
+
+    /// <summary>"un mes", "una semana": el artículo vale 1 cuando va delante de una unidad de tiempo.</summary>
+    private static bool IsArticleBeforeTimeUnit(string words, string text, int end) =>
+        NumberWords.GetValueOrDefault(words) == 1
+            && words.Length <= 3
+            && TimeUnitAfterPattern().IsMatch(text, end);
 
     private static string? ParseDay(string day) =>
         int.TryParse(day, NumberStyles.None, CultureInfo.InvariantCulture, out _)
@@ -167,13 +245,22 @@ public static partial class NumberNormalizer
             ? date
             : null;
 
-    private static bool Overlaps(List<NumberMention> mentions, int start, int length) =>
-        mentions.Exists(mention => start < mention.Start + mention.Length && mention.Start < start + length);
+    /// <summary>Marca las posiciones ocupadas: comprobar un solape cuesta lo que mide la coincidencia, no el número de cifras.</summary>
+    private static bool Overlaps(bool[] taken, int start, int length) => Array.IndexOf(taken, true, start, length) >= 0;
 
-    /// <summary>"1.500,75" → 1500.75: el punto separa los miles y la coma, los decimales.</summary>
+    private static void Add(List<NumberMention> mentions, bool[] taken, NumberMention mention)
+    {
+        Array.Fill(taken, true, mention.Start, mention.Length);
+        mentions.Add(mention);
+    }
+
+    private static string FullYear(string year) =>
+        year.Length == 2 ? (TwoDigitYearBase + int.Parse(year, CultureInfo.InvariantCulture)).ToString(CultureInfo.InvariantCulture) : year;
+
+    /// <summary>"1.500,75" → 1500.75: el punto (o un espacio) separa los miles y la coma, los decimales.</summary>
     private static decimal? ParseDigits(string digits) =>
         decimal.TryParse(
-            digits.Replace(".", string.Empty, StringComparison.Ordinal).Replace(',', '.'),
+            ThousandsSeparatorPattern().Replace(digits, string.Empty).Replace(',', '.'),
             NumberStyles.AllowDecimalPoint,
             CultureInfo.InvariantCulture,
             out var value)
@@ -219,13 +306,13 @@ public static partial class NumberNormalizer
         return total + current;
     }
 
-    /// <summary>El "ciento" de "cuarenta por ciento" es la unidad del porcentaje, no el número 100.</summary>
+    /// <summary>El "ciento" de "tanto por ciento" es la unidad del porcentaje, no el número 100. "Por cien euros" sí es 100.</summary>
     private static bool IsPercentageHundred(string text, Group number) =>
-        number.Value.StartsWith("cien", StringComparison.OrdinalIgnoreCase)
+        number.Value.StartsWith("ciento", StringComparison.OrdinalIgnoreCase)
             && number.Index >= ForPrefix.Length
             && text.AsSpan(number.Index - ForPrefix.Length, ForPrefix.Length).Equals(ForPrefix, StringComparison.OrdinalIgnoreCase);
 
-    private const string Unit = @"(?:\s*(?:%|€)|\s+(?:euros?|por\s+ciento)(?![\p{L}\p{N}]))?";
+    private const string Unit = @"(?:\s*(?:%|€)|\s+(?:euros?|por\s+cien(?:to)?|por\s+100)(?![\p{L}\p{N}]))?";
 
     private const string NumberWord =
         "(?:cero|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|dieciséis|dieciseis|"
@@ -244,20 +331,32 @@ public static partial class NumberNormalizer
     private static partial Regex WordsPattern();
 
     [GeneratedRegex(
-        @"(?<![\p{N}.,])(?<number>\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:,\d+)?)(?![\p{N}])" + Unit,
+        @"(?<![\p{N}.,])(?<number>\d{1,3}(?:[. \u00A0]\d{3})+(?:,\d+)?|\d+(?:,\d+)?)(?![\p{N}])(?:\s+(?<scale>mil|millones|millón)(?![\p{L}\p{N}]))?" + Unit,
         GuidelineRegex.Options,
         GuidelineRegex.TimeoutMilliseconds)]
     private static partial Regex DigitsPattern();
 
     [GeneratedRegex(
-        @"(?<![\p{N}/-])(?<day>\d{1,2})(?<sep>[/-])(?<month>\d{1,2})\k<sep>(?<year>\d{4})(?![\p{N}])",
+        @"(?<![\p{N}/.-])(?<day>\d{1,2})(?<sep>[/.-])(?<month>\d{1,2})\k<sep>(?<year>\d{4}|\d{2})(?![\p{N}])",
         GuidelineRegex.Options,
         GuidelineRegex.TimeoutMilliseconds)]
     private static partial Regex NumericDatePattern();
 
     [GeneratedRegex(
-        @"(?<![\p{L}\p{N}])(?<day>\d{1,2}|\p{L}+)\s+de\s+" + MonthName + @"\s+del?\s+(?<year>\d{4})(?![\p{N}])",
+        @"(?<![\p{L}\p{N}])(?<day>\d{1,2}|\p{L}+)\s+de\s+" + MonthName + @"(?![\p{L}])(?:\s+del?\s+(?<year>\d{4})(?![\p{N}]))?",
         GuidelineRegex.IgnoreCase,
         GuidelineRegex.TimeoutMilliseconds)]
     private static partial Regex TextualDatePattern();
+
+    [GeneratedRegex(@"\S+", GuidelineRegex.Options, GuidelineRegex.TimeoutMilliseconds)]
+    private static partial Regex WordTokenPattern();
+
+    [GeneratedRegex(@"[. \u00A0](?=\d{3})", GuidelineRegex.Options, GuidelineRegex.TimeoutMilliseconds)]
+    private static partial Regex ThousandsSeparatorPattern();
+
+    [GeneratedRegex(
+        @"\G\s+(?:mes|año|día|semana|hora|vez|trimestre|semestre)(?![\p{L}])",
+        GuidelineRegex.IgnoreCase,
+        GuidelineRegex.TimeoutMilliseconds)]
+    private static partial Regex TimeUnitAfterPattern();
 }

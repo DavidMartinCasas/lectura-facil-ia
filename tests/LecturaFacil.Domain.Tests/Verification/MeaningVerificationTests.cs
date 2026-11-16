@@ -18,7 +18,7 @@ public sealed class MeaningVerificationTests
     {
         var verification = Combine(
             Fact(KeyFactType.Amount, "máximo de 250 €", "Como mucho, 250 euros al mes", KeyFactStatus.Conserved),
-            Fact(KeyFactType.Deadline, "quince días hábiles", "Tiene 15 días para pedirla", KeyFactStatus.Conserved),
+            Fact(KeyFactType.Deadline, "quince días", "Tiene 15 días para pedirla", KeyFactStatus.Conserved),
             Fact(KeyFactType.Amount, "40 % de la renta mensual", null, KeyFactStatus.Omitted));
 
         verification.Status.ShouldBe(VerificationStatus.Verified);
@@ -46,14 +46,14 @@ public sealed class MeaningVerificationTests
     {
         var verification = Combine(
             Fact(KeyFactType.Amount, "máximo de 250 €", "Como mucho, 250 euros al mes", KeyFactStatus.Conserved),
-            Fact(KeyFactType.Deadline, "quince días hábiles", "Tiene 15 días para pedirla", KeyFactStatus.Conserved));
+            Fact(KeyFactType.Deadline, "quince días", "Tiene 15 días para pedirla", KeyFactStatus.Conserved));
 
         var added = verification.KeyFacts[0];
         added.Type.ShouldBe(KeyFactType.Figure);
         added.OriginalValue.ShouldBe("40 %");
         added.AdaptedValue.ShouldBeNull();
         added.Status.ShouldBe(KeyFactStatus.Review);
-        added.ReasonMessage.ShouldBe("No aparece en la adaptación");
+        added.ReasonMessage.ShouldBe("Esta cifra del original no está en la adaptación");
         verification.KeyFacts.Count.ShouldBe(3);
     }
 
@@ -74,17 +74,49 @@ public sealed class MeaningVerificationTests
     }
 
     [Fact]
-    public void Combine_WhenThereAreMoreFactsThanAllowed_KeepsTheWarningsFirst()
+    public void Combine_WhenThereAreMoreFactsThanAllowed_KeepsEveryWarningAndLimitsTheConservedOnes()
     {
         var facts = Enumerable.Range(0, 5)
             .Select(_ => Fact(KeyFactType.Requirement, "no ser titular de otra vivienda", "No tiene otra casa", KeyFactStatus.Conserved))
             .Append(Fact(KeyFactType.Requirement, "estar empadronado", null, KeyFactStatus.Omitted))
+            .Append(Fact(KeyFactType.Requirement, "ser mayor de edad", null, KeyFactStatus.Omitted))
             .ToArray();
 
-        var verification = MeaningVerification.Combine("Texto original.", "Texto adaptado.", facts, Verifier, maxKeyFacts: 3);
+        var verification = MeaningVerification.Combine(
+            "No ser titular de otra vivienda, estar empadronado y ser mayor de edad.", "No tiene otra casa.", facts, Verifier, maxKeyFacts: 1);
 
-        verification.KeyFacts.Count.ShouldBe(3);
-        verification.KeyFacts[0].Status.ShouldBe(KeyFactStatus.Omitted);
+        verification.KeyFacts.Select(fact => fact.Status).ShouldBe([KeyFactStatus.Omitted, KeyFactStatus.Omitted, KeyFactStatus.Conserved]);
+    }
+
+    [Fact]
+    public void Combine_WhenTheVerifierQuotesSomethingThatIsNotInTheOriginal_AsksForReview()
+    {
+        var verification = Combine(
+            Fact(KeyFactType.Requirement, "tener nacionalidad española", "No tiene otra casa", KeyFactStatus.Conserved));
+
+        verification.KeyFacts.Single(fact => fact.Type == KeyFactType.Requirement).Status.ShouldBe(KeyFactStatus.Review);
+    }
+
+    [Fact]
+    public void Unreadable_AsksToReviewTheWholeDocument()
+    {
+        var verification = MeaningVerification.Unreadable();
+
+        verification.Status.ShouldBe(VerificationStatus.NotVerified);
+        var fact = verification.KeyFacts.ShouldHaveSingleItem();
+        fact.OriginalValue.ShouldBe(MeaningVerification.WholeDocument);
+        fact.Reason.ShouldBe(KeyFactReason.NotVerified);
+    }
+
+    [Fact]
+    public void KeyFact_Truncate_DoesNotSplitASurrogatePair()
+    {
+        var text = new string('x', KeyFact.ValueMaxLength - 1) + "😀";
+
+        var truncated = KeyFact.Truncate(text);
+
+        truncated.Length.ShouldBe(KeyFact.ValueMaxLength - 1);
+        char.IsHighSurrogate(truncated[^1]).ShouldBeFalse();
     }
 
     [Fact]
@@ -108,7 +140,7 @@ public sealed class MeaningVerificationTests
     {
         var verification = Combine(
             Fact(KeyFactType.Amount, "máximo de 250 €", "Como mucho, 250 euros al mes", KeyFactStatus.Conserved),
-            Fact(KeyFactType.Deadline, "quince días hábiles", "Tiene 15 días para pedirla", KeyFactStatus.Conserved),
+            Fact(KeyFactType.Deadline, "quince días", "Tiene 15 días para pedirla", KeyFactStatus.Conserved),
             Fact(KeyFactType.Amount, "40 % de la renta mensual", null, KeyFactStatus.Omitted));
 
         verification.ConservedCount.ShouldBe(2);

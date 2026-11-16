@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+using System.Text.RegularExpressions;
 using LecturaFacil.Application.Common;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Verification;
@@ -22,16 +23,24 @@ public sealed class VerifyMeaning(IMeaningVerifier verifier, IOptions<LimitsOpti
         ArgumentNullException.ThrowIfNull(adaptation);
 
         var adaptedText = TextToVerify(adaptation);
-        if (originalText.Length + adaptedText.Length > _limits.MaxCharactersPerVerification)
+        try
         {
-            return MeaningVerification.NotVerified(originalText, _limits.MaxKeyFactsPerVersion);
-        }
+            if (originalText.Length + adaptedText.Length > _limits.MaxCharactersPerVerification)
+            {
+                return MeaningVerification.NotVerified(originalText, _limits.MaxKeyFactsPerVersion);
+            }
 
-        var assessment = await verifier.AssessAsync(originalText, adaptedText, cancellationToken);
-        return assessment.IsSuccess
-            ? MeaningVerification.Combine(
-                originalText, adaptedText, assessment.Value.KeyFacts, assessment.Value.Metadata, _limits.MaxKeyFactsPerVersion)
-            : MeaningVerification.NotVerified(originalText, _limits.MaxKeyFactsPerVersion);
+            var assessment = await verifier.AssessAsync(originalText, adaptedText, cancellationToken);
+            return assessment.IsSuccess
+                ? MeaningVerification.Combine(
+                    originalText, adaptedText, assessment.Value.KeyFacts, assessment.Value.Metadata, _limits.MaxKeyFactsPerVersion)
+                : MeaningVerification.NotVerified(originalText, _limits.MaxKeyFactsPerVersion);
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            // Un texto anómalo no debe tirar el borrador: se pide revisar todo el documento.
+            return MeaningVerification.Unreadable();
+        }
     }
 
     /// <summary>Todo lo que leerá la persona: el texto adaptado y, después, el glosario.</summary>

@@ -48,7 +48,7 @@ public sealed class LlmMeaningVerifier(ILlmProvider llm, IPromptLoader prompts, 
     private static string? Truncate(string? text)
     {
         var trimmed = text?.Trim();
-        return trimmed is { Length: > KeyFact.ValueMaxLength } ? trimmed[..KeyFact.ValueMaxLength] : trimmed;
+        return trimmed is null ? null : KeyFact.Truncate(trimmed);
     }
 
     private static KeyFactType ToType(VerificationReplyType type) => type switch

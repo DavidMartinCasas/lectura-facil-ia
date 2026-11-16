@@ -22,9 +22,15 @@ public sealed record LlmRequest
     private const string AdaptationTagPrefix = "adaptacion-";
     private const int GuidLength = 32;
     private const int DelimiterPunctuationLength = 7; // "<" ">" "\n" + "\n" "</" ">"
+    private const int ComparisonSeparatorLength = 2; // "\n\n" entre los dos textos
 
     /// <summary>Caracteres que añaden los delimitadores de <see cref="ForDocument"/> alrededor del documento.</summary>
     public static readonly int DocumentEnvelopeLength = (2 * (DocumentTagPrefix.Length + GuidLength)) + DelimiterPunctuationLength;
+
+    /// <summary>Caracteres que añaden los delimitadores de <see cref="ForComparison"/> alrededor de los dos textos.</summary>
+    public static readonly int ComparisonEnvelopeLength =
+        (2 * (OriginalTagPrefix.Length + GuidLength)) + (2 * (AdaptationTagPrefix.Length + GuidLength))
+        + (2 * DelimiterPunctuationLength) + ComparisonSeparatorLength;
 
     public LlmRequest(LlmRole role, string systemPrompt, string userMessage, int maxOutputTokens)
     {

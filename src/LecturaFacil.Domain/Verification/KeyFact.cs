@@ -50,5 +50,18 @@ public sealed record KeyFact
         return new KeyFact(normalizedType, originalValue.Trim(), adapted, KeyFactVerdict.Create(verdict.Status, verdict.Reason));
     }
 
+    /// <summary>Corta un valor a <see cref="ValueMaxLength"/> sin partir un par sustituto UTF-16 (un emoji, por ejemplo).</summary>
+    public static string Truncate(string value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.Length <= ValueMaxLength)
+        {
+            return value;
+        }
+
+        var length = char.IsHighSurrogate(value[ValueMaxLength - 1]) ? ValueMaxLength - 1 : ValueMaxLength;
+        return value[..length];
+    }
+
     internal KeyFact WithVerdict(KeyFactVerdict verdict) => Create(Type, OriginalValue, AdaptedValue, verdict);
 }

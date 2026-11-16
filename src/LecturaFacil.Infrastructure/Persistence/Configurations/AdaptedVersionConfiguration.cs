@@ -137,7 +137,7 @@ internal static class AdaptedVersionConfiguration
 
         public KeyFact? ToKeyFact()
         {
-            if (string.IsNullOrWhiteSpace(OriginalValue) || OriginalValue.Length > KeyFact.ValueMaxLength || AdaptedValue?.Length > KeyFact.ValueMaxLength)
+            if (string.IsNullOrWhiteSpace(OriginalValue))
             {
                 return null;
             }
@@ -145,7 +145,7 @@ internal static class AdaptedVersionConfiguration
             var type = Enum.TryParse<KeyFactType>(Type, out var parsedType) ? parsedType : KeyFactType.Other;
             var status = Enum.TryParse<KeyFactStatus>(Status, out var parsedStatus) ? parsedStatus : KeyFactStatus.Review;
             var reason = Enum.TryParse<KeyFactReason>(Reason, out var parsedReason) ? parsedReason : KeyFactReason.NeedsReview;
-            return KeyFact.Create(type, OriginalValue, AdaptedValue, KeyFactVerdict.Create(status, reason));
+            return KeyFact.Create(type, KeyFact.Truncate(OriginalValue), AdaptedValue is null ? null : KeyFact.Truncate(AdaptedValue), KeyFactVerdict.Create(status, reason));
         }
     }
 

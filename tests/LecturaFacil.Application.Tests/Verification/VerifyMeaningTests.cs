@@ -116,7 +116,8 @@ public sealed class VerifyMeaningTests
         percentage.Reason.ShouldBe(KeyFactReason.ValueChanged);
 
         verification.KeyFacts.Single(fact => fact.OriginalValue == "máximo de 250 €").Status.ShouldBe(KeyFactStatus.Conserved);
-        verification.KeyFacts.Single(fact => fact.OriginalValue == "quince días hábiles").Status.ShouldBe(KeyFactStatus.Conserved);
+        verification.KeyFacts.Single(fact => fact.OriginalValue.StartsWith("quince días hábiles", StringComparison.Ordinal))
+            .Status.ShouldBe(KeyFactStatus.Conserved);
         verification.Summary.ShouldBe("6 conservados, 2 a revisar, 1 omitido");
     }
 
@@ -202,14 +203,15 @@ public sealed class VerifyMeaningTests
     }
 
     [Fact]
-    public async Task Verify_KeepsAtMostTheConfiguredNumberOfKeyFacts()
+    public async Task Verify_NeverDropsAWarningEvenAboveTheLimitOfKeyFacts()
     {
         _limits.MaxKeyFactsPerVersion = 10;
         var original = string.Join(' ', Enumerable.Range(1, 30).Select(day => $"Plazo {day}."));
 
         var verification = await Verify("verify/vacio", original, "Sin cifras.");
 
-        verification.KeyFacts.Count.ShouldBe(10);
+        verification.KeyFacts.Count.ShouldBe(30);
+        verification.KeyFacts.ShouldAllBe(fact => fact.Status == KeyFactStatus.Review);
     }
 
     private async Task<MeaningVerification> Verify(string fixture, string original, string adaptation) =>

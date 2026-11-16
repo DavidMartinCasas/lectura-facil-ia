@@ -74,7 +74,7 @@ public sealed class LimitsOptions
     [Range(1_000, 400_000, ErrorMessage = "Limits:MaxCharactersPerVerification debe estar entre {1} y {2}.")]
     public int MaxCharactersPerVerification { get; set; } = 50_000;
 
-    /// <summary>Datos clave que se guardan como mucho por versión. Los avisos se guardan antes que los datos conservados.</summary>
+    /// <summary>Datos clave conservados que se guardan como mucho por versión. Los avisos se guardan siempre todos.</summary>
     [Range(10, 1_000, ErrorMessage = "Limits:MaxKeyFactsPerVersion debe estar entre {1} y {2}.")]
     public int MaxKeyFactsPerVersion { get; set; } = 100;
 
