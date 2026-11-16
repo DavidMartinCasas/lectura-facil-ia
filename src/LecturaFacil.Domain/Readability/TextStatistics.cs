@@ -5,10 +5,14 @@ namespace LecturaFacil.Domain.Readability;
 
 /// <summary>Frases, palabras y sílabas de un texto, en una sola pasada (coste lineal con su tamaño).</summary>
 /// <remarks>
-/// <para>Palabra: secuencia de letras. Los números no cuentan como palabras y un guion separa dos palabras.</para>
-/// <para>Fin de frase: punto, interrogación, exclamación, puntos suspensivos o salto de línea (los títulos y las listas de lectura
-/// fácil suelen ir sin punto). Un punto entre dos cifras ("3.5") no cierra la frase. Solo cuentan las frases con alguna palabra.</para>
-/// <para>Limitación: las abreviaturas con punto ("Sr.", "art.") cierran frase y hacen el texto algo más fácil de lo que es.</para>
+/// <para>Palabra: secuencia de letras. Los números, "º" y "ª" no cuentan como palabras y un guion separa dos palabras.</para>
+/// <para>Fin de frase: interrogación o exclamación; punto, puntos suspensivos o salto de línea salvo que el texto siga
+/// en minúscula o con una cifra (abreviaturas como "art. 3", líneas cortadas por el PDF). Tampoco cierra frase un punto
+/// pegado a lo que sigue ("3.5", "1.500", "1.º", "www.sede.es", "D.N.I"). Un salto de línea seguido de mayúscula o de
+/// un guion de lista sí la cierra: los títulos y las listas de lectura fácil suelen ir sin punto. Solo cuentan las frases
+/// con alguna palabra.</para>
+/// <para>Limitaciones: una abreviatura seguida de mayúscula ("Sr. García") cierra frase; los números y las siglas
+/// ("DNI" = 1 sílaba) hacen el texto algo más fácil de lo que es. El resultado es aproximado.</para>
 /// </remarks>
 public readonly record struct TextStatistics(int Sentences, int Words, int Syllables)
 {
@@ -27,7 +31,7 @@ public readonly record struct TextStatistics(int Sentences, int Words, int Sylla
 
         while (index < normalized.Length)
         {
-            if (char.IsLetter(normalized[index]))
+            if (IsWordLetter(normalized[index]))
             {
                 var length = WordLength(normalized[index..]);
                 syllables += SpanishSyllableCounter.Count(normalized.Slice(index, length));
@@ -37,12 +41,22 @@ public readonly record struct TextStatistics(int Sentences, int Words, int Sylla
                 continue;
             }
 
-            if (sentenceHasWords && EndsSentence(normalized, index))
+            if (!sentenceHasWords || !IsTerminator(normalized[index]))
             {
-                sentences++;
-                sentenceHasWords = false;
+                index++;
+                continue;
             }
 
+            // Cada espacio o punto se mira una sola vez: si la frase sigue, se salta hasta lo siguiente ("euros... antes").
+            var next = SkipBlanksAndPoints(normalized, index + 1);
+            if (ContinuesSentence(normalized, index, next))
+            {
+                index = Math.Max(next, index + 1);
+                continue;
+            }
+
+            sentences++;
+            sentenceHasWords = false;
             index++;
         }
 
@@ -54,10 +68,12 @@ public readonly record struct TextStatistics(int Sentences, int Words, int Sylla
         return new TextStatistics(sentences, words, syllables);
     }
 
+    private static bool IsWordLetter(char character) => char.IsLetter(character) && character is not ('º' or 'ª');
+
     private static int WordLength(ReadOnlySpan<char> text)
     {
         var length = 0;
-        while (length < text.Length && (char.IsLetter(text[length]) || IsCombiningMark(text[length])))
+        while (length < text.Length && (IsWordLetter(text[length]) || IsCombiningMark(text[length])))
         {
             length++;
         }
@@ -68,13 +84,33 @@ public readonly record struct TextStatistics(int Sentences, int Words, int Sylla
     private static bool IsCombiningMark(char character) =>
         char.GetUnicodeCategory(character) == UnicodeCategory.NonSpacingMark;
 
-    private static bool EndsSentence(ReadOnlySpan<char> text, int index) => text[index] switch
-    {
-        '?' or '!' or '…' or '\n' or '\r' => true,
-        '.' => !IsDecimalPoint(text, index),
-        _ => false,
-    };
+    private static bool IsTerminator(char character) => character is '.' or '?' or '!' or '…' or '\n' or '\r';
 
-    private static bool IsDecimalPoint(ReadOnlySpan<char> text, int index) =>
-        index > 0 && index + 1 < text.Length && char.IsDigit(text[index - 1]) && char.IsDigit(text[index + 1]);
+    private static int SkipBlanksAndPoints(ReadOnlySpan<char> text, int index)
+    {
+        while (index < text.Length && (char.IsWhiteSpace(text[index]) || text[index] is '.' or '…'))
+        {
+            index++;
+        }
+
+        return index;
+    }
+
+    private static bool ContinuesSentence(ReadOnlySpan<char> text, int terminator, int next)
+    {
+        if (text[terminator] is '?' or '!' || next >= text.Length)
+        {
+            return false;
+        }
+
+        var glued = next == terminator + 1;
+        if (glued && text[terminator] == '.' && IsGluedToPoint(text[next]))
+        {
+            return true;
+        }
+
+        return char.IsLower(text[next]) || char.IsDigit(text[next]);
+    }
+
+    private static bool IsGluedToPoint(char character) => char.IsLetterOrDigit(character);
 }

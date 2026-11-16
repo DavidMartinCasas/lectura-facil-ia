@@ -32,11 +32,33 @@ public sealed class TextStatisticsTests
     }
 
     [Fact]
-    public void From_WhenTextHasNumbers_DoesNotCountThemAsWordsNorTheirDecimalPointAsASentenceEnd()
+    public void From_WhenTextHasNumbersAndAnEllipsisFollowedByLowercase_CountsOneSentenceWithoutNumbers()
     {
         var statistics = TextStatistics.From("Pague 3.5 euros... antes del 10/12/2026.");
 
-        statistics.ShouldBe(new TextStatistics(Sentences: 2, Words: 4, Syllables: 7));
+        statistics.ShouldBe(new TextStatistics(Sentences: 1, Words: 4, Syllables: 7));
+    }
+
+    [Theory]
+    [InlineData("Presente el D.N.I. en la sede.")]
+    [InlineData("Consulte www.sede.gob.es para más información.")]
+    [InlineData("Según el art. 3 de la orden, puede pedirla.")]
+    [InlineData("Escriba a registro@ayto.es si tiene dudas.")]
+    [InlineData("La ayuda es de 1.500,50 euros y se paga a las 10.30 horas.")]
+    [InlineData("La persona solicitante deberá\npresentar la documentación.")]
+    [InlineData("Puede pedirla, etc. y entregarla después.")]
+    public void From_WhenAPointOrLineBreakDoesNotEndTheSentence_CountsOneSentence(string text)
+    {
+        TextStatistics.From(text).Sentences.ShouldBe(1);
+    }
+
+    [Fact]
+    public void From_WhenTextHasOrdinalIndicators_DoesNotCountThemAsWords()
+    {
+        var statistics = TextStatistics.From("Requisito 1.º: tener 18 años. La 2.ª fase es en mayo.");
+
+        statistics.Sentences.ShouldBe(2);
+        statistics.Words.ShouldBe(8);
     }
 
     [Fact]
