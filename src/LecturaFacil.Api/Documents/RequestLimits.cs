@@ -38,6 +38,22 @@ internal static class RequestLimits
             });
         });
 
+    /// <summary>
+    /// Límite global de exportaciones por minuto (TODO(US-16): por usuario cuando haya autenticación). Se lee de
+    /// <see cref="LimitsOptions.ExportsPerMinute"/>.
+    /// </summary>
+    public static RateLimiterOptions AddDocumentExportRateLimit(this RateLimiterOptions options) =>
+        options.AddPolicy(DocumentExportEndpoints.ExportRateLimitPolicy, context =>
+        {
+            var limits = context.RequestServices.GetRequiredService<IOptions<LimitsOptions>>().Value;
+            return RateLimitPartition.GetFixedWindowLimiter(DocumentExportEndpoints.ExportRateLimitPolicy, _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = limits.ExportsPerMinute,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            });
+        });
+
     public static IServiceCollection AddRequestLimits(this IServiceCollection services)
     {
         services.AddOptions<KestrelServerOptions>()
