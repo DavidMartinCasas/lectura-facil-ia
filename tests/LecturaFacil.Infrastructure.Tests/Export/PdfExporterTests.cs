@@ -56,6 +56,32 @@ public sealed class PdfExporterTests
     }
 
     [Fact]
+    public void Export_UsesLineSpacingOfAtLeastOneAndAHalfAndLeftAlignment()
+    {
+        var longSentence = string.Join(' ', Enumerable.Repeat("Esta frase es larga para que ocupe varias líneas.", 6));
+        using var pdf = PdfDocument.Open(_exporter.Export(ExportSamples.WithText(longSentence)));
+
+        var words = pdf.GetPage(1).GetWords().ToList();
+        var lines = words
+            .Where(word => word.Letters[0].PointSize == 14 && !ExportSamples.Footer.Contains(word.Text, StringComparison.Ordinal))
+            .GroupBy(word => Math.Round(word.BoundingBox.Bottom, 1))
+            .OrderByDescending(line => line.Key)
+            .Select(line => (Baseline: line.Key, Start: line.Min(word => word.BoundingBox.Left), End: line.Max(word => word.BoundingBox.Right)))
+            .ToList();
+        lines.Count.ShouldBeGreaterThanOrEqualTo(3);
+
+        // Interlineado: entre dos líneas seguidas de la misma frase hay al menos 1,5 veces el tamaño de la letra.
+        for (var index = 1; index < lines.Count; index++)
+        {
+            (lines[index - 1].Baseline - lines[index].Baseline).ShouldBeGreaterThanOrEqualTo(1.5 * 14 - 0.5);
+        }
+
+        // Alineación a la izquierda: todas las líneas empiezan en el margen y no se estiran hasta el derecho.
+        lines.Select(line => Math.Round(line.Start)).Distinct().ShouldHaveSingleItem();
+        lines.Select(line => Math.Round(line.End)).Distinct().Count().ShouldBeGreaterThan(1);
+    }
+
+    [Fact]
     public void Export_DeclaresTitleAndSpanishLanguageWithoutInternalMetadata()
     {
         var bytes = _exporter.Export(ExportSamples.Rent());

@@ -27,6 +27,14 @@ export class ExportPanelComponent {
   protected readonly labels = EXPORT_FORMAT_LABELS;
   protected readonly format = signal<ExportFormat>('docx');
 
+  /** El valor del grupo de botones no tiene tipo: solo se acepta un formato de la lista. */
+  protected select(value: unknown): void {
+    const format = EXPORT_FORMATS.find((option) => option === value);
+    if (format) {
+      this.format.set(format);
+    }
+  }
+
   protected submit(): void {
     if (this.canExport() && !this.exporting()) {
       this.exportAdaptation.emit(this.format());

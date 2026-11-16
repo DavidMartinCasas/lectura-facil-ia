@@ -5,7 +5,7 @@
     class="formats"
     [attr.aria-label]="texts.exportFormatLabel"
     [value]="format()"
-    (change)="format.set($event.value)"
+    (change)="select($event.value)"
   >
     @for (option of formats; track option) {
       <mat-radio-button [value]="option">{{ labels[option] }}</mat-radio-button>

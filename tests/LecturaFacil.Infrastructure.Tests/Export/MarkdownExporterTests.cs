@@ -72,6 +72,10 @@ public sealed class MarkdownExporterTests
     [InlineData("Entra en https://ejemplo.com/datos?x=1.", "Entra en `https://ejemplo.com/datos?x=1`.")]
     [InlineData("Entra en www.ejemplo.com hoy", "Entra en `www.ejemplo.com` hoy")]
     [InlineData("Escribe a info@ejemplo.com hoy", "Escribe a `info@ejemplo.com` hoy")]
+    [InlineData("Mira _www.ejemplo.com/?d=1 hoy", @"Mira \_`www.ejemplo.com/?d=1` hoy")]
+    [InlineData("Mira 1https://ejemplo.com hoy", "Mira 1`https://ejemplo.com` hoy")]
+    [InlineData("Mira éhttps://ejemplo.com hoy", "Mira é`https://ejemplo.com` hoy")]
+    [InlineData("Mira *https://ejemplo.com* hoy", @"Mira \*`https://ejemplo.com*` hoy")]
     [InlineData("Ver [aquí](https://ejemplo.com)", @"Ver \[aquí\](`https://ejemplo.com`)")]
     public void Export_PutsAddressesInCodeSoNoViewerTurnsThemIntoLinks(string sentence, string expected) =>
         Export(ExportSamples.WithText(sentence)).ShouldContain(expected);

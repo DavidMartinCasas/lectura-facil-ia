@@ -66,6 +66,8 @@ public sealed class ExportDocument
             return Result<ExportedFile>.Failure(ExportErrors.PendingWarnings);
         }
 
+        // Los exportadores solo usan CPU y no reciben el token: si la petición ya se ha cancelado, no se genera nada.
+        cancellationToken.ThrowIfCancellationRequested();
         var content = exporter.Export(ToExportable(latest));
         return Result<ExportedFile>.Success(
             new ExportedFile(ExportFileName.Create(latest.Title, exporter.FileExtension), exporter.ContentType, content));

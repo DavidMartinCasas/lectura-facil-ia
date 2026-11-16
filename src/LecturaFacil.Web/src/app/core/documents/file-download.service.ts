@@ -16,6 +16,7 @@ export class FileDownloadService {
     this.document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
+    // Se revoca después: algunos navegadores cancelan la descarga si la URL desaparece en el mismo instante.
+    setTimeout(() => URL.revokeObjectURL(url));
   }
 }

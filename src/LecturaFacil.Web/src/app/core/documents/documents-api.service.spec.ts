@@ -112,11 +112,9 @@ describe('DocumentsApiService', () => {
   it('uses a generic name when the server does not send a safe one', async () => {
     const response = firstValueFrom(service.exportDocument('abc', 'md'));
 
-    controller
-      .expectOne('/api/documents/abc/export?format=md')
-      .flush(new Blob(['#']), {
-        headers: { 'Content-Disposition': 'attachment; filename="../x.md"' },
-      });
+    controller.expectOne('/api/documents/abc/export?format=md').flush(new Blob(['#']), {
+      headers: { 'Content-Disposition': 'attachment; filename="../x.md"' },
+    });
 
     expect((await response).fileName).toBe('documento.md');
   });

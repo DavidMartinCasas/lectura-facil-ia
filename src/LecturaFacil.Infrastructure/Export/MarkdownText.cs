@@ -77,8 +77,10 @@ internal static partial class MarkdownText
         return longest;
     }
 
-    // La puntuación final (".", ")"…) se queda fuera de la dirección, como hacen los visores GFM.
-    [GeneratedRegex(@"\b(?:(?:https?|ftp)://|www\.)\S+?(?=[.,;:!?)\]]*(?:\s|$))|[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    // Se reconoce de más antes que de menos: la dirección puede ir pegada a cualquier cosa que no sea una letra ASCII
+    // ("_www.", "1https://", "éhttps://"…), igual que los autoenlaces GFM. La puntuación final (".", ")"…) se queda fuera,
+    // como hacen los visores.
+    [GeneratedRegex(@"(?<![A-Za-z])(?:(?:https?|ftp)://|www\.)\S+?(?=[.,;:!?)\]]*(?:\s|$))|[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex AddressPattern();
 
     [GeneratedRegex(@"^\d{1,9}(?<marker>[.)])", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
