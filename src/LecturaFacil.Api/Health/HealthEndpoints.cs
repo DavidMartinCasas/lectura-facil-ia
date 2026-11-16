@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Api.Observability;
 using LecturaFacil.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -32,11 +33,18 @@ internal static class HealthEndpoints
     private static bool IsLlm(HealthCheckRegistration registration) =>
         registration.Tags.Contains(DependencyInjection.LlmHealthCheckTag);
 
-    /// <summary>Solo el estado global: ni nombres de comprobaciones ni excepciones, que darían pistas internas.</summary>
-    private static Task WriteStatusOnlyAsync(HttpContext context, HealthReport report) =>
-        context.Response.WriteAsJsonAsync(
-            new HealthResponse(report.Status.ToString()),
-            context.RequestAborted);
+    /// <summary>Cabecera con la versión desplegada (US-17). El cuerpo se queda igual: lo comprueban Docker y la CI.</summary>
+    public const string VersionHeader = "X-App-Version";
+
+    /// <summary>
+    /// Solo el estado global y, en una cabecera, la versión desplegada: ni nombres de comprobaciones ni excepciones,
+    /// que darían pistas internas.
+    /// </summary>
+    private static Task WriteStatusOnlyAsync(HttpContext context, HealthReport report)
+    {
+        context.Response.Headers[VersionHeader] = context.RequestServices.GetRequiredService<AppVersion>().Value;
+        return context.Response.WriteAsJsonAsync(new HealthResponse(report.Status.ToString()), context.RequestAborted);
+    }
 
     private sealed record HealthResponse(string Status);
 }

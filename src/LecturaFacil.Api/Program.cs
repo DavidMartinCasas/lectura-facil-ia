@@ -4,6 +4,7 @@ using LecturaFacil.Api.Configuration;
 using LecturaFacil.Api.Documents;
 using LecturaFacil.Api.Health;
 using LecturaFacil.Api.Llm;
+using LecturaFacil.Api.Observability;
 using LecturaFacil.Application;
 using LecturaFacil.Infrastructure;
 using LecturaFacil.Infrastructure.Persistence;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.Options;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+builder.AddObservability();
 
 builder.Services
     .AddValidatedOptions()
@@ -27,6 +29,8 @@ app.MapHealthEndpoints();
 app.MapDocumentEndpoints();
 app.MapLlmDiagnosticsEndpoints(app.Environment);
 app.MapLlmStatusEndpoints();
+app.MapMonitoringEndpoints();
+app.MapMetricsEndpoints();
 
 if (app.Services.GetRequiredService<IOptions<DatabaseOptions>>().Value.ApplyMigrationsOnStartup)
 {

@@ -2,6 +2,7 @@
 using LecturaFacil.Application.Common;
 using LecturaFacil.Infrastructure.Export;
 using LecturaFacil.Infrastructure.Llm;
+using LecturaFacil.Infrastructure.Observability;
 using LecturaFacil.Infrastructure.Persistence;
 
 namespace LecturaFacil.Api.Configuration;
@@ -19,6 +20,7 @@ internal static class OptionsConfiguration
         services.AddValidated<LimitsOptions>(LimitsOptions.SectionName);
         services.AddValidated<UiOptions>(UiOptions.SectionName);
         services.AddValidated<ExportOptions>(ExportOptions.SectionName);
+        services.AddValidated<ObservabilityOptions>(ObservabilityOptions.SectionName);
         return services;
     }
 

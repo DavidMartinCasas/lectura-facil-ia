@@ -48,7 +48,17 @@ public static class DependencyInjection
         services.AddSingleton<IReadabilityCalculator, SzigrisztPazosReadabilityCalculator>();
         services.AddSingleton<IGuidelineChecker, GuidelineChecker>();
 
-        return services.AddAdaptation().AddExport().AddLlm();
+        return services.AddAdaptation().AddExport().AddLlm().AddMonitoring();
+    }
+
+    /// <summary>Reenvío a Sentry de los informes de errores del navegador (US-17), sin redirecciones ni cabeceras en los logs.</summary>
+    private static IServiceCollection AddMonitoring(this IServiceCollection services)
+    {
+        services.AddHttpClient(SentryEnvelopeForwarder.HttpClientName, client => client.Timeout = SentryEnvelopeForwarder.Timeout)
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false })
+            .RedactLoggedHeaders(_ => true);
+        services.AddTransient<SentryEnvelopeForwarder>();
+        return services;
     }
 
     /// <summary>Una estrategia por formato (US-14). Añadir un formato es añadir aquí su exportador.</summary>
