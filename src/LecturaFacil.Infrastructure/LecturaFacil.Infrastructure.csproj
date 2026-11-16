@@ -21,6 +21,7 @@
     <EmbeddedResource Include="Llm\Prompts\*.md" LogicalName="LecturaFacil.Infrastructure.Llm.Prompts.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Export\Fonts\*.ttf" LogicalName="LecturaFacil.Infrastructure.Export.Fonts.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Guidelines\Lists\*.json" LogicalName="LecturaFacil.Infrastructure.Guidelines.Lists.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Samples\*.json" LogicalName="LecturaFacil.Infrastructure.Samples.%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

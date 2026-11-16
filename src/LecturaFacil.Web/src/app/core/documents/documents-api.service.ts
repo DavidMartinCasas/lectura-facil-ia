@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import { HttpClient, HttpResponse } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import {
@@ -12,6 +12,8 @@ import {
 } from './document.models';
 
 export const DOCUMENTS_PATH = '/api/documents';
+/** Cabecera con el token del desafío anti-bots (US-16). Sirve igual para el JSON que para el PDF. */
+export const HUMAN_TOKEN_HEADER = 'X-Turnstile-Token';
 
 /** Llamadas HTTP a /api/documents. Los errores llegan ya traducidos por el interceptor (ApiError). */
 @Injectable({ providedIn: 'root' })
@@ -19,17 +21,21 @@ export class DocumentsApiService {
   private readonly http = inject(HttpClient);
 
   submit(submission: DocumentSubmission): Observable<SubmitDocumentResponse> {
+    const headers = submission.humanToken
+      ? new HttpHeaders({ [HUMAN_TOKEN_HEADER]: submission.humanToken })
+      : undefined;
     if (submission.kind === 'pdf') {
       const form = new FormData();
       form.append('file', submission.file);
-      return this.http.post<SubmitDocumentResponse>(DOCUMENTS_PATH, form);
+      return this.http.post<SubmitDocumentResponse>(DOCUMENTS_PATH, form, { headers });
     }
 
     const title = submission.title?.trim();
-    return this.http.post<SubmitDocumentResponse>(DOCUMENTS_PATH, {
-      text: submission.text,
-      title: title ? title : null,
-    });
+    return this.http.post<SubmitDocumentResponse>(
+      DOCUMENTS_PATH,
+      { text: submission.text, title: title ? title : null },
+      { headers },
+    );
   }
 
   list(): Observable<readonly DocumentListItem[]> {

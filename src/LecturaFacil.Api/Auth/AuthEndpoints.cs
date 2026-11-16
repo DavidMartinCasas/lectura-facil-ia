@@ -15,7 +15,7 @@ namespace LecturaFacil.Api.Auth;
 internal static partial class AuthEndpoints
 {
     public const string Path = "/api/auth";
-    public const string LoginRateLimitPolicy = "auth-login";
+    public const string LoginRateLimitPolicy = "login";
     public const string InvalidCredentialsCode = "auth.invalid_credentials";
     public const string InvalidCredentialsMessage = "Correo o contraseña incorrectos.";
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-using System.Threading.RateLimiting;
+using LecturaFacil.Api.Security;
 using LecturaFacil.Application.Common;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.RateLimiting;
@@ -23,35 +23,22 @@ internal static class RequestLimits
     public static long MaxRequestBytes(LimitsOptions limits) => (long)limits.MaxFileSizeBytes + MultipartOverheadBytes;
 
     /// <summary>
-    /// Límite global de documentos por minuto (TODO(US-16): por usuario cuando haya autenticación). Se lee de
-    /// <see cref="LimitsOptions.DocumentSubmissionsPerMinute"/>.
+    /// Documentos por hora y usuario (<see cref="LimitsOptions.AdaptationsPerHour"/>, US-16): cada uno se adapta con el
+    /// modelo. Al superarlo, 429 con <c>Retry-After</c>.
     /// </summary>
-    public static RateLimiterOptions AddDocumentSubmitRateLimit(this RateLimiterOptions options) =>
+    public static RateLimiterOptions AddAdaptationsRateLimit(this RateLimiterOptions options) =>
         options.AddPolicy(DocumentEndpoints.SubmitRateLimitPolicy, context =>
         {
             var limits = context.RequestServices.GetRequiredService<IOptions<LimitsOptions>>().Value;
-            return RateLimitPartition.GetFixedWindowLimiter(DocumentEndpoints.SubmitRateLimitPolicy, _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = limits.DocumentSubmissionsPerMinute,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0,
-            });
+            return RateLimitPartitions.FixedWindow(RateLimitPartitions.User(context), limits.AdaptationsPerHour, TimeSpan.FromHours(1));
         });
 
-    /// <summary>
-    /// Límite global de exportaciones por minuto (TODO(US-16): por usuario cuando haya autenticación). Se lee de
-    /// <see cref="LimitsOptions.ExportsPerMinute"/>.
-    /// </summary>
-    public static RateLimiterOptions AddDocumentExportRateLimit(this RateLimiterOptions options) =>
+    /// <summary>Exportaciones por minuto y usuario (<see cref="LimitsOptions.ExportsPerMinute"/>, US-14 y US-16).</summary>
+    public static RateLimiterOptions AddExportsRateLimit(this RateLimiterOptions options) =>
         options.AddPolicy(DocumentExportEndpoints.ExportRateLimitPolicy, context =>
         {
             var limits = context.RequestServices.GetRequiredService<IOptions<LimitsOptions>>().Value;
-            return RateLimitPartition.GetFixedWindowLimiter(DocumentExportEndpoints.ExportRateLimitPolicy, _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = limits.ExportsPerMinute,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0,
-            });
+            return RateLimitPartitions.FixedWindow(RateLimitPartitions.User(context), limits.ExportsPerMinute, TimeSpan.FromMinutes(1));
         });
 
     public static IServiceCollection AddRequestLimits(this IServiceCollection services)

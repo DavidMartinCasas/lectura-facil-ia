@@ -64,7 +64,7 @@ public sealed class AuthEndpointTests
     public async Task AnonymousRequests_DoNotUseUpTheSubmitLimitOfUsersWithASession()
     {
         await using var baseFactory = new DocumentsApiFactory();
-        await using var factory = baseFactory.WithWebHostBuilder(builder => builder.UseSetting("Limits:DocumentSubmissionsPerMinute", "1"));
+        await using var factory = baseFactory.WithWebHostBuilder(builder => builder.UseSetting("Limits:AdaptationsPerHour", "1"));
         using var anonymous = await factory.CreateAnonymousClientAsync();
         using var client = await factory.CreateApiClientAsync();
         var text = new { text = new string('a', 100) };

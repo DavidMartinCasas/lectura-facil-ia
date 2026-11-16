@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,23 +17,32 @@ import {
   validatePdf,
   validateText,
 } from '../../core/documents/upload-validation';
-import { UPLOAD_TEXTS } from '../../core/ui-texts';
+import { TURNSTILE_TEXTS, UPLOAD_TEXTS } from '../../core/ui-texts';
+import { TurnstileWidgetComponent } from '../turnstile-widget/turnstile-widget';
 
 type UploadMode = 'text' | 'pdf';
 
 /**
  * Formulario para pegar un texto o elegir (o arrastrar) un PDF. Valida en el navegador por comodidad y emite lo que
- * hay que enviar; no llama a la API.
+ * hay que enviar; no llama a la API. Si el desafío anti-bots está activo (`turnstileSiteKey`), lo muestra y añade su
+ * token al envío; el servidor lo valida siempre.
  */
 @Component({
   selector: 'app-upload-form',
-  imports: [MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule],
+  imports: [
+    MatButtonModule,
+    MatButtonToggleModule,
+    MatFormFieldModule,
+    MatInputModule,
+    TurnstileWidgetComponent,
+  ],
   templateUrl: './upload-form.html',
   styleUrl: './upload-form.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UploadFormComponent {
   readonly busy = input(false);
+  readonly turnstileSiteKey = input<string | null>(null);
   readonly submitted = output<DocumentSubmission>();
 
   protected readonly texts = UPLOAD_TEXTS;
@@ -37,6 +53,15 @@ export class UploadFormComponent {
   protected readonly file = signal<File | null>(null);
   protected readonly error = signal<string | null>(null);
   protected readonly dragging = signal(false);
+  protected readonly humanToken = signal<string | null>(null);
+  private readonly turnstile = viewChild(TurnstileWidgetComponent);
+
+  protected onHumanToken(token: string | null): void {
+    this.humanToken.set(token);
+    if (token !== null) {
+      this.error.set(null);
+    }
+  }
 
   protected changeMode(mode: UploadMode): void {
     this.mode.set(mode);
@@ -78,19 +103,34 @@ export class UploadFormComponent {
     }
 
     if (this.mode() === 'text') {
-      const error = validateText(this.text());
+      const error = validateText(this.text()) ?? this.humanCheckError();
       this.error.set(error);
       if (error === null) {
-        this.submitted.emit({ kind: 'text', text: this.text(), title: this.title() });
+        this.emit({ kind: 'text', text: this.text(), title: this.title() });
       }
       return;
     }
 
     const file = this.file();
-    const error = await validatePdf(file);
+    const error = (await validatePdf(file)) ?? this.humanCheckError();
     this.error.set(error);
     if (error === null && file !== null) {
-      this.submitted.emit({ kind: 'pdf', file });
+      this.emit({ kind: 'pdf', file });
+    }
+  }
+
+  private humanCheckError(): string | null {
+    return this.turnstileSiteKey() !== null && this.humanToken() === null
+      ? TURNSTILE_TEXTS.required
+      : null;
+  }
+
+  /** Envía con el token (si lo hay) y pide un desafío nuevo: cada token vale para un solo envío. */
+  private emit(submission: DocumentSubmission): void {
+    const token = this.humanToken();
+    this.submitted.emit(token === null ? submission : { ...submission, humanToken: token });
+    if (token !== null) {
+      this.turnstile()?.reset();
     }
   }
 

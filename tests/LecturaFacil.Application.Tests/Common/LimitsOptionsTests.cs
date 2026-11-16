@@ -30,7 +30,7 @@ public sealed class LimitsOptionsTests
         options.MaxConcurrentPdfExtractions.ShouldBe(2);
         options.MaxCharactersPerAdaptationChunk.ShouldBe(6_000);
         options.AdaptationConcurrency.ShouldBe(1);
-        options.DocumentSubmissionsPerMinute.ShouldBe(10);
+        options.AdaptationsPerHour.ShouldBe(10);
         options.MaxAdaptationChunksPerDocument.ShouldBe(10);
         options.DocumentEventsPollMilliseconds.ShouldBe(1_000);
         options.DocumentEventsMaxSeconds.ShouldBe(600);

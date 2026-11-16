@@ -14,7 +14,7 @@ namespace LecturaFacil.Api.Documents;
 internal static class DocumentExportEndpoints
 {
     /// <summary>Generar un DOCX o un PDF cuesta CPU y memoria: la exportación tiene su propio límite de peticiones.</summary>
-    public const string ExportRateLimitPolicy = "document-export";
+    public const string ExportRateLimitPolicy = "exports";
 
     private static readonly Dictionary<string, int> StatusCodesByError = new(StringComparer.Ordinal)
     {

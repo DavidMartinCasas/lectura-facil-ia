@@ -26,9 +26,10 @@ internal static class ApiConfiguration
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.OnRejected = RateLimitPartitions.AddRetryAfter;
             options.AddLlmDiagnosticsRateLimit();
-            options.AddDocumentSubmitRateLimit();
-            options.AddDocumentExportRateLimit();
+            options.AddAdaptationsRateLimit();
+            options.AddExportsRateLimit();
             options.AddMonitoringTunnelRateLimit();
             options.AddLoginRateLimit();
         });

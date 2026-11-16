@@ -105,6 +105,19 @@ public sealed class StartupConfigurationTests
         exception.Message.ShouldContain("Llm:Fallback:ApiKey");
     }
 
+    [Fact]
+    public async Task Start_WhenTurnstileIsEnabledWithoutItsKeys_DoesNotStart()
+    {
+        var settings = CompleteSettings();
+        settings["Turnstile:Enabled"] = "true";
+        await using var factory = new ConfiguredApiFactory(settings);
+
+        var exception = Should.Throw<OptionsValidationException>(() => factory.CreateClient());
+
+        exception.Message.ShouldContain("Turnstile:SecretKey");
+        exception.Message.ShouldContain("Turnstile:SiteKey");
+    }
+
     [Theory]
     [InlineData("Limits:MaxWordsPerSentence", "0")]
     [InlineData("Llm:Primary:Type", "999")]

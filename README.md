@@ -75,11 +75,16 @@ El doble guion bajo separa niveles y no importan las mayúsculas: `LLM__PRIMARY_
 | `LIMITS__MAXWORDSPERSENTENCE` | No | `15` | Palabras por frase a partir de las que se avisa (5 – 50). |
 | `LIMITS__MAXOUTPUTTOKENS` | No | `4096` | Tokens máximos por respuesta del modelo (256 – 32 768). |
 | `LIMITS__LLMTIMEOUTSECONDS` | No | `120` | Tiempo máximo por llamada al modelo, en segundos (5 – 600). |
-| `LIMITS__EXPORTSPERMINUTE` | No | `30` | Exportaciones por minuto, en total (1 – 1000). |
+| `LIMITS__ADAPTATIONSPERHOUR` | No | `10` | Documentos que puede enviar a adaptar cada usuario por hora (1 – 1000). Al superarlo, 429 con `Retry-After`. |
+| `LIMITS__EXPORTSPERMINUTE` | No | `30` | Exportaciones por minuto y usuario (1 – 1000). |
 | `EXPORT__FONTSIZEPOINTS` | No | `14` | Letra del texto de los DOCX y PDF exportados, en puntos (14 – 28). |
 | `EXPORT__LINESPACING` | No | `1.5` | Interlineado de los DOCX y PDF exportados (1,5 – 3). |
 | `EXPORT__DOCXFONTFAMILY` | No | `Arial` | Fuente sin serifa del DOCX. El PDF lleva siempre Atkinson Hyperlegible incrustada. |
-| `UI__NOTICE` | No | vacío | Aviso que se muestra en la interfaz (máx. 500 caracteres). |
+| `UI__NOTICE` | No | vacío | Aviso que se muestra como banner en todas las pantallas (máx. 500 caracteres). |
+| `TURNSTILE__ENABLED` | No | `false` | Exige el desafío anti-bots de Cloudflare Turnstile al enviar documentos. Si es `false`, nada sale hacia Cloudflare. |
+| `TURNSTILE__SITEKEY` | Si está habilitado | vacío | Clave del sitio de Turnstile (pública: la recibe el navegador). |
+| `TURNSTILE__SECRETKEY` 🔒 | Si está habilitado | vacío | Clave secreta de Turnstile. Solo en el servidor. |
+| `TURNSTILE__TIMEOUTSECONDS` | No | `5` | Tiempo máximo para validar el token, en segundos (1 – 30). Si se agota, se rechaza el envío. |
 | `SEED__TESTUSER__EMAIL` | No | vacío | Correo del [usuario de prueba](#usuario-de-prueba). Se crea al arrancar si no existe. |
 | `SEED__TESTUSER__PASSWORD` 🔒 | Si hay correo | vacío | Su contraseña: 12 caracteres o más, con mayúscula, minúscula, cifra y símbolo. |
 | `AUTH__MAXFAILEDACCESSATTEMPTS` | No | `5` | Intentos fallidos seguidos antes de bloquear la cuenta (3 – 20). |

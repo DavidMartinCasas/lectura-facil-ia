@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using FluentValidation;
+using LecturaFacil.Api.Security;
 using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -18,8 +19,8 @@ internal static partial class DocumentEndpoints
 {
     public const string Path = "/api/documents";
 
-    /// <summary>Cada documento recibido se adapta con el modelo: el envío tiene su propio límite de peticiones.</summary>
-    public const string SubmitRateLimitPolicy = "document-submit";
+    /// <summary>Cada documento recibido se adapta con el modelo: el envío tiene su propio límite por usuario (US-16).</summary>
+    public const string SubmitRateLimitPolicy = "adaptations";
 
     private const string JsonContentType = "application/json";
     private const string MultipartContentType = "multipart/form-data";
@@ -47,6 +48,7 @@ internal static partial class DocumentEndpoints
 
         group.MapPost("/", SubmitAsync)
             .RequireRateLimiting(SubmitRateLimitPolicy)
+            .RequireHumanVerification()
             .Accepts<SubmitTextRequest>(JsonContentType, MultipartContentType)
             .AddOpenApiOperationTransformer(DescribeMultipartBody)
             .Produces<SubmitDocumentResponse>(StatusCodes.Status202Accepted)

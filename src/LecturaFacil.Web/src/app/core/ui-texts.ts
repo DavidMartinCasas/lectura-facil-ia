@@ -15,6 +15,8 @@ export const APP_TEXTS = {
   mainNavigation: 'Navegación principal',
   navNew: 'Nuevo documento',
   navList: 'Mis documentos',
+  navSamples: 'Ejemplos',
+  noticeLabel: 'Aviso',
   navLogin: 'Entrar',
   logout: 'Salir',
   logoutFailed: 'No se ha podido cerrar la sesión. Inténtalo de nuevo.',
@@ -51,6 +53,27 @@ export const UPLOAD_TEXTS = {
   fileTooLarge: 'El fichero pesa más de 5 MB. Prueba con un PDF más pequeño.',
   fileNotPdf: 'El fichero no es un PDF. Solo se admiten ficheros PDF con texto.',
   fileEmpty: 'El fichero está vacío.',
+} as const;
+
+export const TURNSTILE_TEXTS = {
+  hint: 'Antes de enviar, confirma que eres una persona.',
+  required: 'Completa la verificación de que eres una persona antes de adaptar.',
+  loadFailed:
+    'No se ha podido cargar la verificación. Recarga la página o desactiva el bloqueador de contenido.',
+} as const;
+
+export const SAMPLES_TEXTS = {
+  pageTitle: 'Ejemplos',
+  intro:
+    'Prueba la herramienta con uno de estos textos. Son ficticios y no tienen datos personales.',
+  loading: 'Cargando ejemplos…',
+  loadFailed: 'No se han podido cargar los ejemplos.',
+  retry: 'Reintentar',
+  source: 'Fuente:',
+  showText: 'Ver el texto',
+  adapt: 'Adaptar este ejemplo',
+  adaptLabel: (title: string) => `Adaptar el ejemplo «${title}»`,
+  submitting: 'Enviando…',
 } as const;
 
 export const PROGRESS_TEXTS = {
@@ -216,8 +239,9 @@ export const ERROR_TEXTS = {
   unsupported: 'Ese tipo de contenido no se puede adaptar. Pega un texto o sube un PDF.',
   unprocessable:
     'No se ha podido leer el PDF. Comprueba que tiene texto y que no está dañado ni protegido.',
-  tooManyRequests:
-    'Has enviado muchos documentos seguidos. Espera un minuto y vuelve a intentarlo.',
+  tooManyRequests: 'Has llegado al límite de envíos. Espera un rato y vuelve a intentarlo.',
+  humanVerification:
+    'No se ha podido comprobar que eres una persona. Completa la verificación y vuelve a intentarlo.',
   unavailable: 'El servicio está ocupado ahora mismo. Inténtalo de nuevo en unos minutos.',
   invalidFileType: 'El fichero no es un PDF. Solo se admiten ficheros PDF con texto.',
   scannedPdf: 'Este PDF parece escaneado. De momento solo se admiten PDF con texto.',

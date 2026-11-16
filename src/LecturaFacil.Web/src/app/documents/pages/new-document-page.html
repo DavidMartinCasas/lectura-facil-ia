@@ -8,7 +8,11 @@
   </mat-card>
 
   @if (showForm()) {
-    <app-upload-form [busy]="store.phase() === 'submitting'" (submitted)="submit($event)" />
+    <app-upload-form
+      [busy]="store.phase() === 'submitting'"
+      [turnstileSiteKey]="turnstileSiteKey()"
+      (submitted)="submit($event)"
+    />
   }
 
   @if (store.steps(); as steps) {
