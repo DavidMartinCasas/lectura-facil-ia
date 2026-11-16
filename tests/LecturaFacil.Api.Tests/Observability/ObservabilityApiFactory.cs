@@ -34,6 +34,9 @@ public sealed class ObservabilityApiFactory : WebApplicationFactory<Program>
     public const string BackendDsn = "https://clave-backend@sentry.example.com/1";
     public const string FrontendDsn = "https://clave-frontend@sentry.example.com/2";
 
+    /// <summary>Texto "del documento" que cita el mensaje de la excepción de prueba; no puede llegar a Sentry.</summary>
+    public const string ExceptionText = "la cuantía ascenderá al 40 % de la renta";
+
     public RecordingDocumentRepository Repository { get; } = new();
 
     public InMemoryLogSink Logs { get; } = new();
@@ -86,7 +89,7 @@ public sealed class ObservabilityApiFactory : WebApplicationFactory<Program>
             });
             next(app);
             app.Map(ThrowingPath, branch => branch.Run(_ =>
-                throw new InvalidOperationException("Fallo de prueba en la API")));
+                throw new InvalidOperationException($"Fallo de prueba con texto: {ExceptionText}")));
         };
     }
 

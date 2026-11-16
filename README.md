@@ -85,7 +85,8 @@ El doble guion bajo separa niveles y no importan las mayúsculas: `LLM__PRIMARY_
 | `OBSERVABILITY__FRONTENDSENTRYDSN` | No | vacío | DSN de Sentry del frontend (público). Vacío: deshabilitado. |
 | `OBSERVABILITY__ENVIRONMENT` | No | `production` | Entorno que se ve en Sentry. |
 | `OBSERVABILITY__RELEASE` | No | versión compilada | Versión desplegada (por ejemplo, el `git sha`): en Sentry y en la cabecera `X-App-Version` de `/health`. |
-| `OBSERVABILITY__FRONTENDREPORTSPERMINUTE` | No | `60` | Informes de errores del navegador reenviados a Sentry por minuto (1 – 10 000). |
+| `OBSERVABILITY__FRONTENDREPORTSPERMINUTE` | No | `10` | Informes de errores del navegador reenviados a Sentry por minuto y por cliente (1 – 1000). |
+| `OBSERVABILITY__MAXFRONTENDREPORTBYTES` | No | `200000` | Tamaño máximo de cada informe del navegador, en bytes (1024 – 1 048 576). |
 
 ## Observabilidad
 
@@ -99,7 +100,9 @@ Pensada para ver errores, tiempos y qué proveedor procesa cada documento **sin 
   errores de JavaScript con el entorno y la versión. Ambos usan un filtro que quita cuerpos, cookies, cabeceras, la
   consulta de las URLs, los datos de la persona y cualquier campo llamado `text`, `content`, `original` o `adapted`.
   El navegador envía sus informes a `/api/monitoring/sentry` y la API los reenvía **solo** al DSN del frontend
-  configurado: la CSP sigue sin permitir conexiones a otros orígenes.
+  configurado, solo desde el propio origen, solo errores, sesiones e informes del SDK (nada de adjuntos ni
+  grabaciones) y con un límite por cliente: la CSP sigue sin permitir conexiones a otros orígenes. Como el DSN del
+  frontend es público, **fija también un límite de eventos y de cuota en el proyecto de Sentry del frontend**.
 - **Métricas:** formato Prometheus en `/metrics` (adaptaciones por proveedor y resultado, errores por código, duración
   y tokens). Solo responde a peticiones de la red interna (localhost o IPs privadas) que no lleguen por un proxy; el
   nginx público la bloquea y la API no publica ningún puerto. Para consultarla desde la máquina del despliegue:

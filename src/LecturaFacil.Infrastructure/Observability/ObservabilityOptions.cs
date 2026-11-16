@@ -31,9 +31,9 @@ public sealed class ObservabilityOptions : IValidatableObject
     [RegularExpression(@"^[A-Za-z0-9.+_-]{0,64}$", ErrorMessage = "Observability:Release solo admite letras, cifras, '.', '+', '_' y '-' (64 como mucho).")]
     public string Release { get; set; } = string.Empty;
 
-    /// <summary>Informes de errores del navegador que la API reenvía a Sentry por minuto, en total.</summary>
-    [Range(1, 10_000, ErrorMessage = "Observability:FrontendReportsPerMinute debe estar entre {1} y {2}.")]
-    public int FrontendReportsPerMinute { get; set; } = 60;
+    /// <summary>Informes de errores del navegador que la API reenvía a Sentry por minuto y por cliente (IP).</summary>
+    [Range(1, 1_000, ErrorMessage = "Observability:FrontendReportsPerMinute debe estar entre {1} y {2}.")]
+    public int FrontendReportsPerMinute { get; set; } = 10;
 
     /// <summary>Tamaño máximo de un informe de errores del navegador, en bytes.</summary>
     [Range(1_024, 1_048_576, ErrorMessage = "Observability:MaxFrontendReportBytes debe estar entre {1} y {2}.")]

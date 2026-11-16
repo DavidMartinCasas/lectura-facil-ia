@@ -9,6 +9,8 @@ export interface MonitoringConfig {
   readonly dsn: string | null;
   readonly environment: string;
   readonly release: string;
+  /** Partes de nombres de campo que se filtran. Las da la API: es la misma lista que usa el backend. */
+  readonly sensitiveFields: readonly string[];
 }
 
 export const MONITORING_CONFIG_URL = '/api/monitoring/config';
@@ -18,24 +20,9 @@ export const MONITORING_TUNNEL_URL = '/api/monitoring/sentry';
 
 export const REDACTED = '[filtrado]';
 
-/** Partes de nombres de campo que pueden llevar texto de un documento o datos de la persona. */
-const SENSITIVE_FIELD_HINTS = [
-  'text',
-  'content',
-  'original',
-  'adapted',
-  'body',
-  'email',
-  'cookie',
-  'authorization',
-  'token',
-  'password',
-  'secret',
-];
-
-export function isSensitive(field: string): boolean {
+export function isSensitive(field: string, hints: readonly string[]): boolean {
   const name = field.toLowerCase();
-  return SENSITIVE_FIELD_HINTS.some((hint) => name.includes(hint));
+  return hints.some((hint) => name.includes(hint.toLowerCase()));
 }
 
 /** La URL sin consulta ni fragmento: la ruta basta para saber dónde falló. */
@@ -45,13 +32,14 @@ export function withoutQuery(url: string): string {
 
 function redactFields<T>(
   record: Record<string, T> | undefined,
+  hints: readonly string[],
 ): Record<string, T | string> | undefined {
   if (!record) {
     return record;
   }
 
   return Object.fromEntries(
-    Object.entries(record).map(([key, value]) => [key, isSensitive(key) ? REDACTED : value]),
+    Object.entries(record).map(([key, value]) => [key, isSensitive(key, hints) ? REDACTED : value]),
   );
 }
 
@@ -59,7 +47,7 @@ function redactFields<T>(
  * Filtro `beforeSend`: nada del cuerpo, cookies, cabeceras, consulta de la URL ni datos de la persona, y ningún campo
  * cuyo nombre sugiera texto de un documento. La interfaz nunca pone texto en los errores; esto es la segunda barrera.
  */
-export function scrubEvent(event: ErrorEvent): ErrorEvent {
+export function scrubEvent(event: ErrorEvent, hints: readonly string[]): ErrorEvent {
   const request = event.request
     ? {
         method: event.request.method,
@@ -70,19 +58,21 @@ export function scrubEvent(event: ErrorEvent): ErrorEvent {
     ...event,
     request,
     user: undefined,
-    extra: redactFields(event.extra),
+    extra: redactFields(event.extra, hints),
     contexts: event.contexts
-      ? Object.fromEntries(Object.entries(event.contexts).filter(([key]) => !isSensitive(key)))
+      ? Object.fromEntries(
+          Object.entries(event.contexts).filter(([key]) => !isSensitive(key, hints)),
+        )
       : undefined,
     tags: event.tags
-      ? Object.fromEntries(Object.entries(event.tags).filter(([key]) => !isSensitive(key)))
+      ? Object.fromEntries(Object.entries(event.tags).filter(([key]) => !isSensitive(key, hints)))
       : undefined,
   };
 }
 
 /** Filtro `beforeBreadcrumb`: sin consulta en las URLs y sin campos con nombre de texto. */
-export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb {
-  const data = redactFields(breadcrumb.data);
+export function scrubBreadcrumb(breadcrumb: Breadcrumb, hints: readonly string[]): Breadcrumb {
+  const data = redactFields(breadcrumb.data, hints);
   if (data && typeof data['url'] === 'string') {
     data['url'] = withoutQuery(data['url']);
   }
@@ -116,8 +106,8 @@ export function sentryOptions(config: MonitoringConfig & { readonly dsn: string 
     },
     tracesSampleRate: 0,
     integrations: withoutTextBreadcrumbs,
-    beforeSend: scrubEvent,
-    beforeBreadcrumb: scrubBreadcrumb,
+    beforeSend: (event) => scrubEvent(event, config.sensitiveFields),
+    beforeBreadcrumb: (breadcrumb) => scrubBreadcrumb(breadcrumb, config.sensitiveFields),
   };
 }
 
@@ -141,7 +131,12 @@ export async function initMonitoring(
 ): Promise<boolean> {
   try {
     const config = await load();
-    if (!config.dsn) {
+    // Sin la lista de campos que filtrar no se envía nada: mejor sin informes que con texto.
+    if (
+      !config.dsn ||
+      !Array.isArray(config.sensitiveFields) ||
+      config.sensitiveFields.length === 0
+    ) {
       return false;
     }
 

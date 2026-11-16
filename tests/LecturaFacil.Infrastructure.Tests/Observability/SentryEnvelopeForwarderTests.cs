@@ -57,6 +57,47 @@ public sealed class SentryEnvelopeForwarderTests
         handler.Requests.ShouldBeEmpty();
     }
 
+    [Theory]
+    [InlineData("{\"type\":\"attachment\",\"length\":5}\nhola!")]
+    [InlineData("{\"type\":\"replay_event\"}\n{}")]
+    [InlineData("{\"type\":\"event\"}\n{}\n{\"type\":\"profile\"}\n{}")]
+    [InlineData("{\"length\":2}\n{}")]
+    [InlineData("{\"type\":\"event\",\"length\":999}\n{}")]
+    [InlineData("")]
+    public async Task Forward_WhenAnItemIsNotAnErrorReport_RejectsTheWholeEnvelope(string items)
+    {
+        var handler = FakeHttpMessageHandler.Returning(HttpStatusCode.OK, "{}");
+        var envelope = Encoding.UTF8.GetBytes($"{{\"dsn\":\"{FrontendDsn}\"}}\n{items}");
+
+        var result = await Forwarder(handler).ForwardAsync(envelope, Token);
+
+        result.Error.ShouldBe(SentryEnvelopeForwarder.InvalidEnvelope);
+        handler.Requests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Forward_AcceptsItemsWithAnExplicitLengthThatContainNewlines()
+    {
+        var handler = FakeHttpMessageHandler.Returning(HttpStatusCode.OK, "{}");
+        var envelope = Encoding.UTF8.GetBytes(
+            $"{{\"dsn\":\"{FrontendDsn}\"}}\n{{\"type\":\"event\",\"length\":5}}\n{{\n}}\n\n{{\"type\":\"client_report\"}}\n{{}}\n");
+
+        var result = await Forwarder(handler).ForwardAsync(envelope, Token);
+
+        result.IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Forward_WhenTheEnvelopeHasTooManyItems_RejectsIt()
+    {
+        var handler = FakeHttpMessageHandler.Returning(HttpStatusCode.OK, "{}");
+        var items = string.Concat(Enumerable.Repeat("{\"type\":\"event\"}\n{}\n", SentryEnvelopeForwarder.MaxItemsPerEnvelope + 1));
+
+        var result = await Forwarder(handler).ForwardAsync(Encoding.UTF8.GetBytes($"{{\"dsn\":\"{FrontendDsn}\"}}\n{items}"), Token);
+
+        result.Error.ShouldBe(SentryEnvelopeForwarder.InvalidEnvelope);
+    }
+
     [Fact]
     public async Task Forward_WhenTheFrontendDsnIsNotConfigured_IsDisabled()
     {

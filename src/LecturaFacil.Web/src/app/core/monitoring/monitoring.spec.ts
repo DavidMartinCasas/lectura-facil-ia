@@ -10,6 +10,8 @@ import {
 } from './monitoring';
 
 const DOCUMENT_TEXT = 'La Concejalía de Vivienda convoca ayudas para el alquiler.';
+// La lista real la da la API (la misma que usa el backend); aquí, la parte que necesitan los tests.
+const HINTS = ['text', 'content', 'original', 'adapted', 'email'];
 
 describe('monitoring', () => {
   describe('initMonitoring', () => {
@@ -22,6 +24,7 @@ describe('monitoring', () => {
             dsn: 'https://clave@sentry.example.com/2',
             environment: 'pruebas',
             release: 'abc1234',
+            sensitiveFields: HINTS,
           }),
         (options) => started.push(options),
       );
@@ -39,14 +42,42 @@ describe('monitoring', () => {
         httpBodies: [],
         urlQueryParams: false,
       });
-      expect(started[0].beforeSend).toBe(scrubEvent);
+      const sent = await started[0].beforeSend!(
+        { type: undefined, extra: { text: DOCUMENT_TEXT } },
+        {},
+      );
+      expect(sent?.extra).toEqual({ text: REDACTED });
     });
 
     it('does not start Sentry when the API gives no DSN', async () => {
       const start = vi.fn();
 
       const active = await initMonitoring(
-        () => Promise.resolve({ dsn: null, environment: 'production', release: '1' }),
+        () =>
+          Promise.resolve({
+            dsn: null,
+            environment: 'production',
+            release: '1',
+            sensitiveFields: HINTS,
+          }),
+        start,
+      );
+
+      expect(active).toBe(false);
+      expect(start).not.toHaveBeenCalled();
+    });
+
+    it('does not start Sentry without the list of fields to scrub', async () => {
+      const start = vi.fn();
+
+      const active = await initMonitoring(
+        () =>
+          Promise.resolve({
+            dsn: 'https://clave@sentry.example.com/2',
+            environment: 'p',
+            release: '1',
+            sensitiveFields: [],
+          }),
         start,
       );
 
@@ -79,7 +110,7 @@ describe('monitoring', () => {
         user: { email: 'ana@example.com', ip_address: '203.0.113.7' },
       };
 
-      const scrubbed = scrubEvent(event);
+      const scrubbed = scrubEvent(event, HINTS);
 
       expect(scrubbed.request).toEqual({
         method: 'POST',
@@ -100,7 +131,7 @@ describe('monitoring', () => {
           contexts: { [field]: { value: DOCUMENT_TEXT } },
         };
 
-        const scrubbed = scrubEvent(event);
+        const scrubbed = scrubEvent(event, HINTS);
 
         expect(scrubbed.extra).toEqual({ [field]: REDACTED, documentId: '8c1f' });
         expect(scrubbed.tags).toEqual({ area: 'revision' });
@@ -126,10 +157,13 @@ describe('monitoring', () => {
 
   describe('scrubBreadcrumb', () => {
     it('removes the query string from URLs and redacts text fields', () => {
-      const scrubbed = scrubBreadcrumb({
-        category: 'fetch',
-        data: { url: '/api/documents?text=hola', method: 'GET', content: DOCUMENT_TEXT },
-      });
+      const scrubbed = scrubBreadcrumb(
+        {
+          category: 'fetch',
+          data: { url: '/api/documents?text=hola', method: 'GET', content: DOCUMENT_TEXT },
+        },
+        HINTS,
+      );
 
       expect(scrubbed.data).toEqual({ url: '/api/documents', method: 'GET', content: REDACTED });
     });

@@ -12,8 +12,11 @@ internal static class SentryEventScrubber
 {
     public const string Redacted = "[filtrado]";
 
-    /// <summary>Partes de nombres de campo que pueden llevar texto de un documento.</summary>
-    private static readonly string[] SensitiveFieldHints = ["text", "content", "original", "adapted", "body", "email", "cookie", "authorization", "token", "password", "secret"];
+    /// <summary>
+    /// Partes de nombres de campo que pueden llevar texto de un documento o datos de la persona. Es la única lista: el
+    /// frontend la recibe en <c>/api/monitoring/config</c> para filtrar igual.
+    /// </summary>
+    public static readonly IReadOnlyList<string> SensitiveFieldHints = ["text", "content", "original", "adapted", "body", "email", "cookie", "authorization", "token", "password", "secret"];
 
     /// <summary>Cabeceras que no llevan datos de la persona ni credenciales.</summary>
     private static readonly HashSet<string> SafeHeaders = new(StringComparer.OrdinalIgnoreCase)
@@ -26,6 +29,7 @@ internal static class SentryEventScrubber
         ArgumentNullException.ThrowIfNull(sentryEvent);
 
         ScrubRequest(sentryEvent.Request);
+        ScrubExceptionMessages(sentryEvent);
         sentryEvent.User = new SentryUser();
         sentryEvent.ServerName = null;
 
@@ -61,6 +65,29 @@ internal static class SentryEventScrubber
 
     public static bool IsSensitive(string fieldName) =>
         SensitiveFieldHints.Any(hint => fieldName.Contains(hint, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// El mensaje de una excepción de una librería puede citar la entrada (por ejemplo, un fragmento del texto). Se
+    /// sustituye por el tipo; la traza de pila se mantiene, que es lo que sirve para depurar.
+    /// </summary>
+    private static void ScrubExceptionMessages(SentryEvent sentryEvent)
+    {
+        if (sentryEvent.SentryExceptions is not { } exceptions || !exceptions.Any())
+        {
+            return;
+        }
+
+        foreach (var exception in exceptions)
+        {
+            exception.Value = exception.Type;
+        }
+
+        if (sentryEvent.Message is { } message)
+        {
+            message.Formatted = null;
+            message.Params = null;
+        }
+    }
 
     private static void ScrubRequest(SentryRequest request)
     {

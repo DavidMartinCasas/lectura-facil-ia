@@ -3,8 +3,11 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using LecturaFacil.Api.Observability;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Infrastructure.Observability;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace LecturaFacil.Api.Tests.Observability;
 
@@ -55,7 +58,7 @@ public sealed class ObservabilityEndpointTests(ObservabilityApiFactory factory) 
     }
 
     [Fact]
-    public async Task UnhandledException_ReachesSentryWithTheStackTraceButNoBodyCookiesAuthorizationOrEmail()
+    public async Task UnhandledException_ReachesSentryWithTheStackTraceButNoBodyCookiesAuthorizationEmailOrMessage()
     {
         using var client = factory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, ObservabilityApiFactory.ThrowingPath + "?email=ana@example.com")
@@ -68,8 +71,9 @@ public sealed class ObservabilityEndpointTests(ObservabilityApiFactory factory) 
         using var response = await client.SendAsync(request, Token);
 
         response.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
-        var envelope = await WaitForAsync(() => factory.Sentry.Envelopes.FirstOrDefault(sent => sent.Contains("Fallo de prueba en la API", StringComparison.Ordinal)));
+        var envelope = await WaitForAsync(() => factory.Sentry.Envelopes.FirstOrDefault(sent => sent.Contains("TestPipelineStartupFilter", StringComparison.Ordinal)));
         envelope.ShouldContain("InvalidOperationException");
+        envelope.ShouldNotContain(ObservabilityApiFactory.ExceptionText);
         envelope.ShouldContain("\"stacktrace\"");
         envelope.ShouldContain("\"environment\":\"pruebas\"");
         envelope.ShouldContain("\"release\":\"abc1234\"");
@@ -77,6 +81,20 @@ public sealed class ObservabilityEndpointTests(ObservabilityApiFactory factory) 
         envelope.ShouldNotContain("valor-de-la-cookie");
         envelope.ShouldNotContain("token-secreto");
         envelope.ShouldNotContain("ana@example.com");
+    }
+
+    [Fact]
+    public async Task ErrorLogs_ReachSentryAsEventsAndTheJsonConsoleLog()
+    {
+        using var client = factory.CreateClient();
+        var logger = factory.Services.GetRequiredService<ILogger<ObservabilityEndpointTests>>();
+
+#pragma warning disable CA1848, CA2254 // Log de prueba: no merece un LoggerMessage propio.
+        logger.LogError("Error de prueba del worker US-17");
+#pragma warning restore CA1848, CA2254
+
+        await WaitForAsync(() => factory.Sentry.Envelopes.FirstOrDefault(sent => sent.Contains("Error de prueba del worker US-17", StringComparison.Ordinal)));
+        factory.Logs.Events.ShouldContain(log => log.Contains("Error de prueba del worker US-17", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -130,6 +148,8 @@ public sealed class ObservabilityEndpointTests(ObservabilityApiFactory factory) 
         config.GetProperty("dsn").GetString().ShouldBe(ObservabilityApiFactory.FrontendDsn);
         config.GetProperty("environment").GetString().ShouldBe("pruebas");
         config.GetProperty("release").GetString().ShouldBe("abc1234");
+        config.GetProperty("sensitiveFields").EnumerateArray().Select(field => field.GetString())
+            .ShouldBe(SentryEventScrubber.SensitiveFieldHints);
         config.GetRawText().ShouldNotContain("clave-backend");
     }
 
@@ -175,6 +195,58 @@ public sealed class ObservabilityEndpointTests(ObservabilityApiFactory factory) 
         factory.Sentry.Forwarded.ShouldNotContain(sent => sent.Target.Host == "atacante.example.com");
     }
 
+    [Theory]
+    [InlineData("Sec-Fetch-Site", "cross-site")]
+    [InlineData("Origin", "https://otra-web.example.com")]
+    public async Task Tunnel_RejectsReportsFromAnotherOrigin(string header, string value)
+    {
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/monitoring/sentry")
+        {
+            Content = new StringContent($"{{\"dsn\":\"{ObservabilityApiFactory.FrontendDsn}\"}}\n{{\"type\":\"event\"}}\n{{}}", Encoding.UTF8, "text/plain"),
+        };
+        request.Headers.Add(header, value);
+        request.Headers.Add("X-Forwarded-For", $"198.51.100.{header.Length}");
+
+        using var response = await client.SendAsync(request, Token);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Tunnel_AcceptsReportsFromItsOwnOriginEvenWhenTheProxyDropsThePort()
+    {
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/monitoring/sentry")
+        {
+            Content = new StringContent($"{{\"dsn\":\"{ObservabilityApiFactory.FrontendDsn}\"}}\n{{\"type\":\"event\"}}\n{{}}", Encoding.UTF8, "text/plain"),
+        };
+        request.Headers.Add("Origin", "http://localhost:8080");
+        request.Headers.Add("Sec-Fetch-Site", "same-origin");
+        request.Headers.Add("X-Forwarded-For", "198.51.100.150");
+
+        using var response = await client.SendAsync(request, Token);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Tunnel_LimitsReportsPerClientWithoutBlockingOthers()
+    {
+        using var client = factory.CreateClient();
+        var limit = new ObservabilityOptions().FrontendReportsPerMinute;
+
+        var statuses = new List<HttpStatusCode>();
+        for (var sent = 0; sent <= limit; sent++)
+        {
+            statuses.Add(await PostReportAsync(client, "198.51.100.200"));
+        }
+
+        statuses.Take(limit).ShouldAllBe(status => status == HttpStatusCode.OK);
+        statuses[^1].ShouldBe(HttpStatusCode.TooManyRequests);
+        (await PostReportAsync(client, "198.51.100.201")).ShouldBe(HttpStatusCode.OK);
+    }
+
     [Fact]
     public async Task Tunnel_RejectsReportsLargerThanTheLimit()
     {
@@ -187,6 +259,17 @@ public sealed class ObservabilityEndpointTests(ObservabilityApiFactory factory) 
             Token);
 
         response.StatusCode.ShouldBe(HttpStatusCode.RequestEntityTooLarge);
+    }
+
+    private static async Task<HttpStatusCode> PostReportAsync(HttpClient client, string forwardedFor)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/monitoring/sentry")
+        {
+            Content = new StringContent($"{{\"dsn\":\"{ObservabilityApiFactory.FrontendDsn}\"}}\n{{\"type\":\"event\"}}\n{{}}", Encoding.UTF8, "text/plain"),
+        };
+        request.Headers.Add("X-Forwarded-For", forwardedFor);
+        using var response = await client.SendAsync(request, Token);
+        return response.StatusCode;
     }
 
     private static HttpRequestMessage MetricsRequest(string? remoteIp)

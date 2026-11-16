@@ -3,6 +3,7 @@ using LecturaFacil.Infrastructure.Observability;
 using Sentry.AspNetCore;
 using Sentry.Extensibility;
 using Serilog;
+using Serilog.Extensions.Logging;
 using Serilog.Formatting.Compact;
 
 namespace LecturaFacil.Api.Observability;
@@ -19,14 +20,17 @@ internal static class ObservabilityConfiguration
         builder.Logging.ClearProviders();
         builder.WebHost.UseSentry((context, sentry) => ConfigureSentry(sentry, Options(context.Configuration)));
 
-        // writeToProviders: los logs también llegan al proveedor de Sentry (errores como eventos y el resto como migas).
-        builder.Services.AddSerilog(
-            (services, logger) => logger
-                .ReadFrom.Configuration(builder.Configuration)
+        // Serilog es un proveedor más: los logs llegan también al de Sentry (errores como eventos y el resto como
+        // migas). El nivel lo decide Serilog (sección "Serilog"), por eso el filtro general deja pasar todo.
+        builder.Logging.SetMinimumLevel(LogLevel.Trace);
+        builder.Services.AddSingleton<ILoggerProvider>(services => new SerilogLoggerProvider(
+            new LoggerConfiguration()
+                .ReadFrom.Configuration(services.GetRequiredService<IConfiguration>())
                 .ReadFrom.Services(services)
                 .Enrich.FromLogContext()
-                .WriteTo.Console(new RenderedCompactJsonFormatter()),
-            writeToProviders: true);
+                .WriteTo.Console(new RenderedCompactJsonFormatter())
+                .CreateLogger(),
+            dispose: true));
 
         builder.Services.AddSingleton(provider => AppVersion.From(Options(provider.GetRequiredService<IConfiguration>())));
         return builder;
