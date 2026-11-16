@@ -52,6 +52,15 @@ public sealed class TextStatisticsTests
         TextStatistics.From(text).Sentences.ShouldBe(1);
     }
 
+    [Theory]
+    [InlineData("El plazo acaba mañana. 15 personas reciben ayudas.")]
+    [InlineData("Lee esto hoy. 3 personas lo harán.")]
+    [InlineData("Requisitos:\n1. Tener 18 años.")]
+    public void From_WhenTheNextSentenceStartsWithANumber_CountsTwoSentences(string text)
+    {
+        TextStatistics.From(text).Sentences.ShouldBe(2);
+    }
+
     [Fact]
     public void From_WhenTextHasOrdinalIndicators_DoesNotCountThemAsWords()
     {

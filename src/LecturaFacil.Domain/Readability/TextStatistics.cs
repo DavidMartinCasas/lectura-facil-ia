@@ -7,7 +7,7 @@ namespace LecturaFacil.Domain.Readability;
 /// <remarks>
 /// <para>Palabra: secuencia de letras. Los números, "º" y "ª" no cuentan como palabras y un guion separa dos palabras.</para>
 /// <para>Fin de frase: interrogación o exclamación; punto, puntos suspensivos o salto de línea salvo que el texto siga
-/// en minúscula o con una cifra (abreviaturas como "art. 3", líneas cortadas por el PDF). Tampoco cierra frase un punto
+/// en minúscula (líneas cortadas por el PDF, "etc. y") o el punto es de una abreviatura seguida de número ("art. 3"). Tampoco cierra frase un punto
 /// pegado a lo que sigue ("3.5", "1.500", "1.º", "www.sede.es", "D.N.I"). Un salto de línea seguido de mayúscula o de
 /// un guion de lista sí la cierra: los títulos y las listas de lectura fácil suelen ir sin punto. Solo cuentan las frases
 /// con alguna palabra.</para>
@@ -16,6 +16,12 @@ namespace LecturaFacil.Domain.Readability;
 /// </remarks>
 public readonly record struct TextStatistics(int Sentences, int Words, int Syllables)
 {
+    // Abreviaturas que suelen ir delante de un número en textos administrativos.
+    private static readonly HashSet<string> NumberAbbreviations =
+        ["art", "arts", "núm", "núms", "n", "pág", "págs", "p", "apdo", "apdos", "cap", "vol", "disp"];
+
+    private static readonly int MaxAbbreviationLength = NumberAbbreviations.Max(abbreviation => abbreviation.Length);
+
     public bool HasWords => Words > 0;
 
     public static TextStatistics From(string text)
@@ -109,8 +115,31 @@ public readonly record struct TextStatistics(int Sentences, int Words, int Sylla
             return true;
         }
 
-        return char.IsLower(text[next]) || char.IsDigit(text[next]);
+        if (char.IsDigit(text[next]))
+        {
+            // "mañana. 15 personas" son dos frases; "art. 3" es una.
+            return text[terminator] == '.' && IsAfterAbbreviation(text, terminator);
+        }
+
+        return char.IsLower(text[next]);
     }
 
     private static bool IsGluedToPoint(char character) => char.IsLetterOrDigit(character);
+
+    private static bool IsAfterAbbreviation(ReadOnlySpan<char> text, int point)
+    {
+        var start = point;
+        while (start > 0 && point - start < MaxAbbreviationLength && IsWordLetter(text[start - 1]))
+        {
+            start--;
+        }
+
+        if (start > 0 && IsWordLetter(text[start - 1]))
+        {
+            return false;
+        }
+
+        var word = text[start..point].ToString().ToLowerInvariant();
+        return NumberAbbreviations.Contains(word);
+    }
 }
