@@ -4,6 +4,7 @@ using System.Text.Json;
 using LecturaFacil.Api.Security;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Verification;
 
 namespace LecturaFacil.Api.Tests.Documents;
 
@@ -63,6 +64,7 @@ public sealed class ListDocumentsEndpointTests
             AdaptedContent.TryCreate("Ayudas", [new AdaptedSectionDraft("¿Quién?", ["Una frase."])], [])!,
             new AdaptationMetadata("Servidor local", "modelo-secreto", "adapter.v1", 1, 1, TimeSpan.FromSeconds(1)),
             GuidelineReport.Create(new GuidelineAnalysis([], []), [], 10),
+            MeaningVerification.NotVerified("Texto de prueba.", 10),
             Now);
     }
 

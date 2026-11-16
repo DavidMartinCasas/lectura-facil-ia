@@ -39,6 +39,10 @@ export class DocumentViewStore {
 
   load(id: string): void {
     this.stop();
+    if (this._document()?.id !== id) {
+      this._document.set(null);
+      this._status.set(null);
+    }
     this._loading.set(true);
     this._error.set(null);
     this.active.add(

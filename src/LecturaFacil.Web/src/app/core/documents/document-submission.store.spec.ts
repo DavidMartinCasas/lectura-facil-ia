@@ -14,16 +14,18 @@ describe('DocumentSubmissionStore', () => {
     typeof vi.fn<(submission: DocumentSubmission) => Observable<SubmitDocumentResponse>>
   >;
   let statuses: Subject<DocumentStatus>;
+  let watch: ReturnType<typeof vi.fn<(id: string) => Observable<DocumentStatus>>>;
   let store: DocumentSubmissionStore;
 
   beforeEach(() => {
     statuses = new Subject<DocumentStatus>();
+    watch = vi.fn(() => statuses.asObservable());
     submit = vi.fn(() => of<SubmitDocumentResponse>({ id: 'doc-1', status: 'Received' }));
     TestBed.configureTestingModule({
       providers: [
         DocumentSubmissionStore,
         { provide: DocumentsApiService, useValue: { submit } },
-        { provide: DocumentEventsService, useValue: { watch: () => statuses.asObservable() } },
+        { provide: DocumentEventsService, useValue: { watch: (id: string) => watch(id) } },
       ],
     });
     store = TestBed.inject(DocumentSubmissionStore);
@@ -89,6 +91,23 @@ describe('DocumentSubmissionStore', () => {
     expect(submit).toHaveBeenCalledTimes(2);
     expect(submit).toHaveBeenLastCalledWith(text);
     expect(store.phase()).toBe('tracking');
+    expect(store.error()).toBeNull();
+  });
+
+  it('follows the accepted document again on retry, without sending it twice', () => {
+    store.submit(text);
+    statuses.error(new ApiError(ERROR_TEXTS.progressLost, 0, null));
+    expect(store.phase()).toBe('failed');
+    statuses = new Subject<DocumentStatus>();
+
+    store.retry();
+    statuses.next('Draft');
+    statuses.complete();
+
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(watch).toHaveBeenCalledTimes(2);
+    expect(watch).toHaveBeenLastCalledWith('doc-1');
+    expect(store.phase()).toBe('ready');
     expect(store.error()).toBeNull();
   });
 

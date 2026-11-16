@@ -3,6 +3,7 @@ using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Verification;
 using Microsoft.Extensions.Options;
 
 namespace LecturaFacil.Application.Tests.Documents;
@@ -51,6 +52,7 @@ public sealed class ListDocumentsTests
             AdaptedContent.TryCreate("Ayudas", [new AdaptedSectionDraft("¿Qué es?", ["Una ayuda."])], [])!,
             new AdaptationMetadata("Servidor local", "modelo-secreto", "adapter.v1", 1, 1, TimeSpan.FromSeconds(1)),
             GuidelineReport.Create(new GuidelineAnalysis([], []), [], 10),
+            MeaningVerification.NotVerified("Texto de prueba.", 10),
             Now);
 
         var documents = await CreateUseCase().ExecuteAsync(Token);

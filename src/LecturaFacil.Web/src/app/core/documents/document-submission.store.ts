@@ -56,7 +56,19 @@ export class DocumentSubmissionStore {
     );
   }
 
+  /**
+   * Si el servidor ya aceptó el documento y solo se perdió el seguimiento, vuelve a seguirlo sin reenviarlo (cada envío
+   * crea un documento y una adaptación nuevos). Si el envío falló o la adaptación terminó con error, lo reenvía.
+   */
   retry(): void {
+    const id = this._documentId();
+    const status = this._status();
+    if (id !== null && status !== null && status !== 'Error') {
+      this.stop();
+      this._error.set(null);
+      this.track(id, status);
+      return;
+    }
     if (this.lastSubmission !== null) {
       this.submit(this.lastSubmission);
     }

@@ -187,6 +187,7 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
                 AdaptedContent.TryCreate("Ayudas", [new AdaptedSectionDraft("¿Quién?", ["Una frase."])], [])!,
                 new AdaptationMetadata("Servidor local", "modelo", "adapter.v1", 1, 1, TimeSpan.FromSeconds(1)),
                 GuidelineReport.Create(new GuidelineAnalysis([], []), [], 10),
+                MeaningVerification.NotVerified("Texto de prueba.", 10),
                 createdAt.AddMinutes(2));
         }, createdAt.AddMinutes(1));
         await StoreAsync(OwnerId.From(Guid.NewGuid()), createdAt: createdAt.AddMinutes(5));

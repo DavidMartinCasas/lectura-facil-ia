@@ -60,6 +60,19 @@ describe('DocumentViewStore', () => {
     expect(store.status()).toBe('Draft');
   });
 
+  it('forgets the previous document when another one fails to load', () => {
+    store.load('doc-1');
+    get.mockReturnValue(
+      throwError(() => new ApiError(ERROR_TEXTS.notFound, 404, 'document.not_found')),
+    );
+
+    store.load('doc-2');
+
+    expect(store.document()).toBeNull();
+    expect(store.status()).toBeNull();
+    expect(store.error()).toBe(ERROR_TEXTS.notFound);
+  });
+
   it('shows the translated message when the document cannot be loaded', () => {
     get.mockReturnValue(
       throwError(() => new ApiError(ERROR_TEXTS.notFound, 404, 'document.not_found')),
