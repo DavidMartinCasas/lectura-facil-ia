@@ -2,6 +2,7 @@
 using System.Net;
 using System.Text.Json;
 using LecturaFacil.Api.Llm;
+using LecturaFacil.Api.Tests.Security;
 using LecturaFacil.Infrastructure.Llm;
 using LecturaFacil.Testing;
 using Microsoft.AspNetCore.Builder;
@@ -24,7 +25,7 @@ public sealed class LlmPingEndpointTests
     {
         var provider = FakeLlmProvider.FromFixture("ping/ok");
         await using var factory = new FakeLlmApiFactory(environment, provider);
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(PingUri, TestContext.Current.CancellationToken);
 
@@ -37,7 +38,7 @@ public sealed class LlmPingEndpointTests
     {
         var provider = FakeLlmProvider.FromFixture("ping/ok");
         await using var factory = new FakeLlmApiFactory("Development", provider, IPAddress.Parse("192.168.1.20"));
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(PingUri, TestContext.Current.CancellationToken);
 
@@ -50,7 +51,7 @@ public sealed class LlmPingEndpointTests
     {
         var provider = FakeLlmProvider.FromFixture("ping/ok");
         await using var factory = new FakeLlmApiFactory("Development", provider);
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         for (var i = 0; i < LlmDiagnosticsEndpoints.PingsPerWindow; i++)
         {
@@ -69,7 +70,7 @@ public sealed class LlmPingEndpointTests
     {
         var provider = FakeLlmProvider.FromFixture("ping/ok", "Principal");
         await using var factory = new FakeLlmApiFactory("Development", provider);
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(PingUri, TestContext.Current.CancellationToken);
 
@@ -98,6 +99,7 @@ public sealed class LlmPingEndpointTests
             builder.ConfigureTestServices(services =>
             {
                 services.AddTransient(_ => new LlmProviders(primary, null));
+                services.UseTestAuthentication();
                 services.AddSingleton<IStartupFilter>(new RemoteAddressStartupFilter(remoteAddress ?? IPAddress.Loopback));
             });
         }

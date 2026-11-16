@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Api.Tests.Security;
 using LecturaFacil.Application.Llm;
 using LecturaFacil.Infrastructure.Llm;
 using LecturaFacil.Testing;
@@ -22,6 +23,12 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     protected virtual string Environment => "Production";
 
     protected virtual string ConnectionString => _database.GetConnectionString();
+
+    /// <summary>
+    /// Si es <c>true</c>, la sesión es la cookie real de Identity (tests de inicio de sesión). Si no, la da
+    /// <see cref="TestAuthenticationHandler"/>.
+    /// </summary>
+    protected virtual bool UseRealAuthentication => false;
 
     /// <summary>Si es <c>false</c>, los documentos se quedan en el estado en que se guardan.</summary>
     protected virtual bool RunAdaptationWorker => false;
@@ -52,6 +59,11 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.ConfigureTestServices(services =>
         {
             services.UseFakeLlm(Llm);
+            if (!UseRealAuthentication)
+            {
+                services.UseTestAuthentication();
+            }
+
             if (!RunAdaptationWorker)
             {
                 services.RemoveAdaptationWorker();

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 using System.Net;
 using System.Text.Json;
-using LecturaFacil.Api.Security;
+using LecturaFacil.Api.Tests.Security;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
 using LecturaFacil.Domain.Verification;
@@ -20,7 +20,7 @@ public sealed class ListDocumentsEndpointTests
     public async Task List_WhenThereAreNoDocuments_ReturnsAnEmptyArray()
     {
         await using var factory = new DocumentsApiFactory();
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(ListUri, Token);
 
@@ -34,10 +34,10 @@ public sealed class ListDocumentsEndpointTests
     public async Task List_ReturnsTitleDateStatusAndProvider_OnlyOfTheCurrentUser_WithoutModelNames()
     {
         await using var factory = new DocumentsApiFactory();
-        var received = await SeedAsync(factory, FixedCurrentUser.DevelopmentOwner, "Bases", Now.AddMinutes(-1));
-        var adapted = await SeedAsync(factory, FixedCurrentUser.DevelopmentOwner, "Convocatoria", Now, Adapt);
+        var received = await SeedAsync(factory, TestUsers.DefaultOwner, "Bases", Now.AddMinutes(-1));
+        var adapted = await SeedAsync(factory, TestUsers.DefaultOwner, "Convocatoria", Now, Adapt);
         await SeedAsync(factory, OwnerId.From(Guid.NewGuid()), "Ajeno", Now.AddMinutes(1));
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(ListUri, Token);
 

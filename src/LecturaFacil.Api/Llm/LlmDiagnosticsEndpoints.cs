@@ -26,7 +26,7 @@ internal static class LlmDiagnosticsEndpoints
 
     /// <summary>
     /// Diagnóstico de los proveedores de LLM. Solo existe en Development, solo responde a peticiones desde la propia
-    /// máquina (aún no hay autenticación: llega en US-15) y tiene límite de peticiones. En cualquier otro caso, 404.
+    /// máquina, con sesión y con límite de peticiones. En cualquier otro caso, 404 (o 401 sin sesión).
     /// </summary>
     public static IEndpointRouteBuilder MapLlmDiagnosticsEndpoints(this IEndpointRouteBuilder endpoints, IHostEnvironment environment)
     {
@@ -40,6 +40,7 @@ internal static class LlmDiagnosticsEndpoints
             .AddEndpointFilter(async (context, next) =>
                 IsLocal(context.HttpContext) ? await next(context) : TypedResults.NotFound())
             .RequireRateLimiting(RateLimitPolicy)
+            .RequireAuthorization()
             .WithName("PingLlmProviders")
             .WithSummary("Solo en desarrollo y desde la propia máquina: llamada mínima a cada proveedor de LLM y rol.")
             .ExcludeFromDescription();

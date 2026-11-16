@@ -11,7 +11,7 @@ public sealed class SecurityTests(ApiFactory factory) : IClassFixture<ApiFactory
     [InlineData(ApiFactory.ThrowingPath)]
     public async Task AnyResponse_WhenReturned_IncludesSecurityHeaders(string path)
     {
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(new Uri(path, UriKind.Relative), TestContext.Current.CancellationToken);
 
@@ -27,7 +27,7 @@ public sealed class SecurityTests(ApiFactory factory) : IClassFixture<ApiFactory
     [Fact]
     public async Task UnhandledException_OutsideDevelopment_ReturnsGenericProblemDetails()
     {
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(new Uri(ApiFactory.ThrowingPath, UriKind.Relative), TestContext.Current.CancellationToken);
 
@@ -42,7 +42,7 @@ public sealed class SecurityTests(ApiFactory factory) : IClassFixture<ApiFactory
     [Fact]
     public async Task UnknownRoute_WhenRequested_ReturnsProblemDetails()
     {
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(new Uri("/no-existe", UriKind.Relative), TestContext.Current.CancellationToken);
 
@@ -53,7 +53,7 @@ public sealed class SecurityTests(ApiFactory factory) : IClassFixture<ApiFactory
     [Fact]
     public async Task OpenApiDocument_OutsideDevelopment_IsNotPublished()
     {
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(new Uri("/openapi/v1.json", UriKind.Relative), TestContext.Current.CancellationToken);
 
@@ -66,7 +66,7 @@ public sealed class DevelopmentTests(DevelopmentApiFactory factory) : IClassFixt
     [Fact]
     public async Task OpenApiDocument_InDevelopment_IsPublished()
     {
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
 
         using var response = await client.GetAsync(new Uri("/openapi/v1.json", UriKind.Relative), TestContext.Current.CancellationToken);
 

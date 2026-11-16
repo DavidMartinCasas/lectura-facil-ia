@@ -20,7 +20,7 @@ public sealed class AdaptationFlowTests(AdaptationFlowTests.WorkerApiFactory fac
     [Fact]
     public async Task SubmittedDocument_IsAdaptedInTheBackground_AndCanBeRead()
     {
-        using var client = factory.CreateClient();
+        using var client = await factory.CreateApiClientAsync();
         using var submitted = await client.PostAsync(
             new Uri("/api/documents", UriKind.Relative),
             new StringContent(await File.ReadAllTextAsync(ExampleFile(), Token), System.Text.Encoding.UTF8, "application/json"),
