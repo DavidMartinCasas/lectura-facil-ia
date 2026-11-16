@@ -20,6 +20,7 @@ public sealed class LimitsOptionsTests
         options.MaxFileSizeBytes.ShouldBe(5 * 1024 * 1024);
         options.MaxCharacters.ShouldBe(20_000);
         options.MaxWordsPerSentence.ShouldBe(15);
+        options.MaxConnectorsPerSentence.ShouldBe(1);
         options.MaxOutputTokens.ShouldBe(4_096);
         options.LlmTimeoutSeconds.ShouldBe(120);
         options.MinCharacters.ShouldBe(50);
@@ -44,6 +45,8 @@ public sealed class LimitsOptionsTests
     [InlineData(nameof(LimitsOptions.MaxCharacters), 1_000_000)]
     [InlineData(nameof(LimitsOptions.MaxWordsPerSentence), 0)]
     [InlineData(nameof(LimitsOptions.MaxWordsPerSentence), 100)]
+    [InlineData(nameof(LimitsOptions.MaxConnectorsPerSentence), 0)]
+    [InlineData(nameof(LimitsOptions.MaxConnectorsPerSentence), 11)]
     [InlineData(nameof(LimitsOptions.MaxOutputTokens), 10)]
     [InlineData(nameof(LimitsOptions.MaxOutputTokens), 1_000_000)]
     [InlineData(nameof(LimitsOptions.LlmTimeoutSeconds), 0)]

@@ -75,7 +75,7 @@ Las historias que se lanzan el mismo día no dependen entre sí y pueden hacerse
 | [US-02](historias/US-02-configuracion-y-secretos.md) | Configuración y secretos validados | EP-01 | Must | 2 | Mar 17 | US-01 | No | 🔍 |
 | [US-03](historias/US-03-proveedores-llm.md) | Proveedores LLM (local y Azure) | EP-01 | Must | 5 | Mié 18 | US-02 | Sí: endpoints y claves | 🔍 |
 | [US-04](historias/US-04-subida-y-extraccion.md) | Subir texto o PDF y extraer el texto | EP-02 | Must | 3 | Mié 18 | US-01 | No | 🔍 |
-| [US-05](historias/US-05-deteccion-de-problemas.md) | Detectar problemas del original | EP-02 | Must | 3 | Mié 18 | US-01 | No | ⬜ |
+| [US-05](historias/US-05-deteccion-de-problemas.md) | Detectar problemas del original | EP-02 | Must | 3 | Mié 18 | US-01 | No | 🔍 |
 | [US-06](historias/US-06-adaptacion-con-llm.md) | Adaptar el texto con el LLM | EP-03 | Must | 5 | Jue 19 | US-03, US-04, US-05 | No | ⬜ |
 | [US-07](historias/US-07-revisor-de-pautas.md) | Revisor de pautas | EP-03 | Must | 2 | Vie 20 | US-05, US-06 | No | ⬜ |
 | [US-08](historias/US-08-indice-de-legibilidad.md) | Índice de legibilidad INFLESZ | EP-03 | Must | 3 | Jue 19 | US-01 | No | ⬜ |

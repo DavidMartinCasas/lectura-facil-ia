@@ -31,6 +31,10 @@ public sealed class LimitsOptions
     [Range(5, 50, ErrorMessage = "Limits:MaxWordsPerSentence debe estar entre {1} y {2}.")]
     public int MaxWordsPerSentence { get; set; } = 15;
 
+    /// <summary>Conectores que abren otra oración ("cuyo", "siempre que"…) a partir de los que una frase une varias ideas.</summary>
+    [Range(1, 10, ErrorMessage = "Limits:MaxConnectorsPerSentence debe estar entre {1} y {2}.")]
+    public int MaxConnectorsPerSentence { get; set; } = 1;
+
     [Range(256, 32_768, ErrorMessage = "Limits:MaxOutputTokens debe estar entre {1} y {2}.")]
     public int MaxOutputTokens { get; set; } = 4_096;
 

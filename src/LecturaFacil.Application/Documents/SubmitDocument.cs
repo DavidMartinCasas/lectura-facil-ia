@@ -6,13 +6,17 @@ using Microsoft.Extensions.Options;
 
 namespace LecturaFacil.Application.Documents;
 
-/// <summary>Recibe un texto pegado o un PDF digital y crea un documento en estado <see cref="DocumentStatus.Received"/>.</summary>
+/// <summary>
+/// Recibe un texto pegado o un PDF digital y crea un documento en estado <see cref="DocumentStatus.Received"/>, con los
+/// problemas de lectura fácil que tiene su texto original.
+/// </summary>
 public sealed class SubmitDocument(
     ITextExtractor textExtractor,
     IDocumentRepository repository,
     ICurrentUser currentUser,
     IOptions<LimitsOptions> limits,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    IGuidelineChecker guidelineChecker)
 {
     // Tamaño del bloque de lectura: el mismo que usa Stream.CopyToAsync por defecto.
     private const int ReadBufferSize = 81_920;
@@ -76,6 +80,7 @@ public sealed class SubmitDocument(
 
         var originalText = OriginalText.Create(text, limits);
         var document = Document.Submit(currentUser.OwnerId, title, originalText, timeProvider.GetUtcNow());
+        document.RecordOriginalFindings(guidelineChecker.Check(originalText.Value).Findings);
         await repository.AddAsync(document, cancellationToken);
 
         return Result<SubmittedDocument>.Success(
