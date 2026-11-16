@@ -48,6 +48,22 @@ public sealed class LlmStatusEndpointTests
         }
     }
 
+    [Theory]
+    [InlineData(true, "Healthy")]
+    [InlineData(false, "Degraded")]
+    public async Task LlmHealth_ReflectsThePrimaryWithoutDetailsAndWithoutTheDatabase(bool primaryAvailable, string expected)
+    {
+        var availability = new LlmAvailability(fallbackEnabled: false);
+        availability.Update(new LlmAvailabilityStatus(primaryAvailable, null));
+        await using var factory = new StatusApiFactory(availability);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync(new Uri("/health/llm", UriKind.Relative), TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).ShouldBe($$"""{"status":"{{expected}}"}""");
+    }
+
     private sealed class StatusApiFactory(LlmAvailability availability) : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)

@@ -145,7 +145,8 @@ Cómo se decide en cada llamada:
 
 Estado visible:
 
-- `GET /health` devuelve `Degraded` (HTTP 200) si el principal no responde; `Unhealthy` (503) solo si falla la base de datos.
+- `GET /health` es la salud de la API y su base de datos (la que usa Docker): no cambia porque el modelo no responda.
+- `GET /health/llm` (solo dentro de la red de Docker; nginx no lo publica) devuelve `Degraded` (HTTP 200) si el principal no responde.
 - `GET /api/status/llm` devuelve solo si cada proveedor está disponible, sin URLs, IPs ni modelos:
 
   ```json

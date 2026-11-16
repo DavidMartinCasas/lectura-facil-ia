@@ -18,6 +18,9 @@ public static class DependencyInjection
     public const string DatabaseHealthCheckName = "database";
     public const string LlmHealthCheckName = "llm-primary";
 
+    /// <summary>Etiqueta de las comprobaciones del LLM: se exponen aparte de la salud de la API.</summary>
+    public const string LlmHealthCheckTag = "llm";
+
     /// <summary>
     /// Registra los adaptadores: base de datos y su comprobación de salud, documentos y proveedores de LLM.
     /// Las opciones (<see cref="DatabaseOptions"/>, <see cref="LlmOptions"/>…) las registra y valida la composición de la API.
@@ -66,7 +69,7 @@ public static class DependencyInjection
         services.AddHostedService(provider => ActivatorUtilities.CreateInstance<LlmHealthMonitor>(
             provider,
             new Func<LlmProviders>(provider.GetRequiredService<LlmProviders>)));
-        services.AddHealthChecks().AddCheck<LlmHealthCheck>(LlmHealthCheckName, HealthStatus.Degraded);
+        services.AddHealthChecks().AddCheck<LlmHealthCheck>(LlmHealthCheckName, HealthStatus.Degraded, [LlmHealthCheckTag]);
         return services;
     }
 
