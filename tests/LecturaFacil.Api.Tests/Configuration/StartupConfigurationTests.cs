@@ -72,6 +72,7 @@ public sealed class StartupConfigurationTests
         services.GetRequiredService<IOptions<UiOptions>>().Value.Notice.ShouldBeEmpty();
         services.GetRequiredService<IOptions<LimitsOptions>>().Value.MaxWordsPerSentence.ShouldBe(15);
         services.GetRequiredService<IOptions<DatabaseOptions>>().Value.ApplyMigrationsOnStartup.ShouldBeFalse();
+        services.GetRequiredService<IOptions<LlmResilienceOptions>>().Value.MaxRetryAttempts.ShouldBe(1);
     }
 
     [Theory]
@@ -106,6 +107,7 @@ public sealed class StartupConfigurationTests
     [InlineData("Limits:MaxWordsPerSentence", "0")]
     [InlineData("Llm:Primary:Type", "999")]
     [InlineData("Ui:Notice", "x")]
+    [InlineData("Llm:Resilience:BreakDurationSeconds", "0")]
     public async Task Start_WhenOptionIsOutOfRange_DoesNotStart(string key, string value)
     {
         var settings = CompleteSettings();
@@ -184,6 +186,9 @@ public sealed class StartupConfigurationTests
             {
                 builder.UseSetting(key, value);
             }
+
+            // Ni el .env.example ni ninguna otra configuración de estos tests puede llegar a llamar a un proveedor.
+            builder.UseSetting(TestConfiguration.HealthCheckEnabledKey, "false");
 
             if (loggerProvider is not null)
             {

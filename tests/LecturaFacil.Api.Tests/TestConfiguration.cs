@@ -14,5 +14,10 @@ internal static class TestConfiguration
         ["Llm:Primary:ApiKey"] = "clave-de-prueba",
         ["Llm:Primary:AdapterModel"] = "modelo-adaptador",
         ["Llm:Primary:VerifierModel"] = "modelo-verificador",
+
+        // Sin comprobación periódica: los tests nunca llaman a un proveedor, ni siquiera con el ping.
+        [HealthCheckEnabledKey] = "false",
     };
+
+    public const string HealthCheckEnabledKey = "Llm:Resilience:HealthCheckEnabled";
 }

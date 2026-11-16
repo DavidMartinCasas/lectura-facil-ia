@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Application.Llm;
+using LecturaFacil.Infrastructure.Llm;
 using LecturaFacil.Testing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -80,4 +82,16 @@ public sealed class ApiWithoutDatabaseFactory : ApiFactory
 public sealed class DevelopmentApiFactory : ApiFactory
 {
     protected override string Environment => "Development";
+}
+
+/// <summary>API con base de datos, pero con el proveedor principal caído según la comprobación de salud.</summary>
+public sealed class ApiWithPrimaryLlmDownFactory : ApiFactory
+{
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        base.ConfigureWebHost(builder);
+        var availability = new LlmAvailability(fallbackEnabled: false);
+        availability.Update(new LlmAvailabilityStatus(PrimaryAvailable: false, FallbackAvailable: null));
+        builder.ConfigureTestServices(services => services.AddSingleton(availability));
+    }
 }

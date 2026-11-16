@@ -30,3 +30,17 @@ public sealed class HealthEndpointWithoutDatabaseTests(ApiWithoutDatabaseFactory
         (await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).ShouldBe("""{"status":"Unhealthy"}""");
     }
 }
+
+public sealed class HealthEndpointWithPrimaryLlmDownTests(ApiWithPrimaryLlmDownFactory factory) : IClassFixture<ApiWithPrimaryLlmDownFactory>
+{
+    [Fact]
+    public async Task Health_WhenPrimaryLlmIsDown_StaysHealthyBecauseTheApiAndDatabaseWork()
+    {
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync(new Uri("/health", UriKind.Relative), TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).ShouldBe("""{"status":"Healthy"}""");
+    }
+}

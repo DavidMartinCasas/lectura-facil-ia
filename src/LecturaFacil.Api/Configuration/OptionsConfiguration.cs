@@ -14,6 +14,7 @@ internal static class OptionsConfiguration
     {
         services.AddValidated<DatabaseOptions>(DatabaseOptions.SectionName);
         services.AddValidated<LlmOptions>(LlmOptions.SectionName);
+        services.AddValidated<LlmResilienceOptions>(LlmResilienceOptions.SectionName);
         services.AddValidated<LimitsOptions>(LimitsOptions.SectionName);
         services.AddValidated<UiOptions>(UiOptions.SectionName);
         return services;
