@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Adaptation;
+using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Llm;
 using LecturaFacil.Application.Users;

@@ -10,7 +10,8 @@ using Microsoft.OpenApi;
 namespace LecturaFacil.Api.Documents;
 
 /// <summary>
-/// <c>POST /api/documents</c>: texto pegado (JSON) o PDF (<c>multipart/form-data</c>, campo <c>file</c>).
+/// <c>POST /api/documents</c>: texto pegado (JSON) o PDF (<c>multipart/form-data</c>, campo <c>file</c>). El documento
+/// queda en la cola de adaptación. Las consultas están en <see cref="DocumentQueryEndpoints"/>.
 /// Solo traduce HTTP ↔ caso de uso: las reglas viven en <see cref="SubmitDocument"/> y en Domain.
 /// </summary>
 internal static partial class DocumentEndpoints
@@ -38,6 +39,7 @@ internal static partial class DocumentEndpoints
         // así que Minimal APIs no añade la validación sola: hace falta .WithMetadata(new RequireAntiforgeryTokenAttribute()).
         // TODO(US-16): límite de peticiones.
         var group = endpoints.MapGroup(Path).WithTags("Documentos");
+        group.MapDocumentQueries();
 
         group.MapPost("/", SubmitAsync)
             .Accepts<SubmitTextRequest>(JsonContentType, MultipartContentType)

@@ -28,6 +28,10 @@ public sealed class LimitsOptionsTests
         options.MaxPdfPages.ShouldBe(100);
         options.PdfExtractionTimeoutSeconds.ShouldBe(15);
         options.MaxConcurrentPdfExtractions.ShouldBe(2);
+        options.MaxCharactersPerAdaptationChunk.ShouldBe(6_000);
+        options.AdaptationConcurrency.ShouldBe(1);
+        options.DocumentEventsPollMilliseconds.ShouldBe(1_000);
+        options.DocumentEventsMaxSeconds.ShouldBe(600);
     }
 
     [Fact]
