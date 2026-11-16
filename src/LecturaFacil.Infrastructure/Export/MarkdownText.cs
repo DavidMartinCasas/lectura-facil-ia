@@ -77,7 +77,8 @@ internal static partial class MarkdownText
         return longest;
     }
 
-    [GeneratedRegex(@"\b(?:(?:https?|ftp)://|www\.)\S+|[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    // La puntuación final (".", ")"…) se queda fuera de la dirección, como hacen los visores GFM.
+    [GeneratedRegex(@"\b(?:(?:https?|ftp)://|www\.)\S+?(?=[.,;:!?)\]]*(?:\s|$))|[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex AddressPattern();
 
     [GeneratedRegex(@"^\d{1,9}(?<marker>[.)])", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]

@@ -55,7 +55,7 @@ public sealed class MarkdownExporterTests
     {
         var markdown = Export(ExportSamples.WithText("Mira ![x](https://ejemplo.com/a.png) ahora."));
 
-        markdown.ShouldContain(@"Mira !\[x\](`https://ejemplo.com/a.png)` ahora.");
+        markdown.ShouldContain(@"Mira !\[x\](`https://ejemplo.com/a.png`) ahora.");
         markdown.ShouldNotContain("![");
     }
 
@@ -69,10 +69,10 @@ public sealed class MarkdownExporterTests
     }
 
     [Theory]
-    [InlineData("Entra en https://ejemplo.com/datos?x=1.", "Entra en `https://ejemplo.com/datos?x=1.`")]
+    [InlineData("Entra en https://ejemplo.com/datos?x=1.", "Entra en `https://ejemplo.com/datos?x=1`.")]
     [InlineData("Entra en www.ejemplo.com hoy", "Entra en `www.ejemplo.com` hoy")]
     [InlineData("Escribe a info@ejemplo.com hoy", "Escribe a `info@ejemplo.com` hoy")]
-    [InlineData("Ver [aquí](https://ejemplo.com)", @"Ver \[aquí\](`https://ejemplo.com)`")]
+    [InlineData("Ver [aquí](https://ejemplo.com)", @"Ver \[aquí\](`https://ejemplo.com`)")]
     public void Export_PutsAddressesInCodeSoNoViewerTurnsThemIntoLinks(string sentence, string expected) =>
         Export(ExportSamples.WithText(sentence)).ShouldContain(expected);
 
@@ -110,7 +110,7 @@ public sealed class MarkdownExporterTests
         var markdown = Export(document);
 
         markdown.ShouldStartWith(@"# \<b\>Título\</b\>");
-        markdown.ShouldContain(@"- **\*\*Término\*\***: \[enlace\](`https://ejemplo.com)`");
+        markdown.ShouldContain(@"- **\*\*Término\*\***: \[enlace\](`https://ejemplo.com`)");
     }
 
     private string Export(ExportableDocument document) => Encoding.UTF8.GetString(_exporter.Export(document));
