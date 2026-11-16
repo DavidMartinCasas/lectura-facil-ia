@@ -1,0 +1,7 @@
+{
+  "model": "modelo-adaptador-falso",
+  "content": "Bajo la luna de abril,\nel alquiler se fue a dormir.",
+  "inputTokens": 1200,
+  "outputTokens": 20,
+  "durationMs": 3400
+}

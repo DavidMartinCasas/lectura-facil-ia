@@ -21,6 +21,22 @@ public sealed class AdaptedVersion
         CreatedAt = createdAt;
     }
 
+    /// <summary>Para reconstruir la versión desde la persistencia, que asigna <see cref="Metadata"/> después.</summary>
+    private AdaptedVersion(
+        int number,
+        string title,
+        IReadOnlyList<AdaptedSection> sections,
+        IReadOnlyList<GlossaryTerm> glossary,
+        DateTimeOffset createdAt)
+    {
+        Number = number;
+        Title = title;
+        Sections = sections;
+        Glossary = glossary;
+        Metadata = null!;
+        CreatedAt = createdAt;
+    }
+
     /// <summary>Número de versión dentro del documento, desde 1.</summary>
     public int Number { get; }
 

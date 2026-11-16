@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Documents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -14,6 +15,10 @@ public static class DependencyInjection
 
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<SubmitDocument>();
+        services.AddScoped<GetDocument>();
+        services.AddScoped<WatchDocument>();
+        services.AddScoped<AdaptDocument>();
+        services.AddScoped<RequeuePendingAdaptations>();
         return services;
     }
 }

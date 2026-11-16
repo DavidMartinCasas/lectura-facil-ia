@@ -1,0 +1,7 @@
+{
+  "model": "modelo-adaptador-falso",
+  "content": "{\"titulo\": \"Ayudas\", \"secciones\": [{\"pregunta\": \"¿Quién puede pedir la ayuda?\", \"frases\": [\"Puede pedir la ayuda si:\", \"Vive de alquiler en la ciudad.\", \"No tiene otra casa a su nombre.\", \"Gana menos de 1.500 euros al mes.\"]}, {\"pregunta\": \"¿Cuánto dinero da la ayuda?\", \"frases\": [\"El Ayuntamiento paga una parte de su alquiler.\", \"Como mucho, 250 euros al mes.\"]}, {\"pregunta\": \"¿Cómo pido la ayuda?\", \"frases\": [\"Rellene la solicitud.\", \"Lleve los papeles que demuestran lo que gana.\", \"Tiene 15 días para pedirla.\", \"No cuentan sábados, domingos ni festivos.\"]}]}",
+  "inputTokens": 1200,
+  "outputTokens": 900,
+  "durationMs": 3400
+}

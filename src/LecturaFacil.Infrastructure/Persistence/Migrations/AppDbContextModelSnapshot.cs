@@ -32,6 +32,11 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("failure_code");
+
                     b.Property<string>("OriginalText")
                         .IsRequired()
                         .HasColumnType("text")
@@ -58,6 +63,8 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Status");
 
                     b.HasIndex("OwnerId", "CreatedAt");
 
@@ -158,6 +165,92 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("LecturaFacil.Domain.Documents.Document", b =>
                 {
+                    b.OwnsMany("LecturaFacil.Domain.Documents.AdaptedVersion", "AdaptedVersions", b1 =>
+                        {
+                            b1.Property<Guid>("DocumentId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("document_id");
+
+                            b1.Property<int>("Number")
+                                .HasColumnType("integer")
+                                .HasColumnName("number");
+
+                            b1.Property<DateTimeOffset>("CreatedAt")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("created_at");
+
+                            b1.Property<string>("Glossary")
+                                .IsRequired()
+                                .HasColumnType("jsonb")
+                                .HasColumnName("glossary");
+
+                            b1.Property<string>("Sections")
+                                .IsRequired()
+                                .HasColumnType("jsonb")
+                                .HasColumnName("sections");
+
+                            b1.Property<string>("Title")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("title");
+
+                            b1.HasKey("DocumentId", "Number");
+
+                            b1.ToTable("adapted_versions", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("DocumentId");
+
+                            b1.OwnsOne("LecturaFacil.Domain.Documents.AdaptationMetadata", "Metadata", b2 =>
+                                {
+                                    b2.Property<Guid>("AdaptedVersionDocumentId")
+                                        .HasColumnType("uuid");
+
+                                    b2.Property<int>("AdaptedVersionNumber")
+                                        .HasColumnType("integer");
+
+                                    b2.Property<long>("Duration")
+                                        .HasColumnType("bigint")
+                                        .HasColumnName("duration_ms");
+
+                                    b2.Property<long>("InputTokens")
+                                        .HasColumnType("bigint")
+                                        .HasColumnName("input_tokens");
+
+                                    b2.Property<string>("Model")
+                                        .IsRequired()
+                                        .HasMaxLength(200)
+                                        .HasColumnType("character varying(200)")
+                                        .HasColumnName("model");
+
+                                    b2.Property<long>("OutputTokens")
+                                        .HasColumnType("bigint")
+                                        .HasColumnName("output_tokens");
+
+                                    b2.Property<string>("PromptVersion")
+                                        .IsRequired()
+                                        .HasMaxLength(200)
+                                        .HasColumnType("character varying(200)")
+                                        .HasColumnName("prompt_version");
+
+                                    b2.Property<string>("Provider")
+                                        .IsRequired()
+                                        .HasMaxLength(200)
+                                        .HasColumnType("character varying(200)")
+                                        .HasColumnName("provider");
+
+                                    b2.HasKey("AdaptedVersionDocumentId", "AdaptedVersionNumber");
+
+                                    b2.ToTable("adapted_versions");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("AdaptedVersionDocumentId", "AdaptedVersionNumber");
+                                });
+
+                            b1.Navigation("Metadata")
+                                .IsRequired();
+                        });
+
                     b.OwnsMany("LecturaFacil.Domain.Guidelines.Finding", "OriginalFindings", b1 =>
                         {
                             b1.Property<Guid>("Id")
@@ -216,6 +309,8 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
                                 .OnDelete(DeleteBehavior.Restrict)
                                 .IsRequired();
                         });
+
+                    b.Navigation("AdaptedVersions");
 
                     b.Navigation("OriginalFindings");
                 });
