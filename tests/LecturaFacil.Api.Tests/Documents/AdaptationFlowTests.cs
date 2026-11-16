@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using LecturaFacil.Application.Llm;
 using Microsoft.AspNetCore.Hosting;
 
 namespace LecturaFacil.Api.Tests.Documents;
@@ -37,9 +38,16 @@ public sealed class AdaptationFlowTests(AdaptationFlowTests.WorkerApiFactory fac
         var guidelines = adaptation.GetProperty("guidelines");
         guidelines.GetProperty("items").GetArrayLength().ShouldBe(guidelines.GetProperty("totalCount").GetInt32());
         guidelines.GetProperty("summary").GetString().ShouldEndWith("pautas cumplidas");
-        var request = factory.Llm.Requests.ShouldHaveSingleItem();
+        var verification = adaptation.GetProperty("verification");
+        verification.GetProperty("status").GetString().ShouldBe("Verified");
+        verification.GetProperty("keyFacts").EnumerateArray()
+            .Single(fact => fact.GetProperty("originalValue").GetString() == "Ordenanza Municipal 7/2024")
+            .GetProperty("status").GetString().ShouldBe("Omitted");
+        factory.Llm.Requests.Count.ShouldBe(2);
+        var request = factory.Llm.Requests.Single(sent => sent.Role == LlmRole.Adapter);
         request.UserMessage.ShouldContain("2,5 veces el IPREM");
         request.SystemPrompt.ShouldContain("Sin siglas sin explicar: ");
+        factory.Llm.Requests.Single(sent => sent.Role == LlmRole.Verifier).UserMessage.ShouldContain("2,5 veces el IPREM");
     }
 
     private static async Task<JsonElement> WaitUntilFinishedAsync(HttpClient client, Guid id)

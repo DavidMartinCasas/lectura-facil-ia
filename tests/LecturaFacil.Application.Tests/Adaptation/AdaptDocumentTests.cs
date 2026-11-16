@@ -4,9 +4,12 @@ using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Llm;
 using LecturaFacil.Application.Tests.Documents;
+using LecturaFacil.Application.Verification;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Verification;
 using LecturaFacil.Infrastructure.Guidelines;
+using LecturaFacil.Infrastructure.Verification;
 using LecturaFacil.Testing;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -26,6 +29,9 @@ public sealed class AdaptDocumentTests
 
     // Sin hallazgos por defecto: estos tests no dependen de lo que detecten las reglas reales.
     private IGuidelineChecker _guidelineChecker = new StubGuidelineChecker(findingsPerText: 0);
+
+    // El verificador tiene su propio proveedor falso para no mezclar sus peticiones con las del adaptador.
+    private FakeLlmProvider _verifierLlm = FakeLlmProvider.FromFixture("verify/vacio", "Verificador falso");
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -461,6 +467,76 @@ public sealed class AdaptDocumentTests
     }
 
     [Fact]
+    public async Task Adapt_VerifiesTheMeaningOfTheSavedVersionWithTheOriginalAndTheAdaptation()
+    {
+        var document = Store(Paragraph);
+        var llm = FakeLlmProvider.FromFixture("adapter/ok");
+
+        var result = await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        var verification = result.Value.MeaningVerification.ShouldNotBeNull();
+        verification.Status.ShouldBe(VerificationStatus.Verified);
+        verification.Metadata.ShouldNotBeNull().Provider.ShouldBe("Verificador falso");
+        var request = _verifierLlm.Requests.ShouldHaveSingleItem();
+        request.Role.ShouldBe(LlmRole.Verifier);
+        request.UserMessage.ShouldContain(Paragraph);
+        request.UserMessage.ShouldContain("Como mucho, 250 euros al mes.");
+    }
+
+    [Fact]
+    public async Task Adapt_WhenTheVerifierIsUnavailable_StillSavesTheDraftWithItsFiguresForReview()
+    {
+        var document = Store("La ayuda es de 250 € como máximo y se pide en quince días hábiles.");
+        _verifierLlm = FakeLlmProvider.Unavailable();
+
+        var result = await CreateUseCase(FakeLlmProvider.FromFixture("adapter/ok")).ExecuteAsync(document.Id, Token);
+
+        result.IsSuccess.ShouldBeTrue();
+        document.Status.ShouldBe(DocumentStatus.Draft);
+        var verification = result.Value.MeaningVerification.ShouldNotBeNull();
+        verification.Status.ShouldBe(VerificationStatus.NotVerified);
+        verification.KeyFacts.Select(fact => fact.OriginalValue).ShouldBe(["250 €", "quince"]);
+        verification.KeyFacts.ShouldAllBe(fact => fact.Status == KeyFactStatus.Review);
+    }
+
+    [Fact]
+    public async Task Adapt_WhenTheVerifierAnswersBadly_StillSavesTheDraft()
+    {
+        var document = Store(Paragraph);
+        _verifierLlm = FakeLlmProvider.FromFixture("verify/truncado");
+
+        var result = await CreateUseCase(FakeLlmProvider.FromFixture("adapter/ok")).ExecuteAsync(document.Id, Token);
+
+        document.Status.ShouldBe(DocumentStatus.Draft);
+        result.Value.MeaningVerification.ShouldNotBeNull().Status.ShouldBe(VerificationStatus.NotVerified);
+        _verifierLlm.Requests.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Adapt_WhenItRetries_VerifiesOnlyTheSavedVersion()
+    {
+        UseRealGuidelines();
+        var document = Store(Paragraph);
+        var llm = Sequence("adapter/sigla-sin-explicar", "adapter/sigla-en-glosario");
+
+        var result = await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        llm.Requests.Count.ShouldBe(2);
+        _verifierLlm.Requests.ShouldHaveSingleItem().UserMessage.ShouldContain("BOP: ");
+        result.Value.Glossary.Select(term => term.Term).ShouldBe(["BOP"]);
+    }
+
+    [Fact]
+    public async Task Adapt_WhenTheAdaptationFails_DoesNotCallTheVerifier()
+    {
+        var document = Store(Paragraph);
+
+        await CreateUseCase(FakeLlmProvider.Unavailable()).ExecuteAsync(document.Id, Token);
+
+        _verifierLlm.Requests.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task FailUnexpectedly_WhenTheDocumentIsProcessing_LeavesItInErrorWithAGenericReason()
     {
         var document = Store(Paragraph);
@@ -506,6 +582,7 @@ public sealed class AdaptDocumentTests
             llm,
             Prompts.Real,
             new ReviewAdaptation(_guidelineChecker, Options.Create(_limits)),
+            new VerifyMeaning(new LlmMeaningVerifier(_verifierLlm, Prompts.Real, Options.Create(_limits)), Options.Create(_limits)),
             Options.Create(_limits),
             new FixedTimeProvider(Now));
 }

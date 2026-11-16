@@ -1,0 +1,7 @@
+{
+  "model": "modelo-verificador-falso",
+  "content": "{\"datos_clave\": [{\"tipo\": \"requisito\", \"original\": \"2,5 veces el IPREM\", \"adaptado\": \"1.500 euros\", \"estado\": \"revisar\", \"motivo\": \"conversion_calculada\"}]}",
+  "inputTokens": 1500,
+  "outputTokens": 400,
+  "durationMs": 2100
+}

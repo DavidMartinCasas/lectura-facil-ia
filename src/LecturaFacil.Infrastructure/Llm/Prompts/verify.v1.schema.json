@@ -1,0 +1,62 @@
+{
+  "type": "object",
+  "properties": {
+    "datos_clave": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "enum": [
+              "plazo",
+              "importe",
+              "requisito",
+              "fecha",
+              "lugar",
+              "documento",
+              "referencia",
+              "otro"
+            ]
+          },
+          "original": {
+            "type": "string"
+          },
+          "adaptado": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "estado": {
+            "enum": [
+              "conservado",
+              "revisar",
+              "omitido"
+            ]
+          },
+          "motivo": {
+            "enum": [
+              "ninguno",
+              "valor_cambiado",
+              "conversion_calculada",
+              "no_aparece",
+              "otro"
+            ]
+          }
+        },
+        "required": [
+          "tipo",
+          "original",
+          "adaptado",
+          "estado",
+          "motivo"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "datos_clave"
+  ],
+  "additionalProperties": false
+}

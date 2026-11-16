@@ -27,7 +27,8 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     protected virtual bool RunAdaptationWorker => false;
 
     /// <summary>El proveedor falso que usa la API. Por defecto responde con <c>adapter/ok</c>.</summary>
-    public FakeLlmProvider Llm { get; } = FakeLlmProvider.FromFixture("adapter/ok");
+    /// <summary>Responde al adaptador y al verificador con sus grabaciones del ejemplo del IPREM.</summary>
+    public FakeLlmProvider Llm { get; } = TestServices.ExampleLlm();
 
     public virtual async ValueTask InitializeAsync() => await _database.StartAsync();
 

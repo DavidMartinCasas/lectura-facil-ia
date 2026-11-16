@@ -4,12 +4,14 @@ using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Llm;
 using LecturaFacil.Application.Readability;
+using LecturaFacil.Application.Verification;
 using LecturaFacil.Infrastructure.Adaptation;
 using LecturaFacil.Infrastructure.Documents;
 using LecturaFacil.Infrastructure.Guidelines;
 using LecturaFacil.Infrastructure.Llm;
 using LecturaFacil.Infrastructure.Persistence;
 using LecturaFacil.Infrastructure.Readability;
+using LecturaFacil.Infrastructure.Verification;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -67,6 +69,7 @@ public static class DependencyInjection
             provider.GetRequiredService<IOptions<LlmOptions>>(),
             provider.GetRequiredService<LlmProviderFactory>()));
         services.AddTransient<LlmDiagnostics>();
+        services.AddTransient<IMeaningVerifier, LlmMeaningVerifier>();
 
         // Los casos de uso solo ven el decorador con la política de respaldo.
         services.AddSingleton(provider => new LlmAvailability(FallbackEnabled(provider)));

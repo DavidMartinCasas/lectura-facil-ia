@@ -2,6 +2,7 @@
 using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Readability;
+using LecturaFacil.Application.Verification;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -20,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<GetDocument>();
         services.AddScoped<WatchDocument>();
         services.AddScoped<ReviewAdaptation>();
+        services.AddScoped<VerifyMeaning>();
         services.AddScoped<AdaptDocument>();
         services.AddScoped<RequeuePendingAdaptations>();
         return services;

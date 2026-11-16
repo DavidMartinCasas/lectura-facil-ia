@@ -4,6 +4,7 @@ using System.Text;
 using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Llm;
+using LecturaFacil.Application.Verification;
 using LecturaFacil.Domain.Adaptation;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
@@ -18,12 +19,15 @@ namespace LecturaFacil.Application.Adaptation;
 /// Después se revisan las pautas de la adaptación (<see cref="ReviewAdaptation"/>). Si incumple pautas de gravedad alta,
 /// se pide otra adaptación (como mucho <see cref="LimitsOptions.MaxAdaptationRetries"/>) indicando qué pautas incumplió,
 /// y se guarda la mejor según <see cref="BestVersionPolicy"/>. Si el reintento falla, se guarda la primera.
+/// Por último se verifica el significado de la versión que se guarda (<see cref="VerifyMeaning"/>): solo de esa, para
+/// no multiplicar las llamadas al verificador. La verificación nunca impide guardar el borrador; solo añade avisos.
 /// </summary>
 public sealed class AdaptDocument(
     IDocumentRepository repository,
     ILlmProvider llm,
     IPromptLoader prompts,
     ReviewAdaptation reviewAdaptation,
+    VerifyMeaning verifyMeaning,
     IOptions<LimitsOptions> limits,
     TimeProvider timeProvider)
 {
@@ -80,7 +84,8 @@ public sealed class AdaptDocument(
         }
 
         var (content, metadata, report) = adaptation.Value;
-        var version = document.CompleteAdaptation(content, metadata, report, timeProvider.GetUtcNow());
+        var verification = await verifyMeaning.ExecuteAsync(document.OriginalText.Value, content, cancellationToken);
+        var version = document.CompleteAdaptation(content, metadata, report, verification, timeProvider.GetUtcNow());
         await repository.SaveAsync(document, cancellationToken);
         return Result<AdaptedVersion>.Success(version);
     }
