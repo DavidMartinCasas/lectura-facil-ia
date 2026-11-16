@@ -42,10 +42,12 @@ export class AuthService {
       .pipe(tap((user) => this.current.set(user)));
   }
 
-  /** Cierra la sesión en el servidor. Aunque falle, en el navegador se da por cerrada. */
+  /**
+   * Cierra la sesión en el servidor. Solo se da por cerrada si el servidor lo confirma: si falla, la cookie HttpOnly
+   * sigue valiendo y el error llega a quien llama para que lo diga y se pueda reintentar.
+   */
   logout(): Observable<void> {
     return this.http.post<void>(`${AUTH_PATH}/logout`, null).pipe(
-      catchError(() => of(undefined)),
       map(() => undefined),
       tap(() => this.current.set(null)),
     );

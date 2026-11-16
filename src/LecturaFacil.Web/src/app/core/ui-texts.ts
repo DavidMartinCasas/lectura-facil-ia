@@ -17,6 +17,7 @@ export const APP_TEXTS = {
   navList: 'Mis documentos',
   navLogin: 'Entrar',
   logout: 'Salir',
+  logoutFailed: 'No se ha podido cerrar la sesión. Inténtalo de nuevo.',
   signedInAs: 'Has entrado como',
   draftNotice:
     'Cada adaptación es un borrador. Siempre la tiene que revisar y validar una persona antes de usarla.',

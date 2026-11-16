@@ -53,4 +53,27 @@ describe('App', () => {
     expect(element.textContent).not.toContain('persona@example.org');
     controller.verify();
   });
+
+  it('says so and keeps the session when the server cannot close it', async () => {
+    const controller = TestBed.inject(HttpTestingController);
+    const auth = TestBed.inject(AuthService);
+    const login = firstValueFrom(auth.login('persona@example.org', 'una-contraseña'));
+    controller.expectOne('/api/auth/login').flush({ email: 'persona@example.org' });
+    await login;
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+
+    Array.from(element.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Salir'))!
+      .click();
+    controller.expectOne('/api/auth/logout').flush(null, { status: 500, statusText: 'Error' });
+    await fixture.whenStable();
+
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
+      'No se ha podido cerrar la sesión',
+    );
+    expect(auth.user()).toEqual({ email: 'persona@example.org' });
+    controller.verify();
+  });
 });

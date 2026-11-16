@@ -54,7 +54,7 @@ describe('AuthService', () => {
     expect(auth.isAuthenticated()).toBe(true);
   });
 
-  it('closes the session in the browser even if the server fails', async () => {
+  it('keeps the session when the server cannot close it', async () => {
     const login = firstValueFrom(auth.login('persona@example.org', 'una-contraseña'));
     controller.expectOne('/api/auth/login').flush({ email: 'persona@example.org' });
     await login;
@@ -64,7 +64,7 @@ describe('AuthService', () => {
     expect(request.request.method).toBe('POST');
     request.flush(null, { status: 500, statusText: 'Error' });
 
-    await logout;
-    expect(auth.user()).toBeNull();
+    await expect(logout).rejects.toBeTruthy();
+    expect(auth.user()).toEqual({ email: 'persona@example.org' });
   });
 });
