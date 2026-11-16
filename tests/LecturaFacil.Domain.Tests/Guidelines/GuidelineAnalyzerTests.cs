@@ -94,6 +94,8 @@ public sealed class GuidelineAnalyzerTests
             ],
             ignoreOrder: true);
         findings.ShouldPointToFragments(ReferenceExample);
+        string[] expected = ["BOP", "IPREM", "40 %", "quince", "en virtud de", "deberán presentarse", "sufragar"];
+        expected.ShouldBeSubsetOf(findings.Select(finding => finding.Fragment));
         findings.Select(finding => finding.Start).ShouldBeInOrder();
     }
 
@@ -138,6 +140,11 @@ public sealed class GuidelineAnalyzerTests
         string.Concat(Enumerable.Repeat("en virtud ", 2_000)),
         string.Concat(Enumerable.Repeat("Sr. ", 5_000)),
         new string(' ', 20_000),
+        "se " + new string('a', 20_000),
+        "es " + new string('a', 20_000),
+        "deberán " + new string('a', 20_000),
+        string.Concat(Enumerable.Repeat("dos\n", 5_000)),
+        string.Concat(Enumerable.Repeat("IV AB ", 3_300)),
     };
 
     [Fact]

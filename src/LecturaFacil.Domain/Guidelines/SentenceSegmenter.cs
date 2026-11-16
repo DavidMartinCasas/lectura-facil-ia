@@ -16,6 +16,11 @@ public static class SentenceSegmenter
         "s.a", "s.l", "ss", "fdo", "dto", "dpto", "prov", "ref", "máx", "mín", "aptdo", "op", "cit", "ntra", "ntro",
     };
 
+    private static readonly HashSet<string> NumberingWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "capítulo", "anexo", "título", "apartado", "letra", "sección", "parte", "tomo",
+    };
+
     public static IReadOnlyList<Sentence> Split(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -98,10 +103,28 @@ public static class SentenceSegmenter
         var word = text[wordStart..period].TrimStart('"', '\'', '«', '“', '¿', '¡');
         if (word.Length == 1 && char.IsLetter(word[0]))
         {
-            return true;
+            // "capítulo V." o "anexo I." terminan frase; "J. García" no.
+            return !NumberingWords.Contains(PreviousWord(text, wordStart));
         }
 
         return Abbreviations.Contains(word);
+    }
+
+    private static string PreviousWord(string text, int wordStart)
+    {
+        var end = wordStart;
+        while (end > 0 && char.IsWhiteSpace(text[end - 1]))
+        {
+            end--;
+        }
+
+        var start = end;
+        while (start > 0 && char.IsLetter(text[start - 1]))
+        {
+            start--;
+        }
+
+        return text[start..end];
     }
 
     private static void AddIfHasWords(List<Sentence> sentences, string text, int start, int end)

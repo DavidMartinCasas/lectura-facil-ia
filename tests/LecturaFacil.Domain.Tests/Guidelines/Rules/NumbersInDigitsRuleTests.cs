@@ -29,6 +29,12 @@ public sealed class NumbersInDigitsRuleTests
         _rule.Check(text).ShouldHaveSingleItem().Fragment.ShouldBe(fragment);
     }
 
+    [Fact]
+    public void Check_WhenNumberGoesAfterPor_ReturnsIt()
+    {
+        _rule.Check("Durante tres meses o por dos años. La cuantía se multiplica por dos.").Count.ShouldBe(3);
+    }
+
     [Theory]
     [InlineData("Tiene un plazo de 15 días.")]
     [InlineData("Una persona puede pedir una ayuda.")]

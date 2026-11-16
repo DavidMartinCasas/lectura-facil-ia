@@ -16,7 +16,7 @@ public sealed class SubmitDocumentTests
     private static readonly DateTimeOffset Now = new(2026, 11, 15, 10, 0, 0, TimeSpan.Zero);
 
     private readonly InMemoryDocumentRepository _repository = new();
-    private readonly StubGuidelineChecker _guidelineChecker = new();
+    private StubGuidelineChecker _guidelineChecker = new();
     private readonly LimitsOptions _limits = new() { MinCharacters = 50, MaxCharacters = 200, MaxFileSizeBytes = 2_048 };
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
@@ -58,6 +58,17 @@ public sealed class SubmitDocumentTests
 
         result.IsSuccess.ShouldBeTrue();
         _repository.Added.ShouldHaveSingleItem().OriginalFindings.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public async Task SubmitText_WhenThereAreMoreFindingsThanTheMaximum_StoresOnlyTheMaximum()
+    {
+        _limits.MaxFindingsPerDocument = 10;
+        _guidelineChecker = new StubGuidelineChecker(findingsPerText: 25);
+
+        await CreateUseCase().SubmitTextAsync(new SubmitTextCommand(ValidText, null), Token);
+
+        _repository.Added.ShouldHaveSingleItem().OriginalFindings.Count.ShouldBe(10);
     }
 
     [Fact]

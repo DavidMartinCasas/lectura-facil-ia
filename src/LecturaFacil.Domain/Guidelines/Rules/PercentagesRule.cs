@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace LecturaFacil.Domain.Guidelines.Rules;
 
-/// <summary>Porcentajes: "40 %", "40%", "12,5 %", "40 por ciento", "cuarenta por ciento", "100 por cien".</summary>
+/// <summary>Porcentajes: "40 %", "40%", "12,5 %", "40 por ciento", "cuarenta por ciento", "100 por cien", "40 por 100".</summary>
 public sealed partial class PercentagesRule : IGuidelineRule
 {
     private const string Number = @"(?:\d+(?:[.,]\d+)?|(?:" + SpanishNumberWords.Alternation + @")(?:\s+y\s+(?:" + SpanishNumberWords.Alternation + @"))?)";
@@ -22,7 +22,7 @@ public sealed partial class PercentagesRule : IGuidelineRule
     }
 
     [GeneratedRegex(
-        @"(?<![\p{L}\p{N}])(?:\d+(?:[.,]\d+)?[   ]?%|" + Number + @"\s+por\s+cien(?:to)?(?![\p{L}\p{N}]))",
+        @"(?<![\p{L}\p{N}])(?:\d+(?:[.,]\d+)?[   ]?%|" + Number + @"\s+por\s+(?:cien(?:to)?|100)(?![\p{L}\p{N}]))",
         GuidelineRegex.IgnoreCase,
         GuidelineRegex.TimeoutMilliseconds)]
     private static partial Regex PercentagePattern();

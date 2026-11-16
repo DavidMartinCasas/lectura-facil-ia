@@ -18,6 +18,7 @@ public sealed class PassiveVoiceRuleTests
     [InlineData("La solicitud se publicará en el boletín.", "se publicará")]
     [InlineData("Las listas se publican en la web.", "se publican")]
     [InlineData("Las solicitudes deberán presentarse en el registro.", "deberán presentarse")]
+    [InlineData("Se concede una ayuda por familia.", "Se concede")]
     public void Check_WhenSentenceIsPassive_ReturnsIt(string text, string fragment)
     {
         var findings = _rule.Check(text);
@@ -33,6 +34,8 @@ public sealed class PassiveVoiceRuleTests
     [InlineData("El Ayuntamiento da ayudas. Puede pedirlas en la web.")]
     [InlineData("Es nada. Es cada día.")]
     [InlineData("Ser joven es bueno.")]
+    [InlineData("Las oficinas se encuentran en la plaza.")]
+    [InlineData("Pídala cuando esté empadronada.")]
     public void Check_WhenSentenceIsActive_ReturnsNothing(string text)
     {
         _rule.Check(text).ShouldBeEmpty();

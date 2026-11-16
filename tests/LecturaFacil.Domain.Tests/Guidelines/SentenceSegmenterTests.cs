@@ -32,6 +32,14 @@ public sealed class SentenceSegmenterTests
         sentences[1].Text.ShouldBe("Después se publica.");
     }
 
+    [Theory]
+    [InlineData("Lea el capítulo V. Después rellene la solicitud.")]
+    [InlineData("Anexo I. Solicitud de la ayuda.")]
+    public void Split_WhenSingleLetterIsANumbering_Cuts(string text)
+    {
+        SentenceSegmenter.Split(text).Count.ShouldBe(2);
+    }
+
     [Fact]
     public void Split_WhenNextWordIsLowercase_DoesNotCut()
     {

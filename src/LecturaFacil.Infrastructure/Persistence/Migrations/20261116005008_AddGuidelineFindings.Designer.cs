@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LecturaFacil.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261116004428_AddGuidelineFindings")]
+    [Migration("20261116005008_AddGuidelineFindings")]
     partial class AddGuidelineFindings
     {
         /// <inheritdoc />
@@ -142,7 +142,7 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
                         new
                         {
                             Code = "PALABRAS_DIFICILES",
-                            DefaultSeverity = "Low",
+                            DefaultSeverity = "Medium",
                             Description = "Palabras difíciles explicadas"
                         },
                         new

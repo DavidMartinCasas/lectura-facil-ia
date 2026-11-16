@@ -139,7 +139,7 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
                         new
                         {
                             Code = "PALABRAS_DIFICILES",
-                            DefaultSeverity = "Low",
+                            DefaultSeverity = "Medium",
                             Description = "Palabras difíciles explicadas"
                         },
                         new

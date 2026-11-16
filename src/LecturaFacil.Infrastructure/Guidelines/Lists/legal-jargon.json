@@ -8,6 +8,8 @@
   { "term": "lo dispuesto en", "alternative": "lo que dice" },
   { "term": "sin perjuicio de", "alternative": "" },
   { "term": "a contar desde", "alternative": "desde" },
+  { "term": "ascenderá a", "alternative": "será de" },
+  { "term": "ascenderá al", "alternative": "será del" },
   { "term": "con carácter previo", "alternative": "antes" },
   { "term": "con carácter general", "alternative": "en general" },
   { "term": "en su caso", "alternative": "si hace falta" },

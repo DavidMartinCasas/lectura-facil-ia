@@ -29,6 +29,14 @@
   { "term": "prorrogar", "alternative": "alargar" },
   { "term": "tramitar", "alternative": "gestionar" },
   { "term": "tramitación", "alternative": "gestión" },
-  { "term": "titular", "alternative": "dueño o dueña" },
-  { "term": "titulares", "alternative": "dueños o dueñas" }
+  { "term": "titular", "alternative": "persona a cuyo nombre está" },
+  { "term": "titulares", "alternative": "personas a cuyo nombre está" },
+  { "term": "días hábiles", "alternative": "días de lunes a viernes que no son festivos" },
+  { "term": "personas físicas", "alternative": "personas" },
+  { "term": "vivienda habitual", "alternative": "la casa donde vive" },
+  { "term": "interesado", "alternative": "persona que lo pide" },
+  { "term": "interesada", "alternative": "persona que lo pide" },
+  { "term": "solicitante", "alternative": "persona que lo pide" },
+  { "term": "solicitantes", "alternative": "personas que lo piden" },
+  { "term": "extracto", "alternative": "resumen" }
 ]

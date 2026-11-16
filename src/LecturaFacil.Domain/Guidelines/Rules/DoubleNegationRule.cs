@@ -24,7 +24,7 @@ public sealed partial class DoubleNegationRule : IGuidelineRule
                 else if (firstNo is { } start)
                 {
                     yield return Finding.At(Guideline, text.Value, sentence.Start + start, sentence.Start + match.Index + match.Length,
-                        "Evita la doble negación. Escribe la frase en positivo (por ejemplo, «siempre» en lugar de «no… nunca»).");
+                        "Evita la doble negación. Escribe la frase en positivo, sin cambiar lo que quiere decir (por ejemplo, «Es gratis» en lugar de «No tiene ningún coste»).");
                     firstNo = null;
                 }
             }

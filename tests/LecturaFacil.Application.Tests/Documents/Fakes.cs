@@ -52,7 +52,7 @@ internal sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
 }
 
 /// <summary>Devuelve siempre un hallazgo de frases cortas sobre las cinco primeras letras del texto.</summary>
-internal sealed class StubGuidelineChecker : IGuidelineChecker
+internal sealed class StubGuidelineChecker(int findingsPerText = 1) : IGuidelineChecker
 {
     public List<string> CheckedTexts { get; } = [];
 
@@ -60,6 +60,6 @@ internal sealed class StubGuidelineChecker : IGuidelineChecker
     {
         CheckedTexts.Add(text);
         var finding = Finding.At(GuidelineCatalog.Find(GuidelineCodes.ShortSentences), text, 0, 5, "Divide la frase.");
-        return new GuidelineAnalysis([finding], []);
+        return new GuidelineAnalysis([.. Enumerable.Repeat(finding, findingsPerText)], []);
     }
 }

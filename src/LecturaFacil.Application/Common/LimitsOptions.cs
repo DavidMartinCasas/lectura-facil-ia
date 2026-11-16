@@ -35,6 +35,10 @@ public sealed class LimitsOptions
     [Range(1, 10, ErrorMessage = "Limits:MaxConnectorsPerSentence debe estar entre {1} y {2}.")]
     public int MaxConnectorsPerSentence { get; set; } = 1;
 
+    /// <summary>Hallazgos que se guardan como máximo por documento (los primeros del texto). Acota las filas por petición.</summary>
+    [Range(10, 5_000, ErrorMessage = "Limits:MaxFindingsPerDocument debe estar entre {1} y {2}.")]
+    public int MaxFindingsPerDocument { get; set; } = 500;
+
     [Range(256, 32_768, ErrorMessage = "Limits:MaxOutputTokens debe estar entre {1} y {2}.")]
     public int MaxOutputTokens { get; set; } = 4_096;
 

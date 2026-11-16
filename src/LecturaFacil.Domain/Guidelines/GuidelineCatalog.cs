@@ -14,7 +14,7 @@ public static class GuidelineCatalog
         new(GuidelineCodes.PassiveVoice, "Sin voz pasiva", Severity.Medium),
         new(GuidelineCodes.DoubleNegation, "Sin negaciones dobles", Severity.High),
         new(GuidelineCodes.RomanNumerals, "Sin números romanos", Severity.Medium),
-        new(GuidelineCodes.DifficultWords, "Palabras difíciles explicadas", Severity.Low),
+        new(GuidelineCodes.DifficultWords, "Palabras difíciles explicadas", Severity.Medium),
         new(GuidelineCodes.LegalJargon, "Sin expresiones jurídicas complejas", Severity.High),
         new(GuidelineCodes.NumericDate, "Fechas completas", Severity.Low),
     ];

@@ -82,7 +82,9 @@ public sealed class SubmitDocument(
         var document = Document.Submit(currentUser.OwnerId, title, originalText, timeProvider.GetUtcNow());
         // TODO(US-07): las pautas que agotan su tiempo (TimedOutGuidelines) solo quedan en el log; guardarlas para que
         // "sin hallazgos" no se lea como "cumple" cuando una pauta no se ha podido comprobar.
-        document.RecordOriginalFindings(guidelineChecker.Check(originalText.Value).Findings);
+        // TODO(US-07): indicar también cuándo se han descartado hallazgos por superar MaxFindingsPerDocument.
+        var findings = guidelineChecker.Check(originalText.Value).Findings.Take(_limits.MaxFindingsPerDocument);
+        document.RecordOriginalFindings(findings);
         await repository.AddAsync(document, cancellationToken);
 
         return Result<SubmittedDocument>.Success(

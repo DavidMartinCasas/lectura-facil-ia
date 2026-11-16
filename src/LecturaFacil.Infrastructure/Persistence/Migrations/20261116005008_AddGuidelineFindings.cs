@@ -65,7 +65,7 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
                     { "FECHAS_COMPLETAS", "Low", "Fechas completas" },
                     { "FRASES_CORTAS", "Medium", "Frases cortas" },
                     { "NUMEROS_EN_CIFRAS", "Low", "Números escritos con cifras" },
-                    { "PALABRAS_DIFICILES", "Low", "Palabras difíciles explicadas" },
+                    { "PALABRAS_DIFICILES", "Medium", "Palabras difíciles explicadas" },
                     { "SIN_EXPRESIONES_JURIDICAS", "High", "Sin expresiones jurídicas complejas" },
                     { "SIN_NEGACIONES_DOBLES", "High", "Sin negaciones dobles" },
                     { "SIN_NUMEROS_ROMANOS", "Medium", "Sin números romanos" },

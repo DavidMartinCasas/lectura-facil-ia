@@ -27,6 +27,7 @@ public sealed class PercentagesRuleTests
     [InlineData("Será del 40 por ciento de la renta.", "40 por ciento")]
     [InlineData("Será del cuarenta por ciento de la renta.", "cuarenta por ciento")]
     [InlineData("Será del 100 por cien de la renta.", "100 por cien")]
+    [InlineData("Se subvenciona el 40 por 100 del coste.", "40 por 100")]
     public void Check_WhenPercentageIsWrittenInAnyForm_ReturnsIt(string text, string fragment)
     {
         var findings = _rule.Check(text);

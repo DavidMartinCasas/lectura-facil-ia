@@ -4,7 +4,10 @@ using System.Text.RegularExpressions;
 
 namespace LecturaFacil.Domain.Guidelines.Rules;
 
-/// <summary>Fechas en cifras: "15/12/2026", "1-3-2026", "05.06.26" o "2026-12-15". Se sugiere "15 de diciembre de 2026".</summary>
+/// <summary>
+/// Fechas en cifras: "15/12/2026", "1-3-26", "05.06.2026" o "2026-12-15". Con puntos se exige el año con cuatro cifras
+/// para no confundir una fecha con un apartado ("3.2.10"). Se sugiere "15 de diciembre de 2026".
+/// </summary>
 public sealed partial class NumericDateRule : IGuidelineRule
 {
     private const int MonthsInYear = 12;
@@ -55,7 +58,7 @@ public sealed partial class NumericDateRule : IGuidelineRule
     }
 
     [GeneratedRegex(
-        @"(?<![\p{N}./-])(?:(?<day>\d{1,2})(?<sep>[/.-])(?<month>\d{1,2})\k<sep>(?<year>\d{4}|\d{2})|(?<isoyear>\d{4})-(?<isomonth>\d{2})-(?<isoday>\d{2}))(?![\p{N}]|[./-]\p{N})",
+        @"(?<![\p{N}./-])(?:(?<day>\d{1,2})(?<sep>[/-])(?<month>\d{1,2})\k<sep>(?<year>\d{4}|\d{2})|(?<day>\d{1,2})\.(?<month>\d{1,2})\.(?<year>\d{4})|(?<isoyear>\d{4})-(?<isomonth>\d{2})-(?<isoday>\d{2}))(?![\p{N}]|[./-]\p{N})",
         GuidelineRegex.Options,
         GuidelineRegex.TimeoutMilliseconds)]
     private static partial Regex DatePattern();
