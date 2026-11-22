@@ -103,7 +103,9 @@ test('entra, sube un documento, sale y ya no puede ver sus documentos', async ({
 
   await logIn(page, PASSWORD);
   await expect(page).toHaveURL(/\/documentos$/);
-  await expect(page.getByText(`Has entrado como ${E2E_USER}`)).toBeVisible();
+  // En móvil "Has entrado como" solo lo leen los lectores de pantalla; el correo se ve siempre.
+  await expect(page.locator('.user')).toHaveText(new RegExp(`Has entrado como\\s*${E2E_USER}`));
+  await expect(page.getByText(E2E_USER)).toBeVisible();
 
   await page.goto('/nuevo');
   await page

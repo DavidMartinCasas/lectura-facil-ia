@@ -85,7 +85,9 @@ describe('DocumentListComponent', () => {
     const rows = Array.from(element.querySelectorAll('tr[mat-row]')).map((row) =>
       Array.from(row.querySelectorAll('td')).map((cell) => cell.textContent?.trim()),
     );
-    expect(rows[0][0]).toBe('Convocatoria de ayudas');
+    expect(element.querySelector('tr[mat-row] .title-link')?.textContent?.trim()).toBe(
+      'Convocatoria de ayudas',
+    );
     expect(rows[0][1]).toContain('2026');
     expect(rows[0][2]).toBe('Borrador');
     expect(rows[0][3]).toBe('Servidor local');

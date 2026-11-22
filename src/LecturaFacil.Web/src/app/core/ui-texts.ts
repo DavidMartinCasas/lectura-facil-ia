@@ -145,6 +145,7 @@ export const REVIEW_TEXTS = {
   closeSelection: 'Cerrar',
   adaptedTitle: 'Adaptación',
   tabsLabel: 'Original y adaptación',
+  inspectorLabel: 'Revisión',
   glossaryTitle: 'Glosario',
   editSection: 'Editar sección',
   questionLabel: 'Pregunta',

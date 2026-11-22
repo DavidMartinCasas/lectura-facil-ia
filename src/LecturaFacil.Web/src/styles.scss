@@ -35,7 +35,7 @@
   // Medidas.
   --lf-radius-s: 6px;
   --lf-radius-m: 10px;
-  --lf-radius-l: 16px;
+  --lf-radius-l: 12px;
   // Ancho completo de la pantalla; solo los textos largos tienen una medida máxima de lectura.
   --lf-page-width: 100%;
   --lf-gutter: clamp(1.25rem, 3vw, 3rem);
@@ -141,11 +141,11 @@ a {
 .page {
   max-inline-size: var(--lf-page-width);
   margin: 0 auto;
-  padding: 2.5rem var(--lf-gutter) 4rem;
+  padding: 2rem var(--lf-gutter) 4rem;
   display: grid;
   // minmax(0, …): una tabla ancha se desplaza dentro de su contenedor en vez de ensanchar toda la página en móvil.
   grid-template-columns: minmax(0, 1fr);
-  gap: 1.75rem;
+  gap: 1.5rem;
   box-sizing: border-box;
 }
 
@@ -155,7 +155,7 @@ a {
   max-inline-size: var(--lf-reading-width);
 
   h1 {
-    font-size: clamp(1.75rem, 1.4rem + 1.2vw, 2.375rem);
+    font-size: clamp(1.625rem, 1.35rem + 0.8vw, 2.125rem);
     line-height: 1.15;
     font-weight: 700;
     letter-spacing: -0.01em;
@@ -172,9 +172,6 @@ a {
 
 // Aviso de borrador: aparece en varias pantallas con el mismo aspecto.
 .draft-note {
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-start;
   margin: 0;
   padding: 0.875rem 1rem;
   border-inline-start: 4px solid var(--lf-amber);
@@ -236,6 +233,12 @@ a {
 .chip--danger {
   background: var(--lf-danger-soft);
   border-color: transparent;
+}
+
+// Cifras alineadas en tablas y fechas.
+time,
+table {
+  font-variant-numeric: tabular-nums;
 }
 
 // Texto solo para lectores de pantalla.

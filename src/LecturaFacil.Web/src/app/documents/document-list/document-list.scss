@@ -7,7 +7,7 @@
   overflow-x: auto;
   background: var(--lf-surface);
   border: 1px solid var(--lf-rule);
-  border-radius: var(--lf-radius-l);
+  border-radius: var(--lf-radius-m);
 }
 
 table {
@@ -19,12 +19,17 @@ table {
 }
 
 th.mat-mdc-header-cell {
-  font-size: 0.9375rem;
+  font-size: 0.8125rem;
+  background: var(--lf-gazette);
 }
 
 td.mat-mdc-cell,
 th.mat-mdc-header-cell {
-  padding-block: 0.875rem;
+  padding-block: 0.75rem;
+}
+
+td.mat-mdc-cell {
+  font-size: 0.9375rem;
 }
 
 tr.mat-mdc-row:hover {
@@ -32,7 +37,7 @@ tr.mat-mdc-row:hover {
 }
 
 .title-link {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--lf-ink);
   text-decoration: none;
 
@@ -45,6 +50,28 @@ tr.mat-mdc-row:hover {
 td time {
   color: var(--lf-muted);
   white-space: nowrap;
+}
+
+.title-date {
+  display: none;
+}
+
+// Pantallas estrechas: título (con la fecha debajo) y estado; el proveedor se ve en el documento.
+@media (max-width: 40rem) {
+  .col-date,
+  .col-provider {
+    display: none;
+  }
+
+  .title-link {
+    display: block;
+  }
+
+  .title-date {
+    display: block;
+    margin-block-start: 0.125rem;
+    font-size: 0.8125rem;
+  }
 }
 
 .loading,
@@ -67,8 +94,8 @@ td time {
   text-align: center;
   padding: clamp(2.5rem, 6vw, 4rem) 1.5rem;
   background: var(--lf-surface);
-  border: 2px dashed var(--lf-rule);
-  border-radius: var(--lf-radius-l);
+  border: 1px dashed var(--lf-muted);
+  border-radius: var(--lf-radius-m);
 
   p {
     margin: 0;

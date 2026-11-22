@@ -86,7 +86,7 @@ test('sube un texto, ve el progreso por pasos y llega a la vista del documento',
 
   await expect(page).toHaveURL(new RegExp(`/documentos/${DOCUMENT_ID}$`));
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bases de la convocatoria');
-  await expect(page.getByText('Estado: Borrador')).toBeVisible();
+  await expect(page.locator('.status-line')).toHaveText(/Estado:\s*Borrador/);
 });
 
 test('muestra el progreso con los cinco pasos', async ({ page }) => {

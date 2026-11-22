@@ -55,6 +55,7 @@ describe('DocumentReviewComponent', () => {
     expect(element.querySelector('app-readability-panel')?.textContent).toContain('Muy difícil');
     expect(element.querySelector('app-readability-panel')?.textContent).toContain('Bastante fácil');
     expect(element.querySelector('app-key-facts-panel')?.textContent).toContain('1 conservado');
+    expect(element.querySelector('.banner app-export-panel')).not.toBeNull();
   });
 
   it('uses tabs instead of columns on small screens', async () => {
