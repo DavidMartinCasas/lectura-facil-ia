@@ -63,9 +63,9 @@ public sealed class BolaMatrixTests
         GetDocumentEndpointTests.Seed(factory, TestUsers.OtherOwner);
         using var clientOfA = await factory.CreateApiClientAsync(TestUsers.Default);
 
-        var documents = await clientOfA.GetFromJsonAsync<List<ListedDocument>>(new Uri("/api/documents", UriKind.Relative), Token);
+        var page = await clientOfA.GetFromJsonAsync<ListedPage>(new Uri("/api/documents", UriKind.Relative), Token);
 
-        documents.ShouldNotBeNull().Select(document => document.Id).ShouldBe([documentOfA.Id.Value]);
+        page.ShouldNotBeNull().Items.Select(document => document.Id).ShouldBe([documentOfA.Id.Value]);
     }
 
     [Theory]
@@ -156,4 +156,5 @@ public sealed class BolaMatrixTests
     };
 
     private sealed record ListedDocument(Guid Id);
+    private sealed record ListedPage(List<ListedDocument> Items, string? NextCursor);
 }

@@ -1,0 +1,83 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<section class="page" aria-labelledby="page-title">
+  <header class="doc-header">
+    <div class="page-header">
+      <h1 id="page-title">{{ texts.pageTitle }}</h1>
+    </div>
+    <a mat-flat-button routerLink="/nuevo">{{ texts.createFirst }}</a>
+  </header>
+
+  @if (!loading() && (documents()?.length || hasFilters())) {
+    <form class="filters" role="search" (submit)="onSearchSubmit($event)">
+      <mat-form-field appearance="outline" class="filter-search" subscriptSizing="dynamic">
+        <mat-label>{{ texts.searchLabel }}</mat-label>
+        <input
+          matInput
+          type="search"
+          name="buscar"
+          autocomplete="off"
+          [value]="search()"
+          (input)="onSearchInput($any($event.target).value)"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-status" subscriptSizing="dynamic">
+        <mat-label>{{ texts.statusFilterLabel }}</mat-label>
+        <mat-select
+          multiple
+          [value]="statuses()"
+          (selectionChange)="onStatusesChange($event.value)"
+        >
+          @for (status of statusOptions; track status) {
+            <mat-option [value]="status">{{ statusLabels[status] }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      @if (hasFilters()) {
+        <button mat-button type="button" class="filter-clear" (click)="clearFilters()">
+          {{ texts.clearFilters }}
+        </button>
+      }
+    </form>
+  }
+
+  <div class="results" [attr.aria-busy]="refreshing()">
+    @if (refreshing()) {
+      <mat-progress-bar
+        class="refreshing"
+        mode="indeterminate"
+        [attr.aria-label]="texts.updating"
+      />
+    }
+
+    <app-document-list
+      [documents]="documents()"
+      [loading]="loading()"
+      [error]="error()"
+      [filtered]="hasFilters()"
+      (retry)="load()"
+      (clearFilters)="clearFilters()"
+    />
+  </div>
+
+  <p class="visually-hidden" role="status">{{ summary() }}</p>
+
+  @if (moreError(); as message) {
+    <div class="error" role="alert">
+      <p>{{ message }}</p>
+      <button mat-stroked-button type="button" (click)="loadMore()">{{ texts.retry }}</button>
+    </div>
+  } @else if (nextCursor() && !error()) {
+    <div class="load-more">
+      <button
+        mat-stroked-button
+        type="button"
+        [disabled]="loadingMore() || !canLoadMore()"
+        (click)="loadMore()"
+      >
+        {{ loadingMore() ? texts.loadingMore : texts.loadMore }}
+      </button>
+    </div>
+  }
+</section>

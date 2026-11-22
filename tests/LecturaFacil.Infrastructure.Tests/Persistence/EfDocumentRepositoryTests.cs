@@ -275,21 +275,124 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
         await StoreAsync(OwnerId.From(Guid.NewGuid()), createdAt: createdAt.AddMinutes(5));
         await using var context = CreateContext();
 
-        var summaries = await new EfDocumentRepository(context).ListForOwnerAsync(owner, 10, Token);
+        var page = await new EfDocumentRepository(context).ListForOwnerAsync(owner, Query(), Token);
 
+        var summaries = page.Items;
         summaries.Select(summary => summary.Id).ShouldBe([adapted.Id, received.Id]);
         summaries[0].Status.ShouldBe(DocumentStatus.Draft);
         summaries[0].Provider.ShouldBe("Servidor local");
         summaries[0].Title.ShouldBe(DocumentTitle.Default.Value);
         summaries[1].Provider.ShouldBeNull();
-        (await new EfDocumentRepository(context).ListForOwnerAsync(owner, 1, Token)).ShouldHaveSingleItem().Id.ShouldBe(adapted.Id);
+        page.Next.ShouldBeNull();
     }
 
-    private async Task<Document> StoreAsync(OwnerId owner, Action<Document>? prepare = null, DateTimeOffset? createdAt = null)
+    [Fact]
+    public async Task ListForOwner_WalksThroughThePagesWithTheCursor_EvenWhenDatesAreEqual()
+    {
+        var owner = OwnerId.From(Guid.NewGuid());
+        var createdAt = new DateTimeOffset(2026, 11, 16, 9, 0, 0, TimeSpan.Zero);
+        var stored = new List<Document>();
+        foreach (var minutes in new[] { 0, 1, 1, 1, 2 })
+        {
+            stored.Add(await StoreAsync(owner, createdAt: createdAt.AddMinutes(minutes)));
+        }
+
+        var expected = stored
+            .OrderByDescending(document => document.CreatedAt)
+            .ThenByDescending(document => document.Id.Value)
+            .Select(document => document.Id)
+            .ToList();
+        await using var context = CreateContext();
+        var repository = new EfDocumentRepository(context);
+
+        var seen = new List<DocumentId>();
+        DocumentListCursor? cursor = null;
+        var pages = 0;
+        do
+        {
+            var page = await repository.ListForOwnerAsync(owner, Query(after: cursor, pageSize: 2), Token);
+            seen.AddRange(page.Items.Select(summary => summary.Id));
+            cursor = page.Next;
+            pages++;
+        }
+        while (cursor is not null && pages < 10);
+
+        seen.ShouldBe(expected);
+        pages.ShouldBe(3);
+    }
+
+    [Theory]
+    [InlineData("constitucion")]
+    [InlineData("CONSTITUCIÓN")]
+    [InlineData("española")]
+    public async Task ListForOwner_FiltersByTitle_WithoutCaseOrAccents(string search)
+    {
+        var owner = OwnerId.From(Guid.NewGuid());
+        var match = await StoreAsync(owner, title: "Constitución Española");
+        await StoreAsync(owner, title: "Bases de la convocatoria");
+        await using var context = CreateContext();
+
+        var page = await new EfDocumentRepository(context).ListForOwnerAsync(owner, Query(title: search), Token);
+
+        page.Items.ShouldHaveSingleItem().Id.ShouldBe(match.Id);
+    }
+
+    [Theory]
+    [InlineData("%")]
+    [InlineData("_")]
+    [InlineData("\\")]
+    public async Task ListForOwner_TreatsLikeWildcardsInTheSearchAsPlainText(string search)
+    {
+        var owner = OwnerId.From(Guid.NewGuid());
+        var match = await StoreAsync(owner, title: "Descuento del 50% en_tasas \\ especiales");
+        await StoreAsync(owner, title: "Bases de la convocatoria");
+        await using var context = CreateContext();
+
+        var page = await new EfDocumentRepository(context).ListForOwnerAsync(owner, Query(title: search), Token);
+
+        page.Items.ShouldHaveSingleItem().Id.ShouldBe(match.Id);
+    }
+
+    [Fact]
+    public async Task ListForOwner_FiltersByStatusAndTitleTogether()
+    {
+        var owner = OwnerId.From(Guid.NewGuid());
+        var now = DateTimeOffset.UtcNow;
+        var failedBases = await StoreAsync(owner, document => FailNow(document, now), title: "Bases de empleo");
+        await StoreAsync(owner, title: "Bases de ayudas");
+        await StoreAsync(owner, document => FailNow(document, now), title: "Convocatoria");
+        await using var context = CreateContext();
+
+        var page = await new EfDocumentRepository(context).ListForOwnerAsync(
+            owner,
+            Query(title: "bases", statuses: [DocumentStatus.Error, DocumentStatus.Validated]),
+            Token);
+
+        page.Items.ShouldHaveSingleItem().Id.ShouldBe(failedBases.Id);
+    }
+
+    private static void FailNow(Document document, DateTimeOffset now)
+    {
+        document.StartProcessing(now);
+        document.FailProcessing("llm.unavailable", now);
+    }
+
+    private static DocumentListQuery Query(
+        string? title = null,
+        DocumentStatus[]? statuses = null,
+        DocumentListCursor? after = null,
+        int pageSize = 10) =>
+        new(title, new HashSet<DocumentStatus>(statuses ?? []), after, pageSize);
+
+    private async Task<Document> StoreAsync(
+        OwnerId owner,
+        Action<Document>? prepare = null,
+        DateTimeOffset? createdAt = null,
+        string? title = null)
     {
         var document = Document.Submit(
             owner,
-            DocumentTitle.Default,
+            title is null ? DocumentTitle.Default : DocumentTitle.Create(title),
             OriginalText.Create("Texto de prueba del documento.", Limits),
             createdAt ?? DateTimeOffset.UtcNow);
         prepare?.Invoke(document);

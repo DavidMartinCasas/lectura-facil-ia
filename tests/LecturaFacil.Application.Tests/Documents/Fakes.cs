@@ -58,12 +58,14 @@ internal sealed class InMemoryDocumentRepository : IDocumentRepository
         Task.FromResult<IReadOnlyList<DocumentId>>(
             [.. Added.Where(document => DocumentStatusTransitions.IsAwaitingAdaptation(document.Status)).Select(document => document.Id)]);
 
-    public Task<IReadOnlyList<DocumentSummary>> ListForOwnerAsync(OwnerId ownerId, int maxCount, CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyList<DocumentSummary>>(
-            [.. Added.Where(document => document.OwnerId == ownerId)
+    public Task<DocumentPage> ListForOwnerAsync(OwnerId ownerId, DocumentListQuery query, CancellationToken cancellationToken) =>
+        Task.FromResult(DocumentPage.FromFetched(
+            [.. Added.Where(document => document.OwnerId == ownerId && query.Matches(document))
                 .OrderByDescending(document => document.CreatedAt)
-                .Take(maxCount)
-                .Select(DocumentSummary.From)]);
+                .ThenByDescending(document => document.Id.Value)
+                .Take(query.PageSize + 1)
+                .Select(DocumentSummary.From)],
+            query.PageSize));
 
     /// <summary>Simula que otra petición ha cambiado el documento antes de guardar.</summary>
     public bool FailNextSaveWithConflict { get; set; }

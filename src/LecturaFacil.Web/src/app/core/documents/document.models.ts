@@ -37,6 +37,22 @@ export interface SubmitDocumentResponse {
   readonly status: DocumentStatus;
 }
 
+/** Una página de GET /api/documents, del más nuevo al más antiguo. */
+export interface DocumentListPage {
+  readonly items: readonly DocumentListItem[];
+  /** Para pedir la página siguiente; `null` si no hay más documentos. */
+  readonly nextCursor: string | null;
+}
+
+/** Filtros de "Mis documentos". Sin título ni estados = todos los documentos. */
+export interface DocumentListFilter {
+  /** Texto que debe aparecer en el título; la API no distingue mayúsculas ni tildes. */
+  readonly title: string;
+  readonly statuses: readonly DocumentStatus[];
+}
+
+export const NO_DOCUMENT_FILTER: DocumentListFilter = { title: '', statuses: [] };
+
 /** Elemento de GET /api/documents. */
 export interface DocumentListItem {
   readonly id: string;

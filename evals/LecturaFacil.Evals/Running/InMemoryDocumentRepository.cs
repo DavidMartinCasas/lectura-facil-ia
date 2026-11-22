@@ -36,7 +36,7 @@ internal sealed class InMemoryDocumentRepository : IDocumentRepository
         Task.FromResult<IReadOnlyList<DocumentId>>(
             [.. _documents.Values.Where(document => DocumentStatusTransitions.IsAwaitingAdaptation(document.Status)).Select(document => document.Id)]);
 
-    public Task<IReadOnlyList<DocumentSummary>> ListForOwnerAsync(OwnerId ownerId, int maxCount, CancellationToken cancellationToken) =>
+    public Task<DocumentPage> ListForOwnerAsync(OwnerId ownerId, DocumentListQuery query, CancellationToken cancellationToken) =>
         throw new NotSupportedException("The evaluation does not list documents.");
 
     public Task SaveAsync(Document document, CancellationToken cancellationToken) => AddAsync(document, cancellationToken);

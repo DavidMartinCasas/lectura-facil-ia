@@ -143,6 +143,8 @@ a {
   margin: 0 auto;
   padding: 2.5rem var(--lf-gutter) 4rem;
   display: grid;
+  // minmax(0, …): una tabla ancha se desplaza dentro de su contenedor en vez de ensanchar toda la página en móvil.
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.75rem;
   box-sizing: border-box;
 }

@@ -109,6 +109,16 @@ export const LIST_TEXTS = {
   columnProvider: 'Proveedor',
   noProvider: 'Sin adaptar todavía',
   retry: 'Reintentar',
+  searchLabel: 'Buscar por título',
+  statusFilterLabel: 'Estado',
+  clearFilters: 'Quitar filtros',
+  noMatches: 'Ningún documento coincide con la búsqueda.',
+  noMatchesHint: 'Prueba con otras palabras o quita algún estado.',
+  loadMore: 'Cargar más documentos',
+  loadingMore: 'Cargando más documentos…',
+  updating: 'Actualizando la lista…',
+  shown: (count: number, more: boolean): string =>
+    `${count === 1 ? 'Se muestra 1 documento' : `Se muestran ${count} documentos`}${more ? '; hay más.' : '.'}`,
 } as const;
 
 export const DOCUMENT_TEXTS = {

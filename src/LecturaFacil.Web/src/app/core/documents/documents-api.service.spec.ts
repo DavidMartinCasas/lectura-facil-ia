@@ -75,13 +75,28 @@ describe('DocumentsApiService', () => {
     await response;
   });
 
-  it('lists the documents of the user', async () => {
+  it('lists the first page of documents without filters', async () => {
     const response = firstValueFrom(service.list());
 
     const request = controller.expectOne('/api/documents');
     expect(request.request.method).toBe('GET');
-    request.flush([]);
-    expect(await response).toEqual([]);
+    request.flush({ items: [], nextCursor: null });
+    expect(await response).toEqual({ items: [], nextCursor: null });
+  });
+
+  it('sends the title, each status and the cursor as query parameters', async () => {
+    const response = firstValueFrom(
+      service.list({ title: '  bases de ayudas ', statuses: ['Draft', 'Error'] }, 'abc'),
+    );
+
+    const request = controller.expectOne(
+      (req) => req.url === '/api/documents' && req.method === 'GET',
+    );
+    expect(request.request.params.get('title')).toBe('bases de ayudas');
+    expect(request.request.params.getAll('status')).toEqual(['Draft', 'Error']);
+    expect(request.request.params.get('cursor')).toBe('abc');
+    request.flush({ items: [], nextCursor: null });
+    await response;
   });
 
   it('gets a document by its id, encoding it in the URL', async () => {

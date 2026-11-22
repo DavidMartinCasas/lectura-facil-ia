@@ -65,7 +65,7 @@ async function mockBackend(page: Page): Promise<FakeBackend> {
       backend.xsrfHeaders.push(route.request().headers()['x-xsrf-token']);
       return route.fulfill({ status: 202, json: { id: DOCUMENT_ID, status: 'Received' } });
     }
-    return route.fulfill({ json: [] });
+    return route.fulfill({ json: { items: [], nextCursor: null } });
   });
 
   await page.route(`**/api/documents/${DOCUMENT_ID}/events`, (route) =>
