@@ -64,6 +64,7 @@ El doble guion bajo separa niveles y no importan las mayúsculas: `LLM__PRIMARY_
 | `LLM__PRIMARY__ADAPTERMODEL` | Sí | — | Modelo o despliegue que adapta el texto. |
 | `LLM__PRIMARY__VERIFIERMODEL` | Sí | — | Modelo o despliegue que verifica el significado. |
 | `LLM__PRIMARY__TEMPERATURE` | No | `0` | Temperatura de las respuestas (0 – 2). Súbela solo si tu modelo no admite 0. |
+| `LLM__PRIMARY__DISABLETHINKING` | No | `false` | Pide al modelo que no razone antes de responder (`chat_template_kwargs.enable_thinking=false`). Solo con `OpenAICompatible`; actívalo con modelos híbridos como Qwen3 o Gemma 4 en llama.cpp, llama-swap o vLLM. |
 | `LLM__FALLBACK__ENABLED` | No | `false` | Habilita el proveedor de respaldo. Si es `false`, ningún documento sale del principal. |
 | `LLM__FALLBACK__*` | Solo si está habilitado | — | Las mismas opciones que `LLM__PRIMARY__*` (la clave 🔒). |
 | `LIMITS__MAXFILESIZEBYTES` | No | `5242880` (5 MB) | Tamaño máximo de fichero (1 KB – 50 MB). |
@@ -164,7 +165,10 @@ LLM__PRIMARY__ENDPOINT=https://llm.example.com/v1
 LLM__PRIMARY__APIKEY=<tu clave>
 LLM__PRIMARY__ADAPTERMODEL=<modelo tal y como aparece en la configuración de llama-swap>
 LLM__PRIMARY__VERIFIERMODEL=<otro modelo, de otra familia>
+LLM__PRIMARY__DISABLETHINKING=true   # si los modelos razonan (Qwen3, Gemma 4…)
 ```
+
+Si el log dice `LLM output does not match its schema` con tantos tokens de salida como el máximo pedido (64 en `/dev/llm/ping`), el modelo está razonando antes de responder: activa `DISABLETHINKING`.
 
 **Azure AI Foundry** (aquí como respaldo; crea antes un despliegue por rol):
 

@@ -32,6 +32,26 @@ public sealed class LlmOptionsTests
     }
 
     [Fact]
+    public void DisableThinking_ByDefault_IsFalse()
+    {
+        new LlmProviderOptions().DisableThinking.ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData(LlmProviderType.OpenAICompatible, false)]
+    [InlineData(LlmProviderType.AzureFoundry, true)]
+    public void Validate_DisableThinking_IsOnlyAllowedWithOpenAICompatible(LlmProviderType type, bool expectError)
+    {
+        var options = ValidOptions();
+        options.Primary.Type = type;
+        options.Primary.DisableThinking = true;
+
+        OptionsValidation.Validate(options)
+            .Any(error => error.Contains("Llm:Primary:DisableThinking", StringComparison.Ordinal))
+            .ShouldBe(expectError);
+    }
+
+    [Fact]
     public void Fallback_ByDefault_IsDisabled()
     {
         new LlmOptions().Fallback.Enabled.ShouldBeFalse();

@@ -27,6 +27,13 @@ public class LlmProviderOptions
     /// <summary>Temperatura de las respuestas. 0 por defecto: adaptar y verificar piden respuestas estables.</summary>
     public double Temperature { get; set; }
 
+    /// <summary>
+    /// Pide al servidor que no razone antes de responder (<c>chat_template_kwargs.enable_thinking = false</c>). Lo
+    /// entienden llama.cpp, llama-swap y vLLM con modelos híbridos como Qwen3 o Gemma 4: sin él, el razonamiento consume
+    /// los tokens de salida y la respuesta llega cortada. Solo para <see cref="LlmProviderType.OpenAICompatible"/>; falso por defecto, porque otros servidores pueden rechazar el campo.
+    /// </summary>
+    public bool DisableThinking { get; set; }
+
     /// <summary>Valida el proveedor. Los mensajes nombran la opción, nunca su valor.</summary>
     internal IEnumerable<ValidationResult> Validate(string path)
     {
@@ -50,6 +57,11 @@ public class LlmProviderOptions
                 path,
                 nameof(Endpoint),
                 "debe ser una URL absoluta https, sin credenciales (http solo hacia localhost o una red privada).");
+        }
+
+        if (DisableThinking && Type == LlmProviderType.AzureFoundry)
+        {
+            yield return Error(path, nameof(DisableThinking), "solo se admite con OpenAICompatible.");
         }
 
         if (Temperature is < 0 or > MaxTemperature || double.IsNaN(Temperature))

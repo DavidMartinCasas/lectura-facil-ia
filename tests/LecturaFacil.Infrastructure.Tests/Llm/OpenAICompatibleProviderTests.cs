@@ -69,6 +69,28 @@ public sealed class OpenAICompatibleProviderTests
         body.TryGetProperty("tools", out _).ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task Complete_WhenThinkingIsDisabled_AsksTheChatTemplateNotToThink()
+    {
+        var handler = FakeHttpMessageHandler.ReturningCompletion("""{"ok":true}""");
+
+        await CompleteAsync(handler, Request(LlmRole.Adapter), disableThinking: true);
+
+        var body = handler.Requests.ShouldHaveSingleItem().Json;
+        body.GetProperty("chat_template_kwargs").GetProperty("enable_thinking").GetBoolean().ShouldBeFalse();
+        body.GetProperty("response_format").GetProperty("type").GetString().ShouldBe("json_schema");
+    }
+
+    [Fact]
+    public async Task Complete_ByDefault_DoesNotSendChatTemplateArguments()
+    {
+        var handler = FakeHttpMessageHandler.ReturningCompletion("""{"ok":true}""");
+
+        await CompleteAsync(handler, Request(LlmRole.Adapter));
+
+        handler.Requests.ShouldHaveSingleItem().Json.TryGetProperty("chat_template_kwargs", out _).ShouldBeFalse();
+    }
+
     [Theory]
     [InlineData(200, 200)]
     [InlineData(5_000, 1_000)]
@@ -225,12 +247,14 @@ public sealed class OpenAICompatibleProviderTests
         LlmRequest request,
         string endpoint = Endpoint,
         double temperature = 0,
+        bool disableThinking = false,
         LimitsOptions? limits = null,
         TimeSpan? timeoutOverride = null,
         CancellationToken? cancellationToken = null)
     {
         var options = LlmTestOptions.Provider(LlmProviderType.OpenAICompatible, endpoint);
         options.Temperature = temperature;
+        options.DisableThinking = disableThinking;
         using var httpClient = new HttpClient(handler) { Timeout = timeoutOverride ?? Timeout.InfiniteTimeSpan };
         var provider = new OpenAICompatibleProvider(options, httpClient, limits ?? Limits, NullLogger.Instance);
         return await provider.CompleteStructuredAsync<PingReply>(request, cancellationToken ?? TestContext.Current.CancellationToken);
