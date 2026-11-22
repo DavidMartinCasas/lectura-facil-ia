@@ -32,7 +32,7 @@ dotnet test            # incluye Testcontainers (PostgreSQL) y la cobertura mín
 # Frontend
 cd src/LecturaFacil.Web
 npm ci
-npm start              # http://localhost:4200
+npm start              # http://localhost:4200; reenvía /api a la API en http://localhost:5125 (proxy.conf.json)
 npm run lint && npm test -- --watch=false && npm run build
 ```
 
