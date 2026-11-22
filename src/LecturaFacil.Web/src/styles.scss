@@ -11,22 +11,31 @@
 
 :root {
   // Colores base. light-dark() elige el valor según el tema claro u oscuro del sistema.
-  --lf-ink: light-dark(#17252f, #e3e9ee);
-  --lf-muted: light-dark(#4b5a63, #a9b6bd);
-  --lf-page: light-dark(#edf1f0, #0f1619);
-  --lf-surface: light-dark(#ffffff, #172126);
-  --lf-rule: light-dark(#c9d3d1, #2e3b41);
-  // Verde sello: el color de la administración que firma y valida.
-  --lf-primary: light-dark(#0d6b5e, #6fd3c1);
-  --lf-on-primary: light-dark(#ffffff, #00201b);
-  --lf-primary-soft: light-dark(#d8efea, #14403a);
+  // Tinta índigo y papel frío; el cobalto para las acciones y el amarillo de rotulador para lo marcado.
+  --lf-ink: light-dark(#14172e, #e8eaf5);
+  --lf-muted: light-dark(#4e5470, #a6abc6);
+  --lf-page: light-dark(#f3f4f8, #0d0f1c);
+  --lf-surface: light-dark(#ffffff, #161a2e);
+  --lf-rule: light-dark(#d9dce8, #2b3050);
+  --lf-primary: light-dark(#2846e0, #93a5ff);
+  --lf-on-primary: light-dark(#ffffff, #0d0f1c);
+  --lf-primary-soft: light-dark(#e4e9ff, #232c5e);
+  // Rotulador: lo que una persona tiene que mirar (fragmentos difíciles, la acción principal). Siempre con tinta
+  // oscura encima, en los dos temas.
+  --lf-marker: #ffe14d;
+  --lf-marker-ink: #14172e;
   // Ámbar: todo lo que está pendiente de una persona (borrador, revisar).
-  --lf-amber: light-dark(#8f4504, #f5b56b);
-  --lf-amber-soft: light-dark(#fdebd3, #3a2810);
+  --lf-amber: light-dark(#7d5200, #ffd36b);
+  --lf-amber-soft: light-dark(#fff3c4, #3a3013);
   // Papel del boletín para el texto original.
-  --lf-gazette: light-dark(#f5f6f3, #1b2328);
-  --lf-danger: light-dark(#a3231c, #ffb4ab);
-  --lf-danger-soft: light-dark(#fbe3e0, #4a1612);
+  --lf-gazette: light-dark(#ecedf2, #1c2036);
+  --lf-danger: light-dark(#b3261e, #ffb4ab);
+  --lf-danger-soft: light-dark(#fde7e5, #4a1612);
+  // Barra lateral: siempre en tinta, también en el tema claro.
+  --lf-rail: #14172e;
+  --lf-rail-ink: #c9cde3;
+  --lf-rail-rule: #2b3050;
+  --lf-shadow: 0 1px 2px rgb(20 23 46 / 6%), 0 12px 32px -18px rgb(20 23 46 / 28%);
 
   // Tipografía.
   --lf-font-sans: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
@@ -35,11 +44,19 @@
   // Medidas.
   --lf-radius-s: 6px;
   --lf-radius-m: 10px;
-  --lf-radius-l: 12px;
+  --lf-radius-l: 14px;
   // Ancho completo de la pantalla; solo los textos largos tienen una medida máxima de lectura.
   --lf-page-width: 100%;
   --lf-gutter: clamp(1.25rem, 3vw, 3rem);
   --lf-reading-width: 42rem;
+  // Alto de la barra superior fija. En pantallas estrechas la barra no se queda fija: lo pegajoso va arriba del todo.
+  --lf-topbar-height: 3.5rem;
+}
+
+@media (max-width: 63.99rem) {
+  :root {
+    --lf-topbar-height: 0rem;
+  }
 }
 
 html {
@@ -48,8 +65,8 @@ html {
   @include mat.theme(
     (
       color: (
-        primary: mat.$cyan-palette,
-        tertiary: mat.$orange-palette,
+        primary: mat.$blue-palette,
+        tertiary: mat.$yellow-palette,
       ),
       typography: (
         plain-family: var(--lf-font-sans),
@@ -85,18 +102,27 @@ html {
 
   @include mat.button-overrides(
     (
-      filled-container-shape: var(--lf-radius-s),
-      outlined-container-shape: var(--lf-radius-s),
-      text-container-shape: var(--lf-radius-s),
+      filled-container-shape: var(--lf-radius-m),
+      outlined-container-shape: var(--lf-radius-m),
+      text-container-shape: var(--lf-radius-m),
     )
   );
+}
+
+// Tema elegido en el menú (ThemeService). Sin elegir, se sigue al sistema (color-scheme: light dark).
+html[data-theme='light'] {
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 body {
   background-color: var(--lf-page);
   color: var(--lf-ink);
   font-family: var(--lf-font-sans);
-  font-size: 1.0625rem;
+  font-size: 1rem;
   line-height: 1.55;
   margin: 0;
   min-height: 100%;
@@ -121,6 +147,16 @@ p {
 :focus-visible {
   outline: 3px solid var(--lf-primary) !important;
   outline-offset: 2px !important;
+}
+
+// Dentro de un campo de Material el foco ya se ve: el borde del campo se vuelve grueso y del color principal. Sin
+// esto, al pulsar en un campo de texto salía además un recuadro por dentro.
+.mat-mdc-form-field :is(input, textarea, .mat-mdc-select):focus-visible {
+  outline: none !important;
+}
+
+.mat-mdc-form-field.mat-focused {
+  --mat-form-field-outlined-focus-outline-width: 3px;
 }
 
 a {
@@ -155,10 +191,10 @@ a {
   max-inline-size: var(--lf-reading-width);
 
   h1 {
-    font-size: clamp(1.625rem, 1.35rem + 0.8vw, 2.125rem);
-    line-height: 1.15;
-    font-weight: 700;
-    letter-spacing: -0.01em;
+    font-size: clamp(1.5rem, 1.3rem + 0.6vw, 1.875rem);
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -0.025em;
     margin: 0;
   }
 
@@ -166,7 +202,7 @@ a {
   p {
     margin: 0;
     color: var(--lf-muted);
-    font-size: 1.125rem;
+    font-size: 1rem;
   }
 }
 

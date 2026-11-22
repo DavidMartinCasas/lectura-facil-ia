@@ -21,6 +21,7 @@ describe('LoginPage', () => {
         provideHttpClient(withInterceptors([problemDetailsInterceptor])),
         provideHttpClientTesting(),
         provideRouter([
+          { path: '', component: EmptyPage },
           { path: 'documentos', component: EmptyPage },
           { path: 'nuevo', component: EmptyPage },
         ]),
@@ -51,7 +52,7 @@ describe('LoginPage', () => {
   }
 
   it('has labelled email and password fields with the right autocomplete', () => {
-    expect(element().querySelector('h1')?.textContent).toContain('Entrar');
+    expect(element().querySelector('h1')?.textContent).toContain('Lectura Fácil IA');
     expect(element().querySelector('input[name="email"]')?.getAttribute('autocomplete')).toBe(
       'username',
     );
@@ -60,7 +61,7 @@ describe('LoginPage', () => {
     );
   });
 
-  it('goes to "Mis documentos" after logging in', async () => {
+  it('goes to the home page after logging in', async () => {
     await fillAndSubmit(' persona@example.org ', 'una-contraseña');
     const request = controller.expectOne('/api/auth/login');
     expect(request.request.body).toEqual({
@@ -70,7 +71,7 @@ describe('LoginPage', () => {
     request.flush({ email: 'persona@example.org' });
     await fixture.whenStable();
 
-    expect(router.url).toBe('/documentos');
+    expect(router.url).toBe('/');
   });
 
   it('goes back to the page that was asked for', async () => {

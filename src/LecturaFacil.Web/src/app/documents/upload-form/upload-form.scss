@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
+// Formulario de "Nuevo documento". El texto se escribe en una hoja de boletín (gris, serif): es el original que se
+// va a transformar, igual que en la portada y en la revisión. El título va como el de un documento.
 :host {
   display: block;
 }
@@ -8,32 +10,140 @@
   gap: 1.25rem;
 }
 
-mat-button-toggle-group {
+svg {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+// Pegar texto o subir PDF: dos pestañas con icono.
+.modes {
   justify-self: start;
   border-radius: var(--lf-radius-m);
+  --mat-button-toggle-height: 44px;
   --mat-button-toggle-selected-state-background-color: var(--lf-primary);
   --mat-button-toggle-selected-state-text-color: var(--lf-on-primary);
   --mat-button-toggle-shape: var(--lf-radius-m);
   --mat-button-toggle-label-text-weight: 600;
+  --mat-button-toggle-label-text-size: 0.9375rem;
 }
 
-.field {
+.mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline: 0.25rem;
+
+  svg {
+    inline-size: 18px;
+    block-size: 18px;
+  }
+}
+
+.field-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--lf-muted);
+}
+
+.title-field {
+  display: grid;
+  gap: 0.125rem;
+}
+
+// Título: sin caja, con una línea debajo, como el título de un documento. Al escribir, la línea se vuelve gruesa y
+// azul: es el foco, sin recuadro alrededor.
+.title-input {
   inline-size: 100%;
+  box-sizing: border-box;
+  padding: 0.25rem 0 0.5rem;
+  border: 0;
+  border-block-end: 2px solid var(--lf-rule);
+  background: transparent;
+  color: var(--lf-ink);
+  font: inherit;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  border-radius: 0;
+
+  &::placeholder {
+    color: var(--lf-muted);
+    opacity: 0.6;
+  }
+
+  &:hover {
+    border-block-end-color: var(--lf-muted);
+  }
+
+  &:focus-visible {
+    outline: none !important;
+    border-block-end-color: var(--lf-primary);
+    box-shadow: 0 1px 0 var(--lf-primary);
+  }
 }
 
-textarea {
-  min-block-size: 16rem;
-  line-height: 1.6;
+// La hoja de boletín.
+.sheet {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem clamp(1rem, 2.5vw, 1.75rem) 0.5rem;
+  border-radius: var(--lf-radius-l);
+  background: var(--lf-gazette);
+  border: 1px solid transparent;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+
+  &:has(.gazette-input:hover) {
+    border-color: var(--lf-rule);
+  }
+
+  &:has([aria-invalid='true']) {
+    border-color: var(--lf-danger);
+  }
+
+  // Al escribir, el borde de la hoja se vuelve azul y grueso: es el foco, sin un recuadro aparte.
+  &:has(.gazette-input:focus-visible) {
+    border-color: var(--lf-primary);
+    box-shadow: inset 0 0 0 1px var(--lf-primary);
+  }
 }
 
+.gazette-input {
+  inline-size: 100%;
+  min-block-size: 14rem;
+  box-sizing: border-box;
+  padding: 0.25rem 0 0.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--lf-ink);
+  font-family: var(--lf-font-serif);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  resize: vertical;
+
+  &::placeholder {
+    color: var(--lf-muted);
+    font-style: italic;
+  }
+
+  &:focus-visible {
+    outline: none !important;
+  }
+}
+
+// Subir PDF: zona amplia con el dibujo de la portada. Al arrastrar un fichero encima se marca en amarillo.
 .drop-zone {
   display: grid;
   justify-items: center;
   text-align: center;
-  gap: 0.75rem;
-  padding: clamp(2rem, 5vw, 3rem) 1.5rem;
+  gap: 0.5rem;
+  padding: clamp(1.75rem, 4vw, 2.75rem) 1.5rem;
   border: 2px dashed var(--lf-rule);
-  border-radius: var(--lf-radius-m);
+  border-radius: var(--lf-radius-l);
   background: var(--lf-page);
   transition:
     border-color 120ms ease,
@@ -45,9 +155,9 @@ textarea {
 }
 
 .drop-zone--active {
-  border-color: var(--lf-primary);
+  border-color: var(--lf-marker);
   border-style: solid;
-  background: var(--lf-primary-soft);
+  background: color-mix(in srgb, var(--lf-marker) 22%, var(--lf-surface));
 }
 
 .drop-zone--filled {
@@ -55,31 +165,46 @@ textarea {
   border-color: var(--lf-primary);
 }
 
-.drop-icon {
-  inline-size: 3rem;
-  block-size: 3rem;
-  fill: none;
-  stroke-width: 2;
-  stroke-linejoin: round;
-  stroke-linecap: round;
+.drop-pic {
+  inline-size: 6rem;
+  block-size: 4.5rem;
+  margin-block-end: 0.25rem;
+  stroke: none;
 }
 
-.drop-icon__sheet {
+.pic-paper {
   fill: var(--lf-surface);
-  stroke: var(--lf-muted);
+  stroke: var(--lf-rule);
+  stroke-width: 1.5;
 }
 
-.drop-icon__fold {
-  stroke: var(--lf-muted);
+.pic-line {
+  fill: var(--lf-rule);
 }
 
-.drop-icon__lines {
-  stroke: var(--lf-primary);
+.pic-marker {
+  fill: var(--lf-marker);
+}
+
+.pic-badge {
+  fill: var(--lf-primary);
+}
+
+.pic-badge-ink {
+  fill: none;
+  stroke: var(--lf-on-primary);
+  stroke-width: 2.5;
+}
+
+.drop-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
 }
 
 .hint {
-  margin: 0;
-  max-inline-size: 28rem;
+  margin: 0 0 0.5rem;
+  max-inline-size: 30rem;
   color: var(--lf-muted);
 }
 
@@ -89,7 +214,7 @@ textarea {
   align-items: center;
   min-block-size: 44px;
   padding-inline: 1.25rem;
-  border-radius: var(--lf-radius-s);
+  border-radius: var(--lf-radius-m);
   border: 1px solid var(--lf-primary);
   color: var(--lf-primary);
   background: var(--lf-surface);
@@ -108,23 +233,72 @@ textarea {
   opacity: 0;
 }
 
-.file-input:focus-visible + .selected,
 .drop-zone:has(.file-input:focus-visible) .file-label {
   outline: 3px solid var(--lf-primary);
   outline-offset: 2px;
 }
 
-.selected {
+// Fichero elegido: una ficha con su nombre y su tamaño, y el botón para quitarlo.
+.file-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.5rem 0.625rem 1rem;
+  border-radius: var(--lf-radius-m);
+  background: var(--lf-primary-soft);
+
+  svg {
+    inline-size: 22px;
+    block-size: 22px;
+    color: var(--lf-primary);
+  }
+}
+
+.file-name {
+  flex: 1;
+  min-inline-size: 0;
   margin: 0;
+  display: grid;
   overflow-wrap: anywhere;
 }
 
-.actions {
+.file-size {
+  font-size: 0.875rem;
+  color: var(--lf-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+// Abajo: cuántas palabras hay y el botón de adaptar.
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
+  gap: 0.75rem 1rem;
+}
+
+.count {
+  margin: 0 auto 0 0;
+  font-size: 0.9375rem;
+  color: var(--lf-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .submit {
   min-block-size: 48px;
   padding-inline: 2rem;
   font-size: 1.0625rem;
+}
+
+.try-sample {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--lf-muted);
+  text-align: end;
+}
+
+@media (max-width: 40rem) {
+  .try-sample {
+    text-align: start;
+  }
 }

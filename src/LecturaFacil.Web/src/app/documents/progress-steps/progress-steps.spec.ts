@@ -53,4 +53,17 @@ describe('ProgressStepsComponent', () => {
       'No se ha podido terminar.',
     );
   });
+
+  it('can hide its title from view and still name the list', async () => {
+    const fixture = TestBed.createComponent(ProgressStepsComponent);
+    fixture.componentRef.setInput('steps', progressSteps('Processing'));
+    fixture.componentRef.setInput('showTitle', false);
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('h2')?.classList).toContain('visually-hidden');
+    expect(element.querySelector('section')?.getAttribute('aria-labelledby')).toBe(
+      'progress-title',
+    );
+  });
 });

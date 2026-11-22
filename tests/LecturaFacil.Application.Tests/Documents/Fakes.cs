@@ -15,11 +15,17 @@ internal sealed class InMemoryDocumentRepository : IDocumentRepository
 {
     public List<Document> Added { get; } = [];
 
-    /// <summary>Estados guardados con <see cref="SaveAsync"/>, en orden.</summary>
+    /// <summary>
+    /// Estados guardados con <see cref="SaveAsync"/>, en orden. Un guardado que solo cambia la fase del proceso
+    /// (mismo estado) no se repite aquí: está en <see cref="SavedStages"/>.
+    /// </summary>
     public List<DocumentStatus> SavedStatuses { get; } = [];
 
-    /// <summary>Estados que devolverá <see cref="FindStatusForOwnerAsync"/>, uno por llamada (el último se repite).</summary>
-    public Queue<DocumentStatus> ScriptedStatuses { get; } = new();
+    /// <summary>Fases del proceso guardadas con <see cref="SaveAsync"/>, en orden.</summary>
+    public List<ProcessingStage> SavedStages { get; } = [];
+
+    /// <summary>Progreso que devolverá <see cref="FindProgressForOwnerAsync"/>, uno por llamada (el último se repite).</summary>
+    public Queue<DocumentProgress> ScriptedProgress { get; } = new();
 
     public Task AddAsync(Document document, CancellationToken cancellationToken)
     {
@@ -45,13 +51,24 @@ internal sealed class InMemoryDocumentRepository : IDocumentRepository
             return Task.FromResult<DocumentStatus?>(null);
         }
 
-        var status = ScriptedStatuses.Count switch
+        return Task.FromResult<DocumentStatus?>(document.Status);
+    }
+
+    public Task<DocumentProgress?> FindProgressForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken)
+    {
+        var document = Added.Find(candidate => candidate.Id == id && candidate.OwnerId == ownerId);
+        if (document is null)
         {
-            0 => document.Status,
-            1 => ScriptedStatuses.Peek(),
-            _ => ScriptedStatuses.Dequeue(),
+            return Task.FromResult<DocumentProgress?>(null);
+        }
+
+        var progress = ScriptedProgress.Count switch
+        {
+            0 => new DocumentProgress(document.Status, document.Stage),
+            1 => ScriptedProgress.Peek(),
+            _ => ScriptedProgress.Dequeue(),
         };
-        return Task.FromResult<DocumentStatus?>(status);
+        return Task.FromResult<DocumentProgress?>(progress);
     }
 
     public Task<IReadOnlyList<DocumentId>> ListAwaitingAdaptationAsync(CancellationToken cancellationToken) =>
@@ -79,7 +96,15 @@ internal sealed class InMemoryDocumentRepository : IDocumentRepository
             throw new ConcurrentUpdateException();
         }
 
-        SavedStatuses.Add(document.Status);
+        if (document.Stage is { } stage)
+        {
+            SavedStages.Add(stage);
+        }
+
+        if (document.Stage is null || SavedStatuses.Count == 0 || SavedStatuses[^1] != document.Status)
+        {
+            SavedStatuses.Add(document.Status);
+        }
         return Task.CompletedTask;
     }
 }

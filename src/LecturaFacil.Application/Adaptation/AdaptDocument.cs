@@ -22,6 +22,7 @@ namespace LecturaFacil.Application.Adaptation;
 /// Por último se verifica el significado de la versión que se guarda (<see cref="VerifyMeaning"/>): solo de esa, para
 /// no multiplicar las llamadas al verificador. La verificación nunca impide guardar el borrador; solo añade avisos.
 /// Cada ejecución, bien o mal, se registra una vez en <see cref="IAdaptationTelemetry"/> (US-17).
+/// Mientras dura, se guarda en qué fase está (<see cref="ProcessingStage"/>) para que la pantalla enseñe el progreso real.
 /// </summary>
 public sealed class AdaptDocument(
     IDocumentRepository repository,
@@ -94,6 +95,7 @@ public sealed class AdaptDocument(
         }
 
         document.StartProcessing(timeProvider.GetUtcNow());
+        document.EnterStage(ProcessingStage.Adapting, timeProvider.GetUtcNow());
         await repository.SaveAsync(document, cancellationToken);
 
         var adaptation = await AdaptAndReviewAsync(document, usage, cancellationToken);
@@ -105,6 +107,7 @@ public sealed class AdaptDocument(
         }
 
         var (content, metadata, report) = adaptation.Value;
+        await EnterStageAsync(document, ProcessingStage.Verifying, cancellationToken);
         var verification = await verifyMeaning.ExecuteAsync(document.OriginalText.Value, content, cancellationToken);
         var version = document.CompleteAdaptation(content, metadata, report, verification, timeProvider.GetUtcNow());
         await repository.SaveAsync(document, cancellationToken);
@@ -136,13 +139,14 @@ public sealed class AdaptDocument(
             return Result<ReviewedAdaptation>.Failure(first.Error!);
         }
 
-        var best = Review(first.Value);
+        var best = await ReviewAsync(document, first.Value, cancellationToken);
         var last = best;
         var cost = best.Metadata;
         for (var retry = 0; retry < _limits.MaxAdaptationRetries && last.Report.HasHighSeverityViolations; retry++)
         {
             // Lo que cuestan las respuestas válidas del reintento se suma aunque el reintento acabe fallando en otra parte.
             var retryUsage = new Usage(total);
+            await EnterStageAsync(document, ProcessingStage.Retrying, cancellationToken);
             var attempt = await AdaptAsync(document, RetrySystemPrompt(document.OriginalFindings, last.Report), retryUsage, cancellationToken);
             cost = AddCost(cost, retryUsage);
             if (attempt.IsFailure)
@@ -151,7 +155,7 @@ public sealed class AdaptDocument(
                 break;
             }
 
-            last = Review(attempt.Value);
+            last = await ReviewAsync(document, attempt.Value, cancellationToken);
             if (BestVersionPolicy.PrefersRetry(best.Content, best.Report, last.Content, last.Report))
             {
                 best = last;
@@ -168,8 +172,21 @@ public sealed class AdaptDocument(
         return Result<ReviewedAdaptation>.Success(best with { Metadata = metadata });
     }
 
-    private ReviewedAdaptation Review((AdaptedContent Content, AdaptationMetadata Metadata) adaptation) =>
-        new(adaptation.Content, adaptation.Metadata, reviewAdaptation.Execute(adaptation.Content));
+    private async Task<ReviewedAdaptation> ReviewAsync(
+        Document document,
+        (AdaptedContent Content, AdaptationMetadata Metadata) adaptation,
+        CancellationToken cancellationToken)
+    {
+        await EnterStageAsync(document, ProcessingStage.ReviewingGuidelines, cancellationToken);
+        return new(adaptation.Content, adaptation.Metadata, reviewAdaptation.Execute(adaptation.Content));
+    }
+
+    /// <summary>Guarda la fase en la que entra el documento: el seguimiento por SSE la lee y la envía a la pantalla.</summary>
+    private async Task EnterStageAsync(Document document, ProcessingStage stage, CancellationToken cancellationToken)
+    {
+        document.EnterStage(stage, timeProvider.GetUtcNow());
+        await repository.SaveAsync(document, cancellationToken);
+    }
 
     private static AdaptationMetadata AddCost(AdaptationMetadata total, Usage attempt) =>
         total with

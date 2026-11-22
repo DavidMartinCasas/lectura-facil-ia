@@ -6,47 +6,125 @@
   </div>
 
   <div class="compose">
-    <div class="compose-main">
-      @if (showForm()) {
+    <div class="compose-main" [class.compose-main--locked]="tracking()">
+      <!-- Mientras se adapta, el formulario se queda detrás del panel, atenuado y sin poder usarse. -->
+      <div class="compose-form" [inert]="tracking()">
         <app-upload-form
           [busy]="store.phase() === 'submitting'"
           [turnstileSiteKey]="turnstileSiteKey()"
           (submitted)="submit($event)"
         />
-      }
 
-      @if (store.steps(); as steps) {
-        <app-progress-steps [steps]="steps" />
-      }
-
-      @if (store.error(); as message) {
-        <div class="error" role="alert">
-          <p>{{ message }}</p>
-          <div class="actions">
-            <button mat-flat-button type="button" (click)="store.retry()">
-              {{ progressTexts.retry }}
-            </button>
-            @if (!showForm()) {
-              <button mat-stroked-button type="button" (click)="store.reset()">
-                {{ progressTexts.startOver }}
+        @if (!tracking() && store.error(); as message) {
+          <div class="error" role="alert">
+            <p>{{ message }}</p>
+            <div class="actions">
+              <button mat-flat-button type="button" (click)="store.retry()">
+                {{ progressTexts.retry }}
               </button>
-            }
+            </div>
           </div>
+        }
+      </div>
+
+      @if (tracking()) {
+        <div class="progress-overlay">
+          <section #panel class="progress-panel" aria-labelledby="panel-title" tabindex="-1">
+            <h2 id="panel-title">{{ panelTitle() }}</h2>
+            @switch (store.phase()) {
+              @case ('ready') {
+                <p class="panel-hint">{{ progressTexts.readyHint }}</p>
+              }
+              @case ('tracking') {
+                <p class="panel-hint">{{ progressTexts.workingHint }}</p>
+              }
+            }
+
+            @if (store.steps(); as steps) {
+              <app-progress-steps [steps]="steps" [showTitle]="false" />
+            }
+
+            @if (store.error(); as message) {
+              <div class="error" role="alert">
+                <p>{{ message }}</p>
+                <div class="actions">
+                  <button mat-flat-button type="button" (click)="store.retry()">
+                    {{ progressTexts.retry }}
+                  </button>
+                  <button mat-stroked-button type="button" (click)="store.reset()">
+                    {{ progressTexts.startOver }}
+                  </button>
+                </div>
+              </div>
+            }
+
+            @if (store.phase() === 'ready') {
+              <a
+                mat-flat-button
+                class="open-document"
+                [routerLink]="['/documentos', store.documentId()]"
+              >
+                {{ progressTexts.openDocument }}
+              </a>
+            }
+          </section>
         </div>
       }
     </div>
 
-    @if (showForm() && !store.steps()) {
-      <aside class="compose-aside" aria-labelledby="next-title">
-        <h2 id="next-title">Qué pasa después</h2>
-        <ol>
-          <li>Se marcan los problemas de lectura fácil del texto original.</li>
-          <li>La IA propone una adaptación y se comprueban las pautas.</li>
-          <li>Otro modelo revisa que no se pierdan plazos, importes ni requisitos.</li>
-          <li>Revisas el resultado, lo corriges si hace falta y lo exportas.</li>
-        </ol>
-        <p class="draft-note" role="note">{{ draftNotice }}</p>
-      </aside>
-    }
+    <aside class="compose-aside" aria-labelledby="next-title">
+      <h2 id="next-title">Qué pasa después</h2>
+      <!-- Línea de tiempo: el primer paso es el de ahora; los demás, lo que hace la aplicación al pulsar «Adaptar». -->
+      <ol class="timeline">
+        <li class="timeline-now">
+          <span class="timeline-dot">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <path d="M5 2.75h6.5l3.75 3.75v10.75H5z M11.25 2.75v4h4 M7.75 11h4.5M7.75 14h3" />
+            </svg>
+          </span>
+          <p>
+            <strong class="timeline-when">Ahora</strong>
+            Pegas el texto o subes el PDF.
+          </p>
+        </li>
+        <li>
+          <span class="timeline-dot">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <path d="M3.5 13.5h9M3.5 9.5h13M3.5 5.5h7" />
+            </svg>
+          </span>
+          <p>Se marcan los problemas de lectura fácil del texto original.</p>
+        </li>
+        <li>
+          <span class="timeline-dot">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <path
+                d="M10 3.25 11.4 7.6 15.75 9 11.4 10.4 10 14.75 8.6 10.4 4.25 9 8.6 7.6z M15.5 13.75l.55 1.45 1.45.55-1.45.55-.55 1.45-.55-1.45-1.45-.55 1.45-.55z"
+              />
+            </svg>
+          </span>
+          <p>La IA propone una adaptación y se comprueban las pautas.</p>
+        </li>
+        <li>
+          <span class="timeline-dot">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <path
+                d="M10 2.75 16 5v4.5c0 3.6-2.5 6.4-6 7.75-3.5-1.35-6-4.15-6-7.75V5z M7.25 10l2 2 3.75-4"
+              />
+            </svg>
+          </span>
+          <p>Otro modelo revisa que no se pierdan plazos, importes ni requisitos.</p>
+        </li>
+        <li>
+          <span class="timeline-dot">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <path d="M10 3.25v9M6.25 8.75 10 12.5l3.75-3.75 M3.75 13.5v2.75h12.5V13.5" />
+            </svg>
+          </span>
+          <p>Revisas el resultado, lo corriges si hace falta y lo exportas.</p>
+        </li>
+      </ol>
+      <p class="draft-note" role="note">{{ draftNotice }}</p>
+    </aside>
   </div>
 </section>

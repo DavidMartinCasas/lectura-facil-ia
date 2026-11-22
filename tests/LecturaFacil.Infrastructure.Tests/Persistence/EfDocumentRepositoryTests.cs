@@ -235,6 +235,9 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
         (await repository.FindForOwnerAsync(document.Id, stranger, Token)).ShouldBeNull();
         (await repository.FindStatusForOwnerAsync(document.Id, stranger, Token)).ShouldBeNull();
         (await repository.FindStatusForOwnerAsync(document.Id, document.OwnerId, Token)).ShouldBe(DocumentStatus.Received);
+        (await repository.FindProgressForOwnerAsync(document.Id, stranger, Token)).ShouldBeNull();
+        (await repository.FindProgressForOwnerAsync(document.Id, document.OwnerId, Token))
+            .ShouldBe(new DocumentProgress(DocumentStatus.Received, null));
     }
 
     [Fact]

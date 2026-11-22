@@ -35,32 +35,35 @@ h3 {
   max-inline-size: 40rem;
 }
 
-// Fragmento con problemas: subrayado ondulado y fondo ámbar. Es un botón: se puede activar con el teclado.
+// Fragmento con problemas: marcado con rotulador, como lo haría una persona al revisar. Es un botón: se puede
+// activar con el teclado. El subrayado lo distingue también sin color.
 .mark {
   display: inline;
   font: inherit;
   line-height: inherit;
   white-space: inherit;
-  color: inherit;
   text-align: inherit;
-  padding: 0;
+  padding: 0.05em 0.1em;
+  margin: 0 -0.1em;
   border: 0;
-  border-radius: 2px;
-  background: var(--lf-amber-soft);
-  text-decoration: underline wavy var(--lf-amber);
-  text-decoration-thickness: 1.5px;
+  border-radius: 0.2em;
+  color: var(--lf-marker-ink);
+  background: var(--lf-marker);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  text-decoration: underline 1.5px var(--lf-marker-ink);
   text-underline-offset: 3px;
   cursor: pointer;
 
   &:hover {
-    background: color-mix(in srgb, var(--lf-amber) 22%, transparent);
+    background: color-mix(in srgb, var(--lf-marker) 80%, #ff9f1c);
   }
 }
 
 .mark--selected {
-  background: var(--lf-primary-soft);
-  text-decoration-color: var(--lf-primary);
+  background: color-mix(in srgb, var(--lf-marker) 80%, #ff9f1c);
   outline: 2px solid var(--lf-primary);
+  outline-offset: 1px;
 }
 
 // Detalle del fragmento seleccionado: se queda a la vista al bajar por el texto.
@@ -71,9 +74,9 @@ h3 {
   padding: 1rem 1.25rem;
   border-radius: var(--lf-radius-m);
   border: 1px solid var(--lf-rule);
-  border-inline-start: 4px solid var(--lf-amber);
+  border-inline-start: 5px solid var(--lf-marker);
   background: var(--lf-surface);
-  box-shadow: 0 10px 24px -16px rgb(0 0 0 / 45%);
+  box-shadow: var(--lf-shadow);
 }
 
 ul {

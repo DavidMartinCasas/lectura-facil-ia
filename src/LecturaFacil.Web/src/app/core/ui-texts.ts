@@ -13,7 +13,6 @@ export const APP_TEXTS = {
   name: 'Lectura Fácil IA',
   skipToContent: 'Saltar al contenido',
   mainNavigation: 'Navegación principal',
-  navNew: 'Nuevo documento',
   navList: 'Mis documentos',
   navSamples: 'Ejemplos',
   noticeLabel: 'Aviso',
@@ -21,13 +20,18 @@ export const APP_TEXTS = {
   logout: 'Salir',
   logoutFailed: 'No se ha podido cerrar la sesión. Inténtalo de nuevo.',
   signedInAs: 'Has entrado como',
+  theme: 'Tema',
+  themeSystem: 'Sistema',
+  themeLight: 'Claro',
+  themeDark: 'Oscuro',
+  /** Botón de tema: cada pulsación pasa al tema siguiente. */
+  themeChange: 'Cambiar el tema.',
   draftNotice:
     'Cada adaptación es un borrador. Siempre la tiene que revisar y validar una persona antes de usarla.',
 } as const;
 
 export const LOGIN_TEXTS = {
   pageTitle: 'Entrar',
-  intro: 'Escribe tu correo y tu contraseña para ver tus documentos.',
   emailLabel: 'Correo',
   passwordLabel: 'Contraseña',
   submit: 'Entrar',
@@ -42,10 +46,18 @@ export const UPLOAD_TEXTS = {
   modeText: 'Pegar texto',
   modePdf: 'Subir PDF',
   titleLabel: 'Título (opcional)',
+  titlePlaceholder: 'Sin título',
   textLabel: 'Texto que quieres adaptar',
+  textPlaceholder: 'Pega aquí la convocatoria, las bases o la notificación…',
+  words: (count: number) => (count === 1 ? '1 palabra' : `${count.toLocaleString('es')} palabras`),
   fileLabel: 'Fichero PDF',
-  dropHint: 'Arrastra aquí el PDF o elige un fichero. Tamaño máximo: 5 MB.',
+  dropTitle: 'Arrastra aquí el PDF',
+  dropHint:
+    'O elígelo desde tu equipo. Tiene que tener texto, no solo imágenes. Tamaño máximo: 5 MB.',
   selectedFile: 'Fichero elegido:',
+  removeFile: 'Quitar',
+  trySample: '¿No tienes un texto a mano?',
+  trySampleLink: 'Prueba con un ejemplo',
   submit: 'Adaptar',
   submitting: 'Enviando…',
   textRequired: 'Escribe o pega el texto que quieres adaptar.',
@@ -81,6 +93,7 @@ export const PROGRESS_TEXTS = {
   steps: {
     received: 'Recibido',
     adapting: 'Adaptando',
+    adaptingAgain: 'Adaptando otra vez',
     reviewing: 'Revisando pautas',
     verifying: 'Verificando',
     ready: 'Listo',
@@ -95,10 +108,17 @@ export const PROGRESS_TEXTS = {
   adaptationFailed: 'No se ha podido adaptar el documento.',
   retry: 'Reintentar',
   startOver: 'Empezar de nuevo',
+  workingTitle: 'Adaptando tu documento',
+  workingHint: 'Suele tardar menos de un minuto. Puedes quedarte en esta página.',
+  readyTitle: 'Documento listo',
+  readyHint: 'Ahora te llevamos a revisarlo.',
+  failedTitle: 'No se ha podido terminar',
+  openDocument: 'Ver el documento',
 } as const;
 
 export const LIST_TEXTS = {
   pageTitle: 'Mis documentos',
+  newDocument: 'Nuevo documento',
   caption: 'Documentos que has enviado, del más nuevo al más antiguo',
   loading: 'Cargando documentos…',
   empty: 'Todavía no tienes documentos.',

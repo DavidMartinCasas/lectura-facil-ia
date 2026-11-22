@@ -9,6 +9,36 @@ export interface ProgressStep {
   readonly state: StepState;
 }
 
+/** Fase del proceso mientras el documento está en "Procesando". La envía el servidor por SSE. */
+export const PROCESSING_STAGES = [
+  'Adapting',
+  'ReviewingGuidelines',
+  'Retrying',
+  'Verifying',
+] as const;
+
+export type ProcessingStage = (typeof PROCESSING_STAGES)[number];
+
+export function isProcessingStage(value: unknown): value is ProcessingStage {
+  return typeof value === 'string' && (PROCESSING_STAGES as readonly string[]).includes(value);
+}
+
+/** Lo que llega del servidor: el estado y, mientras se adapta, la fase. */
+export interface DocumentProgress {
+  readonly status: DocumentStatus;
+  readonly stage: ProcessingStage | null;
+}
+
+/**
+ * Dónde está la lista de pasos: el paso en curso (`READY` si todos están hechos), si es otra adaptación
+ * tras incumplir pautas y si ha fallado.
+ */
+export interface ProgressPosition {
+  readonly index: number;
+  readonly retrying: boolean;
+  readonly failed: boolean;
+}
+
 const LABELS = [
   PROGRESS_TEXTS.steps.received,
   PROGRESS_TEXTS.steps.adapting,
@@ -17,29 +47,93 @@ const LABELS = [
   PROGRESS_TEXTS.steps.ready,
 ] as const;
 
-const ADAPTING_STEP = 1;
+const RECEIVED = 0;
+const ADAPTING = 1;
+const REVIEWING = 2;
+const VERIFYING = 3;
+const LAST = LABELS.length - 1;
+/** Todos los pasos hechos, también "Listo". */
+const READY = LABELS.length;
+
+const STAGE_STEPS: Readonly<Record<ProcessingStage, number>> = {
+  Adapting: ADAPTING,
+  ReviewingGuidelines: REVIEWING,
+  Retrying: ADAPTING,
+  Verifying: VERIFYING,
+};
 
 /**
- * Pasos que se muestran para un estado. La API solo distingue "en cola" (Received) y "adaptando" (Processing): la
- * revisión de pautas y la verificación ocurren dentro de Processing, así que se marcan como hechas al terminar.
- * Si falla, se marca con error el paso de adaptación, que es el único que se sabe que estaba en curso.
+ * En qué paso está un documento. Mientras se procesa, la fase dice si está adaptando, revisando las pautas o
+ * verificando; sin fase (un servidor antiguo o un evento sin ella), se supone que está adaptando. Si falla, se marca
+ * con error el paso en el que estaba.
  */
-export function progressSteps(status: DocumentStatus): readonly ProgressStep[] {
+export function progressPosition(
+  status: DocumentStatus,
+  stage: ProcessingStage | null = null,
+): ProgressPosition {
   switch (status) {
     case 'Received':
-      return withCurrent(0, 'current');
+      return at(RECEIVED);
     case 'Processing':
-      return withCurrent(ADAPTING_STEP, 'current');
+      return at(stage === null ? ADAPTING : STAGE_STEPS[stage], stage === 'Retrying');
     case 'Error':
-      return withCurrent(ADAPTING_STEP, 'failed');
+      return { ...at(stage === null ? ADAPTING : STAGE_STEPS[stage]), failed: true };
     default:
-      return LABELS.map((label) => ({ label, state: 'done' }));
+      return at(READY);
   }
 }
 
-function withCurrent(index: number, state: 'current' | 'failed'): readonly ProgressStep[] {
-  return LABELS.map((label, position) => ({
-    label,
-    state: position < index ? 'done' : position === index ? state : 'pending',
+/** Los pasos que se ven en una posición. */
+export function stepsAt(position: ProgressPosition): readonly ProgressStep[] {
+  return LABELS.map((label, index) => ({
+    label: index === ADAPTING && position.retrying ? PROGRESS_TEXTS.steps.adaptingAgain : label,
+    state:
+      index < position.index
+        ? 'done'
+        : index > position.index
+          ? 'pending'
+          : position.failed
+            ? 'failed'
+            : 'current',
   }));
+}
+
+/** Pasos que se muestran para un estado y una fase. */
+export function progressSteps(
+  status: DocumentStatus,
+  stage: ProcessingStage | null = null,
+): readonly ProgressStep[] {
+  return stepsAt(progressPosition(status, stage));
+}
+
+/**
+ * El siguiente paso que se enseña camino de `target`, o `null` si ya se está ahí. Hacia delante se avanza de
+ * uno en uno, siempre en orden, para que se vean también las fases que el servidor ha hecho muy deprisa; "Listo"
+ * no se muestra "en curso": de "Verificando" se pasa a todo hecho. Un error o una nueva adaptación (que vuelve
+ * atrás) se enseñan tal cual.
+ */
+export function nextPosition(
+  shown: ProgressPosition,
+  target: ProgressPosition,
+): ProgressPosition | null {
+  if (samePosition(shown, target)) {
+    return null;
+  }
+  if (target.failed || target.index <= shown.index) {
+    return target;
+  }
+  const index = shown.index + 1 === LAST ? READY : shown.index + 1;
+  return index >= target.index ? target : at(index);
+}
+
+export function isReady(position: ProgressPosition): boolean {
+  return position.index === READY && !position.failed;
+}
+
+function samePosition(a: ProgressPosition, b: ProgressPosition): boolean {
+  return a.index === b.index && a.retrying === b.retrying && a.failed === b.failed;
+}
+
+function at(index: number, retrying = false): ProgressPosition {
+  return { index, retrying, failed: false };
 }

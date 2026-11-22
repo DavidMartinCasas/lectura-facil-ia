@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-import { progressSteps } from './document-progress';
+import {
+  ProgressPosition,
+  isReady,
+  nextPosition,
+  progressPosition,
+  progressSteps,
+  stepsAt,
+} from './document-progress';
 
 describe('progressSteps', () => {
   const states = (status: Parameters<typeof progressSteps>[0]) =>
@@ -33,4 +40,71 @@ describe('progressSteps', () => {
       expect(states(status)).toEqual(['done', 'done', 'done', 'done', 'done']);
     },
   );
+
+  it('follows the stage the server reports while processing', () => {
+    const at = (stage: Parameters<typeof progressSteps>[1]) =>
+      progressSteps('Processing', stage).map((step) => step.state);
+
+    expect(at('Adapting')).toEqual(['done', 'current', 'pending', 'pending', 'pending']);
+    expect(at('ReviewingGuidelines')).toEqual(['done', 'done', 'current', 'pending', 'pending']);
+    expect(at('Verifying')).toEqual(['done', 'done', 'done', 'current', 'pending']);
+  });
+
+  it('says it is adapting again when the first adaptation broke severe guidelines', () => {
+    const steps = progressSteps('Processing', 'Retrying');
+
+    expect(steps[1]).toEqual({ label: 'Adaptando otra vez', state: 'current' });
+  });
+
+  it('marks as failed the step the document was in', () => {
+    expect(states('Error')).toEqual(['done', 'failed', 'pending', 'pending', 'pending']);
+    expect(progressSteps('Error', 'Verifying').map((step) => step.state)).toEqual([
+      'done',
+      'done',
+      'done',
+      'failed',
+      'pending',
+    ]);
+  });
+});
+
+describe('nextPosition', () => {
+  /** Las posiciones que se ven de una a otra, sin contar la primera. */
+  function walk(from: ProgressPosition, to: ProgressPosition): string[][] {
+    const seen: string[][] = [];
+    let shown = from;
+    for (let next = nextPosition(shown, to); next !== null; next = nextPosition(shown, to)) {
+      shown = next;
+      seen.push(stepsAt(shown).map((step) => step.state));
+    }
+    return seen;
+  }
+
+  it('goes through every step in order, even those the server did very fast', () => {
+    expect(walk(progressPosition('Received'), progressPosition('Draft'))).toEqual([
+      ['done', 'current', 'pending', 'pending', 'pending'],
+      ['done', 'done', 'current', 'pending', 'pending'],
+      ['done', 'done', 'done', 'current', 'pending'],
+      ['done', 'done', 'done', 'done', 'done'],
+    ]);
+  });
+
+  it('shows an error or a new adaptation straight away', () => {
+    const reviewing = progressPosition('Processing', 'ReviewingGuidelines');
+
+    expect(nextPosition(reviewing, progressPosition('Error', 'ReviewingGuidelines'))?.failed).toBe(
+      true,
+    );
+    expect(nextPosition(reviewing, progressPosition('Processing', 'Retrying'))).toEqual(
+      progressPosition('Processing', 'Retrying'),
+    );
+  });
+
+  it('stops when it gets there', () => {
+    const ready = progressPosition('Draft');
+
+    expect(nextPosition(ready, ready)).toBeNull();
+    expect(isReady(ready)).toBe(true);
+    expect(isReady(progressPosition('Processing'))).toBe(false);
+  });
 });

@@ -45,7 +45,7 @@ describe('SamplesPage', () => {
             },
           },
         },
-        { provide: DocumentEventsService, useValue: { watch: () => of() } },
+        { provide: DocumentEventsService, useValue: { watchProgress: () => of() } },
         {
           provide: PublicConfigService,
           useValue: { turnstileSiteKey: signal(options.siteKey ?? null) },

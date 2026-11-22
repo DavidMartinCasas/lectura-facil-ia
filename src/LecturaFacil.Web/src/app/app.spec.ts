@@ -3,10 +3,11 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { App } from './app';
 import { AuthService } from './core/auth/auth.service';
+import { THEME_KEY, ThemeService } from './core/theme/theme.service';
 
 @Component({ template: '' })
 class EmptyPage {}
@@ -22,7 +23,7 @@ describe('App', () => {
     });
   });
 
-  it('shows the project name in the sidebar', async () => {
+  it('shows the project name in the top bar', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const element = fixture.nativeElement as HTMLElement;
@@ -59,6 +60,39 @@ describe('App', () => {
     const links = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('nav a'));
 
     expect(links.some((link) => link.getAttribute('href') === '/ejemplos')).toBe(true);
+  });
+
+  it('hides the menu on the login screen', async () => {
+    const fixture = TestBed.createComponent(App);
+    await TestBed.inject(Router).navigateByUrl('/entrar?volver=%2Fdocumentos');
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('header.topbar')).toBeNull();
+    expect(element.querySelector('main')).not.toBeNull();
+  });
+
+  it('changes the theme from the top bar and says which one is on', async () => {
+    localStorage.removeItem(THEME_KEY);
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+    const button = Array.from(element.querySelectorAll('button')).find((candidate) =>
+      candidate.textContent?.includes('Cambiar el tema'),
+    )!;
+
+    expect(button.textContent).toContain('Tema: Sistema');
+
+    button.click();
+    await fixture.whenStable();
+    expect(button.textContent).toContain('Tema: Claro');
+
+    button.click();
+    await fixture.whenStable();
+    expect(button.textContent).toContain('Tema: Oscuro');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+
+    TestBed.inject(ThemeService).set('system');
   });
 
   it('shows who has logged in and a "Salir" button that closes the session', async () => {

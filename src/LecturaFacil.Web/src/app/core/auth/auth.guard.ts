@@ -20,9 +20,12 @@ export const authGuard: CanActivateFn = (_route, state): Observable<boolean | Ur
   return auth.loadSession().pipe(map((authenticated) => authenticated || toLogin()));
 };
 
-/** Solo rutas internas de la aplicación: nunca una URL absoluta que lleve a otro sitio (open redirect). */
+/**
+ * A dónde ir al entrar: la pantalla que se pidió o, si no se pidió ninguna, la portada. Solo rutas internas de la
+ * aplicación: nunca una URL absoluta que lleve a otro sitio (open redirect).
+ */
 export function safeReturnUrl(value: string | null | undefined): string {
   return value && value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/\\')
     ? value
-    : '/documentos';
+    : '/';
 }

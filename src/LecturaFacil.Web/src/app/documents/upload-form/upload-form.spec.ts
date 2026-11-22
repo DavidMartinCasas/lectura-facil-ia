@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { DocumentSubmission } from '../../core/documents/document.models';
 import { MAX_PDF_BYTES } from '../../core/documents/upload-validation';
 import { UPLOAD_TEXTS } from '../../core/ui-texts';
@@ -11,6 +12,7 @@ describe('UploadFormComponent', () => {
   let emitted: DocumentSubmission[];
 
   beforeEach(async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
     fixture = TestBed.createComponent(UploadFormComponent);
     emitted = [];
     fixture.componentInstance.submitted.subscribe((submission) => emitted.push(submission));
@@ -71,7 +73,7 @@ describe('UploadFormComponent', () => {
       UPLOAD_TEXTS.textRequired,
     );
     expect(element.querySelector('textarea')?.getAttribute('aria-describedby')).toBe(
-      'upload-error',
+      'upload-count upload-error',
     );
     expect(emitted).toEqual([]);
   });
@@ -85,6 +87,41 @@ describe('UploadFormComponent', () => {
 
     expect(element.textContent).toContain('bases.pdf');
     expect(emitted).toEqual([{ kind: 'pdf', file }]);
+  });
+
+  it('counts the words of the pasted text', async () => {
+    expect(element.querySelector('.count')?.textContent?.trim()).toBe('0 palabras');
+
+    await type('textarea', '  Tienes 15 días\n para pedir la ayuda. ');
+
+    expect(element.querySelector('.count')?.textContent?.trim()).toBe('7 palabras');
+    expect(element.querySelector('textarea')?.getAttribute('aria-describedby')).toBe(
+      'upload-count',
+    );
+  });
+
+  it('shows the chosen file with its size and lets the person remove it', async () => {
+    await choosePdfMode();
+    await chooseFile(new File([new Uint8Array(2048)], 'bases.pdf', { type: 'application/pdf' }));
+
+    expect(element.querySelector('.file-chip')?.textContent).toContain('bases.pdf');
+    expect(element.querySelector('.file-size')?.textContent?.trim()).toBe('2 KB');
+
+    element.querySelector<HTMLButtonElement>('.file-remove')!.click();
+    await fixture.whenStable();
+
+    expect(element.querySelector('.file-chip')).toBeNull();
+    await submit();
+    expect(element.querySelector('[role="alert"]')?.textContent?.trim()).toBe(
+      UPLOAD_TEXTS.fileRequired,
+    );
+    expect(emitted).toEqual([]);
+  });
+
+  it('links to the samples for people without a text at hand', () => {
+    expect(element.querySelector('a[href="/ejemplos"]')?.textContent?.trim()).toBe(
+      UPLOAD_TEXTS.trySampleLink,
+    );
   });
 
   it('emits a PDF dropped on the drop zone', async () => {

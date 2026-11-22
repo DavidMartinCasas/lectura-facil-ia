@@ -1,0 +1,91 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<a class="skip-link" href="#main">{{ texts.skipToContent }}</a>
+<div class="shell">
+  @if (!bare()) {
+    <header class="topbar">
+      <a class="brand" routerLink="/">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <rect width="32" height="32" rx="9" class="brand-mark__tile" />
+          <rect x="8" y="9" width="16" height="3" rx="1.5" class="brand-mark__line" />
+          <rect x="8" y="14.5" width="11" height="3" rx="1.5" class="brand-mark__line" />
+          <rect x="8" y="20" width="14" height="3" rx="1.5" class="brand-mark__line" />
+        </svg>
+        <span class="brand-name">{{ texts.name }}</span>
+      </a>
+
+      <nav id="main-nav" class="nav" [attr.aria-label]="texts.mainNavigation">
+        <a
+          routerLink="/documentos"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          ariaCurrentWhenActive="page"
+          >{{ texts.navList }}</a
+        >
+        <a routerLink="/ejemplos" routerLinkActive="active" ariaCurrentWhenActive="page">{{
+          texts.navSamples
+        }}</a>
+      </nav>
+
+      <div class="tools">
+        <!-- Tema: un botón que pasa de uno al siguiente (sistema → claro → oscuro) y enseña el actual. -->
+        <button type="button" class="icon-button" (click)="theme.next()">
+          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+            @switch (theme.mode()) {
+              @case ('light') {
+                <circle cx="10" cy="10" r="3.25" />
+                <path
+                  d="M10 2.75v1.5M10 15.75v1.5M2.75 10h1.5M15.75 10h1.5M4.87 4.87l1.06 1.06M14.07 14.07l1.06 1.06M4.87 15.13l1.06-1.06M14.07 5.93l1.06-1.06"
+                />
+              }
+              @case ('dark') {
+                <path d="M16.25 12.2A6.75 6.75 0 0 1 7.8 3.75a6.75 6.75 0 1 0 8.45 8.45z" />
+              }
+              @default {
+                <rect x="2.75" y="3.75" width="14.5" height="9.5" rx="1.75" />
+                <path d="M7.25 16.25h5.5M10 13.25v3" />
+              }
+            }
+          </svg>
+          <span class="visually-hidden">{{ texts.themeChange }}</span>
+          <span class="tip">{{ texts.theme }}: {{ themeLabel() }}</span>
+        </button>
+
+        @if (auth.user() !== undefined) {
+          @if (auth.user(); as user) {
+            <div class="account">
+              <span class="avatar" aria-hidden="true">{{ initial(user.email) }}</span>
+              <p class="user">
+                <span class="visually-hidden">{{ texts.signedInAs }}</span>
+                <span class="user-email" [title]="user.email">{{ user.email }}</span>
+              </p>
+              <button type="button" class="icon-button logout" (click)="logout()">
+                <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                  <path
+                    d="M8 3.25H5.25a1.5 1.5 0 0 0-1.5 1.5v10.5a1.5 1.5 0 0 0 1.5 1.5H8 M12.5 6.5 16 10l-3.5 3.5 M16 10H8"
+                  />
+                </svg>
+                <span class="tip">{{ texts.logout }}</span>
+              </button>
+            </div>
+          } @else {
+            <a class="login-link" routerLink="/entrar">{{ texts.navLogin }}</a>
+          }
+        }
+      </div>
+    </header>
+  }
+
+  <div class="workspace">
+    @if (config.notice(); as notice) {
+      <p class="site-notice" role="note">
+        <strong>{{ texts.noticeLabel }}:</strong> {{ notice }}
+      </p>
+    }
+    @if (logoutFailed()) {
+      <p class="logout-error" role="alert">{{ texts.logoutFailed }}</p>
+    }
+    <main id="main" tabindex="-1">
+      <router-outlet />
+    </main>
+  </div>
+</div>

@@ -48,7 +48,10 @@ public sealed class AdaptationWorkerTests(PostgreSqlFixture database) : IClassFi
         var stored = await WaitUntilFinishedAsync(document.Id);
         await worker.StopAsync(Token);
 
-        _statuses.For(document.Id).ShouldBe([DocumentStatus.Processing, DocumentStatus.Draft]);
+        // Tres guardados en "Procesando", uno por fase (adaptando, revisando pautas, verificando), y el borrador.
+        _statuses.For(document.Id).ShouldBe(
+            [DocumentStatus.Processing, DocumentStatus.Processing, DocumentStatus.Processing, DocumentStatus.Draft]);
+        stored.Stage.ShouldBeNull();
         stored.Status.ShouldBe(DocumentStatus.Draft);
         var version = stored.LatestAdaptedVersion.ShouldNotBeNull();
         version.Number.ShouldBe(1);
@@ -214,6 +217,9 @@ public sealed class AdaptationWorkerTests(PostgreSqlFixture database) : IClassFi
 
         public Task<DocumentStatus?> FindStatusForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
             inner.FindStatusForOwnerAsync(id, ownerId, cancellationToken);
+
+        public Task<DocumentProgress?> FindProgressForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
+            inner.FindProgressForOwnerAsync(id, ownerId, cancellationToken);
 
         public Task<IReadOnlyList<DocumentId>> ListAwaitingAdaptationAsync(CancellationToken cancellationToken) =>
             inner.ListAwaitingAdaptationAsync(cancellationToken);

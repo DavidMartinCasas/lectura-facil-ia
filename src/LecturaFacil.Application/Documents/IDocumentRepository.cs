@@ -26,6 +26,13 @@ public interface IDocumentRepository
     /// <summary>Solo el estado actual, si el documento existe y es de <paramref name="ownerId"/>.</summary>
     Task<DocumentStatus?> FindStatusForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// El estado actual y, si se está adaptando, la fase, si el documento existe y es de <paramref name="ownerId"/>.
+    /// Por defecto, solo el estado (sin fase); el repositorio real devuelve los dos.
+    /// </summary>
+    async Task<DocumentProgress?> FindProgressForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
+        await FindStatusForOwnerAsync(id, ownerId, cancellationToken) is { } status ? new DocumentProgress(status, null) : null;
+
     /// <summary>Documentos que esperan su adaptación (recibidos o a medias tras un reinicio), del más antiguo al más nuevo.</summary>
     Task<IReadOnlyList<DocumentId>> ListAwaitingAdaptationAsync(CancellationToken cancellationToken);
 

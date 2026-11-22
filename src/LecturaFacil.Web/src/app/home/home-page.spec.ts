@@ -12,10 +12,12 @@ describe('HomePage', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('renders the project name as the main heading', async () => {
+  it('says what the application does in the main heading', async () => {
     const page = await render();
 
-    expect(page.querySelector('h1')?.textContent?.trim()).toBe('Lectura Fácil IA');
+    expect(page.querySelector('h1')?.textContent?.trim()).toBe(
+      'Convierte un texto administrativo en un texto que todo el mundo entiende.',
+    );
   });
 
   it('warns that every adaptation is a draft pending human validation', async () => {

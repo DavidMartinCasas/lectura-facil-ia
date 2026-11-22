@@ -1,39 +1,67 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <form class="upload" (submit)="submit($event)" novalidate>
   <mat-button-toggle-group
+    class="modes"
     [value]="mode()"
     (change)="changeMode($event.value)"
     [attr.aria-label]="texts.modeLabel"
     hideSingleSelectionIndicator
   >
-    <mat-button-toggle value="text">{{ texts.modeText }}</mat-button-toggle>
-    <mat-button-toggle value="pdf">{{ texts.modePdf }}</mat-button-toggle>
+    <mat-button-toggle value="text">
+      <span class="mode">
+        <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+          <rect x="4.25" y="3.75" width="11.5" height="13.5" rx="1.75" />
+          <path
+            d="M7.5 3.75V3a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75v.75 M7.25 9h5.5M7.25 12h4"
+          />
+        </svg>
+        {{ texts.modeText }}
+      </span>
+    </mat-button-toggle>
+    <mat-button-toggle value="pdf">
+      <span class="mode">
+        <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+          <path
+            d="M5 2.75h6.5l3.75 3.75v10.75H5z M11.25 2.75v4h4 M10 15v-5M7.75 12 10 9.75 12.25 12"
+          />
+        </svg>
+        {{ texts.modePdf }}
+      </span>
+    </mat-button-toggle>
   </mat-button-toggle-group>
 
   @if (mode() === 'text') {
-    <mat-form-field appearance="outline" class="field">
-      <mat-label>{{ texts.titleLabel }}</mat-label>
+    <!-- El título va como el de un documento; el texto, en una hoja de boletín: es el original que se va a
+         transformar, igual que en la portada y en la revisión. -->
+    <div class="title-field">
+      <label class="field-label" for="upload-title">{{ texts.titleLabel }}</label>
       <input
-        matInput
+        id="upload-title"
+        class="title-input"
         name="title"
+        autocomplete="off"
         [attr.maxlength]="maxTitleLength"
+        [placeholder]="texts.titlePlaceholder"
         [value]="title()"
         (input)="onTitleInput($event)"
       />
-    </mat-form-field>
+    </div>
 
-    <mat-form-field appearance="outline" class="field">
-      <mat-label>{{ texts.textLabel }}</mat-label>
+    <div class="sheet">
+      <label class="field-label" for="upload-text">{{ texts.textLabel }}</label>
       <textarea
-        matInput
+        id="upload-text"
+        class="gazette-input"
         name="text"
-        rows="12"
+        rows="10"
+        lang="es"
+        [placeholder]="texts.textPlaceholder"
         [value]="text()"
         (input)="onTextInput($event)"
         [attr.aria-invalid]="error() ? true : null"
-        [attr.aria-describedby]="error() ? 'upload-error' : null"
+        [attr.aria-describedby]="error() ? 'upload-count upload-error' : 'upload-count'"
       ></textarea>
-    </mat-form-field>
+    </div>
   } @else {
     <div
       class="drop-zone"
@@ -43,14 +71,20 @@
       (dragleave)="onDragLeave()"
       (drop)="onDrop($event)"
     >
-      <svg class="drop-icon" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
-        <path d="M13 5h15l10 10v28H13z" class="drop-icon__sheet" />
-        <path d="M28 5v10h10" class="drop-icon__fold" />
-        <path d="M19 26h13M19 31h9M19 36h11" class="drop-icon__lines" />
+      <svg class="drop-pic" viewBox="0 0 96 72" aria-hidden="true" focusable="false">
+        <rect class="pic-paper" x="22" y="6" width="44" height="58" rx="5" />
+        <rect class="pic-line" x="30" y="16" width="28" height="4" rx="2" />
+        <rect class="pic-marker" x="29" y="24" width="20" height="6" rx="2" />
+        <rect class="pic-line" x="30" y="34" width="26" height="4" rx="2" />
+        <rect class="pic-line" x="30" y="43" width="18" height="4" rx="2" />
+        <circle class="pic-badge" cx="66" cy="54" r="13" />
+        <path class="pic-badge-ink" d="M66 60V48M60.5 53.5 66 48l5.5 5.5" />
       </svg>
+      <p class="drop-title">{{ texts.dropTitle }}</p>
       <p id="upload-file-hint" class="hint">{{ texts.dropHint }}</p>
       <label for="upload-file" class="file-label">{{ texts.fileLabel }}</label>
       <input
+        #fileInput
         id="upload-file"
         class="file-input"
         type="file"
@@ -60,12 +94,23 @@
         [attr.aria-invalid]="error() ? true : null"
         [attr.aria-describedby]="error() ? 'upload-file-hint upload-error' : 'upload-file-hint'"
       />
-      @if (file(); as selected) {
-        <p class="selected">
-          {{ texts.selectedFile }} <strong>{{ selected.name }}</strong>
-        </p>
-      }
     </div>
+
+    @if (file(); as selected) {
+      <div class="file-chip">
+        <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+          <path d="M5 2.75h6.5l3.75 3.75v10.75H5z M11.25 2.75v4h4 M7.75 11h4.5M7.75 14h3" />
+        </svg>
+        <p class="file-name">
+          <span class="visually-hidden">{{ texts.selectedFile }}</span>
+          <strong>{{ selected.name }}</strong>
+          <span class="file-size">{{ fileSize(selected.size) }}</span>
+        </p>
+        <button mat-button type="button" class="file-remove" (click)="removeFile()">
+          {{ texts.removeFile }}
+        </button>
+      </div>
+    }
   }
 
   @if (turnstileSiteKey(); as siteKey) {
@@ -76,7 +121,10 @@
     <p id="upload-error" class="error" role="alert">{{ message }}</p>
   }
 
-  <div class="actions">
+  <div class="foot">
+    @if (mode() === 'text') {
+      <p id="upload-count" class="count">{{ wordCount() }}</p>
+    }
     <button
       mat-flat-button
       class="submit"
@@ -86,4 +134,8 @@
       {{ busy() ? texts.submitting : texts.submit }}
     </button>
   </div>
+
+  <p class="try-sample">
+    {{ texts.trySample }} <a routerLink="/ejemplos">{{ texts.trySampleLink }}</a>
+  </p>
 </form>
