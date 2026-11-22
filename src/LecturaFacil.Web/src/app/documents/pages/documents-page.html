@@ -70,7 +70,12 @@
     </div>
   } @else if (nextCursor() && !error()) {
     <div class="load-more">
-      <button mat-stroked-button type="button" [disabled]="loadingMore()" (click)="loadMore()">
+      <button
+        mat-stroked-button
+        type="button"
+        [disabled]="loadingMore() || !canLoadMore()"
+        (click)="loadMore()"
+      >
         {{ loadingMore() ? texts.loadingMore : texts.loadMore }}
       </button>
     </div>

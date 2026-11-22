@@ -2,7 +2,7 @@
 import { Type } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { Observable, Subject, of, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { DocumentEventsService } from '../../core/documents/document-events.service';
 import {
   DocumentDetails,
@@ -240,15 +240,63 @@ describe('pages', () => {
     it('starts with the search and the valid statuses of the URL', async () => {
       TestBed.overrideProvider(ActivatedRoute, {
         useValue: {
-          snapshot: {
-            queryParamMap: convertToParamMap({ buscar: 'bases', estado: ['Draft', 'Inventado'] }),
-          },
+          queryParamMap: of(convertToParamMap({ buscar: 'bases', estado: ['Draft', 'Inventado'] })),
         },
       });
 
       await render(DocumentsPage);
 
+      expect(api.list).toHaveBeenCalledTimes(1);
       expect(api.list).toHaveBeenCalledWith({ title: 'bases', statuses: ['Draft'] });
+    });
+
+    it('follows the URL when it changes without leaving the page', async () => {
+      const params = new BehaviorSubject(convertToParamMap({ buscar: 'bases' }));
+      TestBed.overrideProvider(ActivatedRoute, { useValue: { queryParamMap: params } });
+      api.list.mockReturnValue(of(page([listItem('1')])));
+      const { fixture, element } = await render(DocumentsPage);
+
+      // "Mis documentos" en la cabecera: misma ruta, sin parámetros.
+      params.next(convertToParamMap({}));
+      await fixture.whenStable();
+
+      expect(api.list).toHaveBeenCalledTimes(2);
+      expect(api.list).toHaveBeenLastCalledWith({ title: '', statuses: [] });
+      expect(element.querySelector<HTMLInputElement>('input[type="search"]')!.value).toBe('');
+
+      // La URL que deja applyFilters() no vuelve a pedir la misma página.
+      params.next(convertToParamMap({}));
+      await fixture.whenStable();
+      expect(api.list).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not load more with the old cursor while the new filters are pending', async () => {
+      const firstPage = new Subject<DocumentListPage>();
+      api.list
+        .mockReturnValueOnce(of(page([listItem('1')], 'cursor-1')))
+        .mockReturnValueOnce(firstPage);
+      vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const { fixture, element } = await render(DocumentsPage);
+
+      const input = element.querySelector<HTMLInputElement>('input[type="search"]')!;
+      input.value = 'bases';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(loadMoreButton(element)!.disabled).toBe(true);
+      loadMoreButton(element)!.click();
+      expect(api.list).toHaveBeenCalledTimes(1);
+
+      // Ya se pide la primera página con el filtro nuevo, pero aún no ha llegado.
+      element.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+      fixture.detectChanges();
+      loadMoreButton(element)?.click();
+      expect(api.list).toHaveBeenCalledTimes(2);
+      expect(api.list).toHaveBeenLastCalledWith({ title: 'bases', statuses: [] });
+
+      firstPage.next(page([listItem('2')]));
+      await fixture.whenStable();
+      expect(element.querySelector('.title-link')?.textContent?.trim()).toBe('Documento 2');
+      expect(element.querySelector('mat-progress-bar')).toBeNull();
     });
   });
 

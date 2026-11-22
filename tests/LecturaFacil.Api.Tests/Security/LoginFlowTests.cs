@@ -115,11 +115,11 @@ public sealed class LoginFlowTests(IdentityApiFactory factory) : IClassFixture<I
 
         using var byA = await clientOfA.GetAsync(new Uri($"/api/documents/{documentOfB}", UriKind.Relative), Token);
         using var byB = await clientOfB.GetAsync(new Uri($"/api/documents/{documentOfB}", UriKind.Relative), Token);
-        var listOfA = await clientOfA.GetFromJsonAsync<List<SubmittedDocument>>(DocumentsUri, Token);
+        var listOfA = await clientOfA.GetFromJsonAsync<ListedPage>(DocumentsUri, Token);
 
         byA.StatusCode.ShouldBe(HttpStatusCode.NotFound);
         byB.StatusCode.ShouldBe(HttpStatusCode.OK);
-        listOfA.ShouldNotBeNull().ShouldBeEmpty();
+        listOfA.ShouldNotBeNull().Items.ShouldBeEmpty();
     }
 
     [Fact]
@@ -163,4 +163,6 @@ public sealed class LoginFlowTests(IdentityApiFactory factory) : IClassFixture<I
             : null;
 
     private sealed record SubmittedDocument(Guid Id);
+
+    private sealed record ListedPage(List<SubmittedDocument> Items, string? NextCursor);
 }

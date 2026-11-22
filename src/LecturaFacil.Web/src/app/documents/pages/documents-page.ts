@@ -15,7 +15,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import {
   DOCUMENT_STATUSES,
@@ -74,6 +75,21 @@ export class DocumentsPage {
   protected readonly loadingMore = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly moreError = signal<string | null>(null);
+  /** Hay un cambio de filtros esperando el debounce: la lista en pantalla ya no corresponde a ellos. */
+  private readonly filtersPending = signal(false);
+
+  /**
+   * "Cargar más" solo con la lista de los filtros actuales: si los filtros han cambiado (o se está cargando la primera
+   * página con los nuevos), el cursor de la lista anterior mezclaría resultados de dos búsquedas.
+   */
+  protected readonly canLoadMore = computed(
+    () =>
+      this.nextCursor() !== null &&
+      this.error() === null &&
+      !this.loading() &&
+      !this.refreshing() &&
+      !this.filtersPending(),
+  );
 
   protected readonly hasFilters = computed(
     () => this.search().trim().length > 0 || this.statuses().length > 0,
@@ -87,21 +103,25 @@ export class DocumentsPage {
 
   private request?: Subscription;
   private debounce?: ReturnType<typeof setTimeout>;
+  /** Filtros de la última primera página pedida; evita pedirla dos veces cuando la URL cambia por applyFilters(). */
+  private loadedKey: string | null = null;
 
   constructor() {
-    const params = this.route.snapshot.queryParamMap;
-    this.search.set(params.get(SEARCH_PARAM) ?? '');
-    this.statuses.set(params.getAll(STATUS_PARAM).filter(isDocumentStatus));
-
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.debounce);
       this.request?.unsubscribe();
     });
-    this.load();
+
+    // La URL manda: al entrar, al ir "Atrás" o al pulsar "Mis documentos" con filtros puestos, Angular reutiliza este
+    // componente y solo cambian los parámetros.
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed())
+      .subscribe((params) => this.syncWithUrl(params));
   }
 
   protected onSearchInput(value: string): void {
     this.search.set(value);
+    this.filtersPending.set(true);
     clearTimeout(this.debounce);
     this.debounce = setTimeout(() => this.applyFilters(), SEARCH_DEBOUNCE_MS);
   }
@@ -125,6 +145,9 @@ export class DocumentsPage {
 
   /** Primera página con los filtros actuales; también para "Reintentar". */
   protected load(): void {
+    clearTimeout(this.debounce);
+    this.filtersPending.set(false);
+    this.loadedKey = keyOf(this.filter());
     this.request?.unsubscribe();
     const hasList = this.documents() !== null && this.error() === null;
     this.loading.set(!hasList);
@@ -153,7 +176,7 @@ export class DocumentsPage {
   protected loadMore(): void {
     const cursor = this.nextCursor();
     const current = this.documents();
-    if (!cursor || !current || this.loadingMore()) {
+    if (!cursor || !current || this.loadingMore() || !this.canLoadMore()) {
       return;
     }
 
@@ -188,6 +211,17 @@ export class DocumentsPage {
     this.load();
   }
 
+  private syncWithUrl(params: ParamMap): void {
+    const title = params.get(SEARCH_PARAM) ?? '';
+    const statuses = params.getAll(STATUS_PARAM).filter(isDocumentStatus);
+    if (keyOf({ title: title.trim(), statuses }) === this.loadedKey) {
+      return;
+    }
+    this.search.set(title);
+    this.statuses.set(statuses);
+    this.load();
+  }
+
   private filter(): DocumentListFilter {
     return { title: this.search().trim(), statuses: this.statuses() };
   }
@@ -202,6 +236,12 @@ export class DocumentsPage {
       { injector: this.injector },
     );
   }
+}
+
+/** Mismos filtros, misma clave, sin importar el orden en que se marcaron los estados. */
+function keyOf(filter: DocumentListFilter): string {
+  const statuses = DOCUMENT_STATUSES.filter((status) => filter.statuses.includes(status));
+  return JSON.stringify([filter.title, statuses]);
 }
 
 function messageOf(error: unknown): string {
