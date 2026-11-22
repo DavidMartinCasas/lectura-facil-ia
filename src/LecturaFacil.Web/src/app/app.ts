@@ -67,7 +67,7 @@ import { APP_TEXTS } from './core/ui-texts';
       gap: 0 2rem;
       height: auto;
       min-height: 64px;
-      padding-inline: max(1.25rem, calc((100% - var(--lf-page-width)) / 2 + 1.25rem));
+      padding-inline: var(--lf-gutter);
       background: var(--lf-surface);
       color: var(--lf-ink);
       border-block-end: 1px solid var(--lf-rule);
@@ -131,7 +131,7 @@ import { APP_TEXTS } from './core/ui-texts';
     .site-notice,
     .logout-error {
       margin: 0;
-      padding: 0.75rem max(1.25rem, calc((100% - var(--lf-page-width)) / 2 + 1.25rem));
+      padding: 0.75rem var(--lf-gutter);
       font-size: 0.9375rem;
     }
     .site-notice {
@@ -166,7 +166,8 @@ import { APP_TEXTS } from './core/ui-texts';
         white-space: nowrap;
       }
       .user {
-        display: none;
+        font-size: 0.8125rem;
+        overflow-wrap: anywhere;
       }
     }
   `,

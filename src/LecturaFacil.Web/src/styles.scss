@@ -36,7 +36,9 @@
   --lf-radius-s: 6px;
   --lf-radius-m: 10px;
   --lf-radius-l: 16px;
-  --lf-page-width: 76rem;
+  // Ancho completo de la pantalla; solo los textos largos tienen una medida máxima de lectura.
+  --lf-page-width: 100%;
+  --lf-gutter: clamp(1.25rem, 3vw, 3rem);
   --lf-reading-width: 42rem;
 }
 
@@ -121,11 +123,6 @@ p {
   outline-offset: 2px !important;
 }
 
-// Los campos de Material ya marcan el foco con su borde grueso: el contorno global dibujaría otro por dentro.
-.mat-mdc-form-field .mat-mdc-input-element:focus-visible {
-  outline: none !important;
-}
-
 a {
   color: var(--lf-primary);
   text-underline-offset: 0.2em;
@@ -144,7 +141,7 @@ a {
 .page {
   max-inline-size: var(--lf-page-width);
   margin: 0 auto;
-  padding: 2.5rem 1.25rem 4rem;
+  padding: 2.5rem var(--lf-gutter) 4rem;
   display: grid;
   gap: 1.75rem;
   box-sizing: border-box;

@@ -26,7 +26,9 @@ export default defineConfig({
     { name: 'movil', use: { ...devices['Pixel 7'], launchOptions: { executablePath } } },
   ],
   webServer: {
-    command: `npx ng serve --port ${port}`,
+    // Sin el proxy de desarrollo (proxy.conf.json): cada test simula la API con page.route y ninguna petición
+    // debe llegar a una API real que esté arrancada en la máquina.
+    command: `npx ng serve --port ${port} --proxy-config e2e/proxy.e2e.json`,
     url: `http://localhost:${port}`,
     reuseExistingServer: !process.env['CI'],
     timeout: 120_000,

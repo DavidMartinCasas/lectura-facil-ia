@@ -36,15 +36,17 @@
       }
     </div>
 
-    <aside class="compose-aside" aria-labelledby="next-title">
-      <h2 id="next-title">Qué pasa después</h2>
-      <ol>
-        <li>Se marcan los problemas de lectura fácil del texto original.</li>
-        <li>La IA propone una adaptación y se comprueban las pautas.</li>
-        <li>Otro modelo revisa que no se pierdan plazos, importes ni requisitos.</li>
-        <li>Revisas el resultado, lo corriges si hace falta y lo exportas.</li>
-      </ol>
-      <p class="draft-note" role="note">{{ draftNotice }}</p>
-    </aside>
+    @if (showForm() && !store.steps()) {
+      <aside class="compose-aside" aria-labelledby="next-title">
+        <h2 id="next-title">Qué pasa después</h2>
+        <ol>
+          <li>Se marcan los problemas de lectura fácil del texto original.</li>
+          <li>La IA propone una adaptación y se comprueban las pautas.</li>
+          <li>Otro modelo revisa que no se pierdan plazos, importes ni requisitos.</li>
+          <li>Revisas el resultado, lo corriges si hace falta y lo exportas.</li>
+        </ol>
+        <p class="draft-note" role="note">{{ draftNotice }}</p>
+      </aside>
+    }
   </div>
 </section>

@@ -10,10 +10,8 @@
         <h1 id="page-title">{{ document.title }}</h1>
         @if (store.status(); as status) {
           <p class="status-line">
-            <span class="visually-hidden">{{ texts.statusLabel }}</span>
-            <span class="chip" [class]="'chip chip--' + tone(status)">{{
-              statusLabels[status]
-            }}</span>
+            {{ texts.statusLabel }}
+            <span [class]="'chip chip--' + tone(status)">{{ statusLabels[status] }}</span>
           </p>
         }
       </div>
