@@ -169,6 +169,37 @@ describe('DocumentReviewComponent', () => {
     expect(element.querySelector('app-original-text .spot')).not.toBeNull();
   });
 
+  it('on small screens works as a modal dialog: the content behind it is inert until it closes', async () => {
+    const { fixture, element } = await renderFixture(true);
+    const toggle = element.querySelector<HTMLButtonElement>('.review-toggle')!;
+    document.body.appendChild(element);
+
+    toggle.click();
+    await fixture.whenStable();
+    const panel = element.querySelector('#review-panel')!;
+    expect(panel.getAttribute('role')).toBe('dialog');
+    expect(panel.getAttribute('aria-modal')).toBe('true');
+    expect(element.querySelector('.banner')?.hasAttribute('inert')).toBe(true);
+    expect(element.querySelector('.texts')?.hasAttribute('inert')).toBe(true);
+    expect(document.activeElement).toBe(element.querySelector('.panel-close'));
+
+    element.querySelector<HTMLButtonElement>('.panel-close')!.click();
+    await fixture.whenStable();
+    expect(element.querySelector('.banner')?.hasAttribute('inert')).toBe(false);
+    expect(element.querySelector('.texts')?.hasAttribute('inert')).toBe(false);
+    expect(document.activeElement).toBe(toggle);
+    element.remove();
+  });
+
+  it('on wide screens is not modal and leaves the texts usable', async () => {
+    const element = await render(false);
+
+    const panel = element.querySelector('#review-panel')!;
+    expect(panel.hasAttribute('role')).toBe(false);
+    expect(panel.hasAttribute('aria-modal')).toBe(false);
+    expect(element.querySelector('.texts')?.hasAttribute('inert')).toBe(false);
+  });
+
   it('closes the panel with its close button or the Escape key', async () => {
     const { fixture, element } = await renderFixture();
 

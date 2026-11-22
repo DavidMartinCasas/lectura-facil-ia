@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import {
   afterNextRender,
@@ -58,6 +59,7 @@ interface ReviewPart {
   selector: 'app-document-review',
   imports: [
     AdaptedTextComponent,
+    CdkTrapFocus,
     ExportPanelComponent,
     GuidelinesPanelComponent,
     KeyFactsPanelComponent,
@@ -123,6 +125,12 @@ export class DocumentReviewComponent {
     ];
   });
 
+  /**
+   * Panel abierto por encima de los textos (pantallas pequeñas): funciona como un diálogo modal. El foco no sale de él
+   * y la barra y los textos de detrás quedan inertes hasta cerrarlo.
+   */
+  protected readonly overlayOpen = computed(() => this.panelOpen() && this.smallScreen());
+
   /** Avisos de toda la revisión (datos clave sin revisar y pautas sin cumplir), para el botón que abre el panel. */
   protected readonly warningCount = computed(() => {
     const adaptation = this.adaptation();
@@ -185,12 +193,15 @@ export class DocumentReviewComponent {
   }
 
   protected closePanel(): void {
-    const overlay = this.smallScreen();
+    const overlay = this.overlayOpen();
     this.panelOpen.set(false);
     // Sin el panel no hay dónde quitar la marca de un dato clave.
     this.located.set(null);
     if (overlay) {
-      this.toggleButton()?.nativeElement.focus();
+      // Después de pintar: hasta entonces la barra sigue inerte y no admite el foco.
+      afterNextRender(() => this.toggleButton()?.nativeElement.focus(), {
+        injector: this.injector,
+      });
     }
   }
 

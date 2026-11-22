@@ -165,6 +165,32 @@ test('en móvil, original y adaptación van en pestañas', async ({ page, isMobi
   await expect(page.getByRole('heading', { name: 'Ayudas para el alquiler' })).toBeVisible();
 });
 
+test('en móvil, el foco no sale del panel de la revisión hasta cerrarlo', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'Solo en pantallas pequeñas, donde el panel va por encima de los textos.');
+  await mockReviewApi(page, documentFixture('Draft', { id: DOCUMENT_ID }));
+  await page.goto(`/documentos/${DOCUMENT_ID}`);
+
+  const toggle = page.getByRole('button', { name: /^Revisión/ });
+  await toggle.click();
+  const panel = page.getByRole('dialog', { name: 'Revisión' });
+  await expect(panel.getByRole('button', { name: 'Cerrar la revisión' })).toBeFocused();
+
+  // Hacia atrás desde el primer control y hacia delante pasado el último, el foco sigue dentro.
+  await page.keyboard.press('Shift+Tab');
+  expect(await panel.evaluate((el) => el.contains(document.activeElement))).toBe(true);
+  for (let i = 0; i < 12; i++) {
+    await page.keyboard.press('Tab');
+    expect(await panel.evaluate((el) => el.contains(document.activeElement))).toBe(true);
+  }
+
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+  await expect(toggle).toBeFocused();
+});
+
 test('muestra como texto literal lo que parece HTML', async ({ page }) => {
   const dangerous = '<img src=x onerror="window.__xss=1">';
   await mockReviewApi(

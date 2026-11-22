@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <div class="review">
-  <div class="banner" role="region" [attr.aria-label]="texts.draftLabel">
+  <!-- Con el panel abierto por encima (pantallas pequeñas), lo de detrás queda inerte: ni foco ni lector de pantalla. -->
+  <div
+    class="banner"
+    role="region"
+    [attr.aria-label]="texts.draftLabel"
+    [attr.inert]="overlayOpen() ? '' : null"
+  >
     <strong class="draft">{{ texts.draftLabel }}</strong>
     <span class="meta">{{ texts.version }} {{ adaptation().version }}</span>
     <span class="meta">
@@ -37,7 +43,7 @@
   </div>
 
   <div class="workarea" [class.workarea--open]="panelOpen()">
-    <div class="texts">
+    <div class="texts" [attr.inert]="overlayOpen() ? '' : null">
       @if (smallScreen()) {
         <mat-tab-group
           [attr.aria-label]="texts.tabsLabel"
@@ -89,6 +95,9 @@
         id="review-panel"
         class="review-panel"
         [class.review-panel--overlay]="smallScreen()"
+        [attr.role]="smallScreen() ? 'dialog' : null"
+        [attr.aria-modal]="smallScreen() ? 'true' : null"
+        [cdkTrapFocus]="smallScreen()"
         [attr.aria-label]="texts.reviewLabel"
       >
         <!-- Arriba y fija: la cabecera y la legibilidad se ven siempre, aunque se desplacen los apartados. -->
