@@ -7,7 +7,7 @@
     <p class="hint">{{ texts.noOriginalFindings }}</p>
   }
   <!-- prettier-ignore -->
-  <div class="text" lang="es">@for (segment of segments(); track segment.start) {@if (segment.ranges.length > 0) {<button type="button" class="mark" [class.mark--selected]="selected() === segment" [attr.aria-pressed]="selected() === segment" [attr.aria-label]="label(segment)" (click)="select(segment)">{{ segment.text }}</button>} @else {<span>{{ segment.text }}</span>}}</div>
+  <div class="text" lang="es">@for (segment of segments(); track segment.start) {@if (hasFindings(segment)) {<button type="button" class="mark" [class.mark--selected]="selected() === segment" [class.spot]="isSpot(segment)" [attr.aria-pressed]="selected() === segment" [attr.aria-label]="label(segment)" (click)="select(segment)">{{ segment.text }}</button>} @else if (isSpot(segment)) {<mark class="spot">{{ segment.text }}</mark>} @else {<span>{{ segment.text }}</span>}}</div>
 
   <div class="detail" aria-live="polite">
     @if (selected(); as segment) {

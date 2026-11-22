@@ -6,7 +6,7 @@
   margin: 0 0 1rem;
 
   dt {
-    font-size: 0.875rem;
+    font-size: var(--lf-fs-label);
     color: var(--lf-muted);
   }
 
@@ -22,7 +22,7 @@
 
 .value {
   display: block;
-  font-size: 2.5rem;
+  font-size: var(--lf-fs-figure);
   line-height: 1.1;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -74,10 +74,30 @@
   inset-block-end: 0;
   display: flex;
   justify-content: space-between;
-  font-size: 0.8125rem;
+  font-size: var(--lf-fs-label);
   color: var(--lf-muted);
 }
 
 .improvement {
   font-weight: 700;
+}
+
+// Fija arriba del panel de la revisión: más junta, para dejar sitio a los apartados de debajo.
+:host-context(.pinned) {
+  h2 {
+    margin-block-end: 0.5rem;
+  }
+
+  .scores {
+    margin-block-end: 0.5rem;
+  }
+
+  .scale {
+    margin-block-end: 0.5rem;
+  }
+
+  .improvement,
+  .hint {
+    margin-block-end: 0;
+  }
 }

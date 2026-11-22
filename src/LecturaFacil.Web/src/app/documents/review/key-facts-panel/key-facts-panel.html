@@ -42,6 +42,18 @@
           @if (fact.reasonMessage) {
             <p class="reason">{{ fact.reasonMessage }}</p>
           }
+          @if (canLocate(fact.originalValue)) {
+            <button
+              mat-button
+              type="button"
+              class="locate"
+              [attr.aria-pressed]="located() === fact.id"
+              [attr.aria-label]="texts.locate + ': ' + fact.originalValue"
+              (click)="locate.emit(fact.id)"
+            >
+              {{ located() === fact.id ? texts.locateOff : texts.locate }}
+            </button>
+          }
           @if (fact.requiresAcknowledgement && editable()) {
             <button
               mat-stroked-button
