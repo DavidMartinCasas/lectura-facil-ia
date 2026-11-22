@@ -22,29 +22,177 @@
   border-radius: var(--lf-radius-l);
 }
 
+// Mientras se adapta, el panel de progreso tapa el formulario, que se queda detrás atenuado.
+.compose-main--locked {
+  position: relative;
+}
+
+.compose-form {
+  display: grid;
+  gap: 1.5rem;
+  transition:
+    opacity 200ms ease,
+    filter 200ms ease;
+}
+
+.compose-main--locked .compose-form {
+  opacity: 0.35;
+  filter: grayscale(0.6) blur(1px);
+  user-select: none;
+}
+
+.progress-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  padding: clamp(1.5rem, 7vh, 4.5rem) 1rem 1rem;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--lf-surface) 45%, transparent);
+}
+
+.progress-panel {
+  position: sticky;
+  inset-block-start: calc(var(--lf-topbar-height) + 1.5rem);
+  display: grid;
+  gap: 1rem;
+  inline-size: min(100%, 26rem);
+  box-sizing: border-box;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  background: var(--lf-surface);
+  border: 1px solid var(--lf-rule);
+  border-radius: var(--lf-radius-l);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--lf-ink) 8%, transparent),
+    0 16px 40px -12px color-mix(in srgb, var(--lf-ink) 28%, transparent);
+  animation: panel-in 220ms ease-out;
+
+  h2 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--lf-primary);
+    outline-offset: 3px;
+  }
+
+  &:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+.panel-hint {
+  margin: -0.5rem 0 0.25rem;
+  color: var(--lf-muted);
+}
+
+.open-document {
+  justify-self: start;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-panel {
+    animation: none;
+  }
+
+  .compose-form {
+    transition: none;
+  }
+}
+
 .compose-aside {
   display: grid;
   gap: 1.25rem;
   position: sticky;
-  inset-block-start: 1.5rem;
+  inset-block-start: calc(var(--lf-topbar-height) + 1.5rem);
 
   h2 {
     margin: 0;
     font-size: 1.125rem;
   }
+}
 
-  ol {
-    margin: 0;
-    padding-inline-start: 1.25rem;
+// Qué pasa después: una línea de tiempo con un icono por paso. El paso de ahora va marcado en amarillo.
+.timeline {
+  --dot: 2.25rem;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 1rem;
+
+  // La línea que une los pasos, por el centro de los iconos.
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block: calc(var(--dot) / 2);
+    inset-inline-start: calc(var(--dot) / 2 - 1px);
+    border-inline-start: 2px dashed var(--lf-rule);
+  }
+
+  li {
+    position: relative;
     display: grid;
-    gap: 0.625rem;
-    color: var(--lf-muted);
+    grid-template-columns: var(--dot) minmax(0, 1fr);
+    align-items: start;
+    gap: 0.875rem;
   }
 
-  li::marker {
-    color: var(--lf-primary);
-    font-weight: 700;
+  p {
+    margin: 0;
+    padding-block-start: 0.375rem;
+    color: var(--lf-muted);
+    font-size: 0.9375rem;
   }
+
+  svg {
+    inline-size: 18px;
+    block-size: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.timeline-dot {
+  display: grid;
+  place-items: center;
+  inline-size: var(--dot);
+  block-size: var(--dot);
+  border-radius: 50%;
+  background: var(--lf-surface);
+  border: 1px solid var(--lf-rule);
+  color: var(--lf-primary);
+}
+
+.timeline-now {
+  .timeline-dot {
+    background: var(--lf-marker);
+    border-color: var(--lf-marker);
+    color: var(--lf-marker-ink);
+  }
+
+  p {
+    color: var(--lf-ink);
+  }
+}
+
+.timeline-when {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--lf-ink);
 }
 
 @media (max-width: 60rem) {

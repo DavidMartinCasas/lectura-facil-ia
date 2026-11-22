@@ -9,9 +9,12 @@ import { mockSignedIn } from './session';
 const DOCUMENT_ID = '7f1c2a9e-0000-4000-8000-000000000001';
 const NOW = '2026-11-16T10:00:00Z';
 
-function statusEvent(status: string): string {
-  return `event: status\ndata: ${JSON.stringify({ id: DOCUMENT_ID, status })}\n\n`;
+function statusEvent(status: string, stage: string | null = null): string {
+  return `event: status\ndata: ${JSON.stringify({ id: DOCUMENT_ID, status, stage })}\n\n`;
 }
+
+// Cada paso se ve al menos 650 ms y "Documento listo", 2 s: el documento tarda unos 5 s en abrirse.
+const OPENS_DOCUMENT = { timeout: 10_000 };
 
 async function mockApi(
   page: Page,
@@ -59,7 +62,12 @@ async function mockApi(
     route.fulfill({
       status: 200,
       headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
-      body: statusEvent('Received') + statusEvent('Processing') + statusEvent('Draft'),
+      body:
+        statusEvent('Received') +
+        statusEvent('Processing', 'Adapting') +
+        statusEvent('Processing', 'ReviewingGuidelines') +
+        statusEvent('Processing', 'Verifying') +
+        statusEvent('Draft'),
     }),
   );
 
@@ -84,7 +92,13 @@ test('sube un texto, ve el progreso por pasos y llega a la vista del documento',
     .fill('La persona solicitante deberá presentar la solicitud en el plazo de diez días hábiles.');
   await page.getByRole('button', { name: 'Adaptar' }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/documentos/${DOCUMENT_ID}$`));
+  // El progreso se ve encima del formulario, paso a paso, y termina en "Documento listo".
+  const panel = page.getByRole('region', { name: 'Adaptando tu documento' });
+  await expect(panel.locator('[aria-current="step"]')).toContainText('Revisando pautas');
+  await expect(page.getByRole('heading', { name: 'Documento listo' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Ver el documento' })).toBeVisible();
+
+  await expect(page).toHaveURL(new RegExp(`/documentos/${DOCUMENT_ID}$`), OPENS_DOCUMENT);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bases de la convocatoria');
   await expect(page.locator('.status-line')).toHaveText(/Estado:\s*Borrador/);
 });
@@ -96,7 +110,7 @@ test('muestra el progreso con los cinco pasos', async ({ page }) => {
     route.fulfill({
       status: 200,
       headers: { 'Content-Type': 'text/event-stream' },
-      body: statusEvent('Processing'),
+      body: statusEvent('Processing', 'Adapting'),
     }),
   );
   await page.goto('/nuevo');
@@ -106,7 +120,14 @@ test('muestra el progreso con los cinco pasos', async ({ page }) => {
     .fill('Texto de prueba para adaptar a lectura fácil.');
   await page.getByRole('button', { name: 'Adaptar' }).click();
 
-  const steps = page.getByRole('listitem');
+  const panel = page.getByRole('region', { name: 'Adaptando tu documento' });
+  await expect(panel).toBeFocused();
+  // El formulario se queda detrás, con el texto, pero bloqueado.
+  await expect(page.getByLabel('Texto que quieres adaptar')).toHaveValue(
+    'Texto de prueba para adaptar a lectura fácil.',
+  );
+  await expect(page.locator('.compose-form')).toHaveAttribute('inert', '');
+  const steps = panel.getByRole('listitem');
   await expect(steps).toHaveText([
     /Recibido/,
     /Adaptando/,
@@ -114,7 +135,7 @@ test('muestra el progreso con los cinco pasos', async ({ page }) => {
     /Verificando/,
     /Listo/,
   ]);
-  await expect(page.locator('[aria-current="step"]')).toContainText('Adaptando (en curso)');
+  await expect(panel.locator('[aria-current="step"]')).toContainText('Adaptando (en curso)');
 });
 
 test('rechaza en el navegador un fichero que no es PDF, sin llamar a la API', async ({ page }) => {
@@ -149,7 +170,7 @@ test('muestra un mensaje en español sin detalles técnicos y permite reintentar
   await expect(alert).not.toContainText('Npgsql');
   await alert.getByRole('button', { name: 'Reintentar' }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/documentos/${DOCUMENT_ID}$`));
+  await expect(page).toHaveURL(new RegExp(`/documentos/${DOCUMENT_ID}$`), OPENS_DOCUMENT);
   expect(counters.submissions).toBe(2);
 });
 
@@ -179,8 +200,29 @@ test('se completa el flujo solo con el teclado y el foco siempre se ve', async (
       const label = await focused.evaluate(
         (element) => element.getAttribute('aria-label') ?? element.textContent ?? '',
       );
-      const outline = await focused.evaluate((element) => getComputedStyle(element).outlineStyle);
-      expect(outline, `foco visible en «${label.trim()}»`).not.toBe('none');
+      // En los campos de Material el foco se ve en el borde del campo, que se vuelve grueso. En el texto que se va a
+      // adaptar, en el borde de toda la hoja; en el título, en su línea de abajo (las dos, con una sombra que
+      // engrosa el borde). En el resto, en el contorno del propio elemento.
+      const visible = await focused.evaluate((element) => {
+        const sheet = element.closest('.sheet');
+        if (sheet) {
+          return getComputedStyle(sheet).boxShadow !== 'none';
+        }
+        if (element.classList.contains('title-input')) {
+          return getComputedStyle(element).boxShadow !== 'none';
+        }
+        const field = element.closest('.mat-mdc-form-field');
+        if (field) {
+          const border = field.querySelector('.mdc-notched-outline__leading');
+          return (
+            field.classList.contains('mat-focused') &&
+            border !== null &&
+            parseFloat(getComputedStyle(border).borderTopWidth) >= 2
+          );
+        }
+        return getComputedStyle(element).outlineStyle !== 'none';
+      });
+      expect(visible, `foco visible en «${label.trim()}»`).toBe(true);
       if (
         (await focused.evaluate((element) => element.tagName)) === 'TEXTAREA' &&
         accessibleName === 'textarea'
@@ -199,7 +241,7 @@ test('se completa el flujo solo con el teclado y el foco siempre se ve', async (
   await focusOn('Adaptar');
   await page.keyboard.press('Enter');
 
-  await expect(page).toHaveURL(new RegExp(`/documentos/${DOCUMENT_ID}$`));
+  await expect(page).toHaveURL(new RegExp(`/documentos/${DOCUMENT_ID}$`), OPENS_DOCUMENT);
 });
 
 for (const colorScheme of ['light', 'dark'] as const) {

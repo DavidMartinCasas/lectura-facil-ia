@@ -55,9 +55,9 @@ describe('safeReturnUrl', () => {
   });
 
   it.each([undefined, null, '', 'https://example.org', '//example.org', '/\\example.org'])(
-    'goes to "Mis documentos" instead of %s',
+    'goes to the home page instead of %s',
     (value) => {
-      expect(safeReturnUrl(value)).toBe('/documentos');
+      expect(safeReturnUrl(value)).toBe('/');
     },
   );
 });

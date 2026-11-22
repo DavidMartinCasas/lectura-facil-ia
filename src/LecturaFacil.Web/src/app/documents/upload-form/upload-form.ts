@@ -2,6 +2,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  computed,
   input,
   output,
   signal,
@@ -9,8 +11,7 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { RouterLink } from '@angular/router';
 import { DocumentSubmission } from '../../core/documents/document.models';
 import {
   MAX_TITLE_LENGTH,
@@ -29,13 +30,7 @@ type UploadMode = 'text' | 'pdf';
  */
 @Component({
   selector: 'app-upload-form',
-  imports: [
-    MatButtonModule,
-    MatButtonToggleModule,
-    MatFormFieldModule,
-    MatInputModule,
-    TurnstileWidgetComponent,
-  ],
+  imports: [MatButtonModule, MatButtonToggleModule, RouterLink, TurnstileWidgetComponent],
   templateUrl: './upload-form.html',
   styleUrl: './upload-form.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -55,6 +50,13 @@ export class UploadFormComponent {
   protected readonly dragging = signal(false);
   protected readonly humanToken = signal<string | null>(null);
   private readonly turnstile = viewChild(TurnstileWidgetComponent);
+  private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
+
+  /** Palabras del texto pegado, para la barra de abajo. */
+  protected readonly wordCount = computed(() => {
+    const words = this.text().trim();
+    return this.texts.words(words === '' ? 0 : words.split(/\s+/u).length);
+  });
 
   protected onHumanToken(token: string | null): void {
     this.humanToken.set(token);
@@ -79,6 +81,24 @@ export class UploadFormComponent {
 
   protected onFileChange(event: Event): void {
     this.selectFile((event.target as HTMLInputElement).files?.item(0) ?? null);
+  }
+
+  /** Quita el fichero elegido y vacía el campo, para poder elegir el mismo otra vez. */
+  protected removeFile(): void {
+    this.selectFile(null);
+    const field = this.fileInput()?.nativeElement;
+    if (field) {
+      field.value = '';
+      field.focus();
+    }
+  }
+
+  /** Tamaño legible: «850 KB», «1,2 MB». */
+  protected fileSize(bytes: number): string {
+    const kilobytes = bytes / 1024;
+    return kilobytes < 1024
+      ? `${Math.max(1, Math.round(kilobytes)).toLocaleString('es')} KB`
+      : `${(kilobytes / 1024).toLocaleString('es', { maximumFractionDigits: 1 })} MB`;
   }
 
   protected onDragOver(event: DragEvent): void {

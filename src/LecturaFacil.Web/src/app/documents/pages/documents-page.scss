@@ -2,6 +2,18 @@
 // "Mis documentos": barra de búsqueda y filtro encima de la tabla, y "Cargar más" debajo.
 @use '@angular/material' as mat;
 
+.new-document svg {
+  inline-size: 18px;
+  block-size: 18px;
+  margin-inline-end: 0.375rem;
+  // Centrado con el texto del botón.
+  vertical-align: -4px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
 .filters {
   @include mat.form-field-density(-3);
   display: flex;

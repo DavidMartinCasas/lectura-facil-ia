@@ -42,6 +42,11 @@ internal sealed class DocumentConfiguration : IEntityTypeConfiguration<Document>
             .HasConversion(text => text.Value, value => OriginalText.Restore(value))
             .IsRequired();
 
+        builder.Property(document => document.Stage)
+            .HasColumnName("processing_stage")
+            .HasConversion<string>()
+            .HasMaxLength(StatusMaxLength);
+
         builder.Property(document => document.FailureCode)
             .HasColumnName("failure_code")
             .HasMaxLength(Document.FailureCodeMaxLength);

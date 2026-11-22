@@ -115,6 +115,31 @@ public sealed class DocumentTests
     }
 
     [Fact]
+    public void EnterStage_WhileProcessing_KeepsTheStageUntilTheDocumentLeavesProcessing()
+    {
+        var document = Submit();
+        document.StartProcessing(Now);
+
+        document.EnterStage(ProcessingStage.ReviewingGuidelines, Now.AddSeconds(5));
+
+        document.Stage.ShouldBe(ProcessingStage.ReviewingGuidelines);
+        document.UpdatedAt.ShouldBe(Now.AddSeconds(5));
+
+        document.FailProcessing("adaptation.failed", Now.AddSeconds(6));
+
+        document.Stage.ShouldBeNull();
+    }
+
+    [Fact]
+    public void EnterStage_WhenNotProcessing_Throws()
+    {
+        var document = Submit();
+
+        Should.Throw<InvalidOperationException>(() => document.EnterStage(ProcessingStage.Adapting, Now));
+        document.Stage.ShouldBeNull();
+    }
+
+    [Fact]
     public void Submit_WhenArgumentsAreNull_Throws()
     {
         Should.Throw<ArgumentNullException>(() => Document.Submit(Owner, null!, Text, Now));

@@ -33,7 +33,7 @@ internal static class DocumentQueryEndpoints
             .Produces<DocumentStatusEvent>(StatusCodes.Status200OK, "text/event-stream")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithName("GetDocumentEvents")
-            .WithSummary("Cambios de estado del documento por Server-Sent Events, hasta que termina la adaptación.");
+            .WithSummary("Cambios de estado (y de fase, mientras se adapta) del documento por Server-Sent Events, hasta que termina la adaptación.");
 
         return group;
     }
@@ -80,12 +80,12 @@ internal static class DocumentQueryEndpoints
 
     private static async IAsyncEnumerable<DocumentStatusEvent> ToEvents(
         Guid id,
-        IAsyncEnumerable<DocumentStatus> statuses,
+        IAsyncEnumerable<DocumentProgress> progress,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var status in statuses.WithCancellation(cancellationToken))
+        await foreach (var (status, stage) in progress.WithCancellation(cancellationToken))
         {
-            yield return new DocumentStatusEvent(id, status.ToString());
+            yield return new DocumentStatusEvent(id, status.ToString(), stage?.ToString());
         }
     }
 

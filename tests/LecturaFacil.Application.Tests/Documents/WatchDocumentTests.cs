@@ -22,23 +22,52 @@ public sealed class WatchDocumentTests
         var document = Add(Owner);
         foreach (var status in new[] { DocumentStatus.Received, DocumentStatus.Processing, DocumentStatus.Processing, DocumentStatus.Draft })
         {
-            _repository.ScriptedStatuses.Enqueue(status);
+            _repository.ScriptedProgress.Enqueue(new DocumentProgress(status, null));
         }
 
         var result = await CreateUseCase(TimeProvider.System).StartAsync(document.Id, Token);
 
-        (await ReadAll(result.Value)).ShouldBe([DocumentStatus.Received, DocumentStatus.Processing, DocumentStatus.Draft]);
+        (await ReadAll(result.Value)).Select(progress => progress.Status)
+            .ShouldBe([DocumentStatus.Received, DocumentStatus.Processing, DocumentStatus.Draft]);
+    }
+
+    [Fact]
+    public async Task Watch_SendsEachStageChangeWhileProcessing()
+    {
+        var document = Add(Owner);
+        DocumentProgress[] script =
+        [
+            new(DocumentStatus.Processing, ProcessingStage.Adapting),
+            new(DocumentStatus.Processing, ProcessingStage.Adapting),
+            new(DocumentStatus.Processing, ProcessingStage.ReviewingGuidelines),
+            new(DocumentStatus.Processing, ProcessingStage.Verifying),
+            new(DocumentStatus.Draft, null),
+        ];
+        foreach (var progress in script)
+        {
+            _repository.ScriptedProgress.Enqueue(progress);
+        }
+
+        var result = await CreateUseCase(TimeProvider.System).StartAsync(document.Id, Token);
+
+        (await ReadAll(result.Value)).ShouldBe(
+        [
+            new DocumentProgress(DocumentStatus.Processing, ProcessingStage.Adapting),
+            new DocumentProgress(DocumentStatus.Processing, ProcessingStage.ReviewingGuidelines),
+            new DocumentProgress(DocumentStatus.Processing, ProcessingStage.Verifying),
+            new DocumentProgress(DocumentStatus.Draft, null),
+        ]);
     }
 
     [Fact]
     public async Task Watch_WhenTheDocumentIsAlreadyFinished_SendsItsStatusAndStops()
     {
         var document = Add(Owner);
-        _repository.ScriptedStatuses.Enqueue(DocumentStatus.Error);
+        _repository.ScriptedProgress.Enqueue(new DocumentProgress(DocumentStatus.Error, null));
 
         var result = await CreateUseCase(TimeProvider.System).StartAsync(document.Id, Token);
 
-        (await ReadAll(result.Value)).ShouldBe([DocumentStatus.Error]);
+        (await ReadAll(result.Value)).ShouldBe([new DocumentProgress(DocumentStatus.Error, null)]);
     }
 
     [Fact]
@@ -49,7 +78,7 @@ public sealed class WatchDocumentTests
 
         var result = await CreateUseCase(time).StartAsync(document.Id, Token);
 
-        (await ReadAll(result.Value)).ShouldBe([DocumentStatus.Received]);
+        (await ReadAll(result.Value)).ShouldBe([new DocumentProgress(DocumentStatus.Received, null)]);
     }
 
     [Fact]
@@ -62,12 +91,12 @@ public sealed class WatchDocumentTests
         result.Error.ShouldBe(DocumentErrors.NotFound);
     }
 
-    private static async Task<List<DocumentStatus>> ReadAll(IAsyncEnumerable<DocumentStatus> statuses)
+    private static async Task<List<DocumentProgress>> ReadAll(IAsyncEnumerable<DocumentProgress> progress)
     {
-        var read = new List<DocumentStatus>();
-        await foreach (var status in statuses)
+        var read = new List<DocumentProgress>();
+        await foreach (var item in progress)
         {
-            read.Add(status);
+            read.Add(item);
         }
 
         return read;

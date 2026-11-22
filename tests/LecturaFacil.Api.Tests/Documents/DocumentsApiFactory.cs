@@ -56,6 +56,9 @@ public sealed class RecordingDocumentRepository : IDocumentRepository
     public async Task<DocumentStatus?> FindStatusForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
         (await FindForOwnerAsync(id, ownerId, cancellationToken))?.Status;
 
+    public async Task<DocumentProgress?> FindProgressForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
+        await FindForOwnerAsync(id, ownerId, cancellationToken) is { } document ? new DocumentProgress(document.Status, document.Stage) : null;
+
     public Task<IReadOnlyList<DocumentId>> ListAwaitingAdaptationAsync(CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<DocumentId>>(
             [.. _added.Where(document => DocumentStatusTransitions.IsAwaitingAdaptation(document.Status)).Select(document => document.Id)]);

@@ -2,7 +2,7 @@
 import { Type } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, map, of, throwError } from 'rxjs';
 import { DocumentEventsService } from '../../core/documents/document-events.service';
 import {
   DocumentDetails,
@@ -13,12 +13,13 @@ import {
   SubmitDocumentResponse,
 } from '../../core/documents/document.models';
 import { DocumentsApiService } from '../../core/documents/documents-api.service';
+import { PROGRESS_STEP_MS } from '../../core/documents/document-submission.store';
 import { ApiError } from '../../core/errors/api-error';
 import { ERROR_TEXTS, LIST_TEXTS, PROGRESS_TEXTS, REVIEW_TEXTS } from '../../core/ui-texts';
 import { documentFixture } from '../../testing/document-fixtures';
 import { DocumentPage } from './document-page';
 import { DocumentsPage, SEARCH_DEBOUNCE_MS } from './documents-page';
-import { NewDocumentPage } from './new-document-page';
+import { NewDocumentPage, READY_REDIRECT_MS } from './new-document-page';
 
 const details = (status: DocumentStatus): DocumentDetails => documentFixture(status);
 
@@ -59,7 +60,16 @@ describe('pages', () => {
       providers: [
         provideRouter([]),
         { provide: DocumentsApiService, useValue: api },
-        { provide: DocumentEventsService, useValue: { watch: () => statuses.asObservable() } },
+        {
+          provide: DocumentEventsService,
+          useValue: {
+            watch: () => statuses.asObservable(),
+            watchProgress: () => statuses.pipe(map((status) => ({ status, stage: null }))),
+          },
+        },
+        // Sin esperas: cada paso se enseña al momento y el documento se abre en cuanto está listo.
+        { provide: PROGRESS_STEP_MS, useValue: 0 },
+        { provide: READY_REDIRECT_MS, useValue: 0 },
       ],
     });
   });
@@ -86,19 +96,27 @@ describe('pages', () => {
   }
 
   describe('NewDocumentPage', () => {
-    it('shows the progress and opens the document view when it is ready', async () => {
+    it('shows the progress over the locked form and opens the document view when it is ready', async () => {
       const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       const { fixture, element } = await render(NewDocumentPage);
 
       await submitText(fixture, element);
-      expect(element.querySelector('app-progress-steps')).not.toBeNull();
-      expect(element.querySelector('form')).toBeNull();
+      const panel = element.querySelector<HTMLElement>('.progress-panel');
+      expect(panel?.querySelector('app-progress-steps')).not.toBeNull();
+      expect(panel?.querySelector('h2')?.textContent?.trim()).toBe(PROGRESS_TEXTS.workingTitle);
+      expect(document.activeElement).toBe(panel);
+      // El formulario sigue ahí, con el texto, pero no se puede usar.
+      expect(element.querySelector('textarea')?.value).toContain('convocatoria');
+      expect(element.querySelector<HTMLElement>('.compose-form')?.inert).toBe(true);
 
       statuses.next('Processing');
       statuses.next('Draft');
       statuses.complete();
       await fixture.whenStable();
 
+      expect(panel?.querySelector('h2')?.textContent?.trim()).toBe(PROGRESS_TEXTS.readyTitle);
+      expect(panel?.querySelector('a')?.getAttribute('href')).toBe('/documentos/doc-1');
+      await new Promise((resolve) => setTimeout(resolve));
       expect(navigate).toHaveBeenCalledWith(['/documentos', 'doc-1']);
     });
 
@@ -137,6 +155,25 @@ describe('pages', () => {
       );
       expect(element.textContent).toContain(PROGRESS_TEXTS.startOver);
     });
+
+    it('goes back to the form with the text as it was when the person starts over', async () => {
+      const { fixture, element } = await render(NewDocumentPage);
+      await submitText(fixture, element);
+      statuses.next('Error');
+      statuses.complete();
+      await fixture.whenStable();
+
+      Array.from(element.querySelectorAll<HTMLButtonElement>('.progress-panel button'))
+        .find((button) => button.textContent?.includes(PROGRESS_TEXTS.startOver))!
+        .click();
+      await fixture.whenStable();
+
+      expect(element.querySelector('.progress-panel')).toBeNull();
+      expect(element.querySelector<HTMLElement>('.compose-form')?.inert).toBe(false);
+      expect(element.querySelector('textarea')?.value).toBe(
+        'Texto de la convocatoria que hay que adaptar.',
+      );
+    });
   });
 
   describe('DocumentsPage', () => {
@@ -149,6 +186,15 @@ describe('pages', () => {
       expect(element.querySelector('td')?.textContent).toContain('Bases');
       expect(api.list).toHaveBeenCalledWith({ title: '', statuses: [] });
       expect(element.querySelector('[role="search"]')).not.toBeNull();
+    });
+
+    it('offers to create a new document from the header', async () => {
+      api.list.mockReturnValue(of(page([listItem('doc-1', 'Bases')])));
+
+      const { element } = await render(DocumentsPage);
+      const link = element.querySelector<HTMLAnchorElement>('header a[href="/nuevo"]');
+
+      expect(link?.textContent?.trim()).toBe('Nuevo documento');
     });
 
     it('does not show the filters when the user has no documents yet', async () => {

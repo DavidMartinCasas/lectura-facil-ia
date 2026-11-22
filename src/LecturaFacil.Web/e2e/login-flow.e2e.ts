@@ -112,14 +112,15 @@ test('entra, sube un documento, sale y ya no puede ver sus documentos', async ({
     .getByLabel('Texto que quieres adaptar')
     .fill('La persona solicitante deberá presentar la solicitud en el plazo de diez días hábiles.');
   await page.getByRole('button', { name: 'Adaptar' }).click();
-  await expect(page).toHaveURL(new RegExp(`/documentos/${DOCUMENT_ID}$`));
+  // Los pasos del progreso y "Documento listo" se ven unos segundos antes de abrir el documento.
+  await expect(page).toHaveURL(new RegExp(`/documentos/${DOCUMENT_ID}$`), { timeout: 10_000 });
 
   await page.getByRole('button', { name: 'Salir' }).click();
   await expect(page).toHaveURL(/\/entrar$/);
 
   await page.goto(`/documentos/${DOCUMENT_ID}`);
   await expect(page).toHaveURL(/\/entrar\?volver=/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Entrar');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Lectura Fácil IA');
   expect(backend.xsrfHeaders).toEqual([XSRF_TOKEN, XSRF_TOKEN, XSRF_TOKEN]);
 });
 

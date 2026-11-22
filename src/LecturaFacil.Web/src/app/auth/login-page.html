@@ -1,53 +1,78 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-<section class="login" aria-labelledby="page-title">
-  <div class="page-header">
-    <h1 id="page-title">{{ texts.pageTitle }}</h1>
-    <p class="intro">{{ texts.intro }}</p>
+<div class="login-screen">
+  <!-- Panel de marca: qué es la aplicación, con el mismo gesto del rotulador que la portada. -->
+  <div class="showcase">
+    <a class="brand" routerLink="/">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <rect width="32" height="32" rx="9" class="brand-mark__tile" />
+        <rect x="8" y="9" width="16" height="3" rx="1.5" class="brand-mark__line" />
+        <rect x="8" y="14.5" width="11" height="3" rx="1.5" class="brand-mark__line" />
+        <rect x="8" y="20" width="14" height="3" rx="1.5" class="brand-mark__line" />
+      </svg>
+      <span>{{ appTexts.name }}</span>
+    </a>
+
+    <p class="statement">Lo que dice la administración, en palabras que todo el mundo entiende.</p>
+
+    <figure
+      class="specimen"
+      aria-label="Ejemplo de una frase de una convocatoria y su versión fácil"
+    >
+      <p class="specimen-original" lang="es">
+        …deberán presentar la solicitud en el plazo de <mark>quince días hábiles</mark> a contar
+        desde el día siguiente…
+      </p>
+      <p class="specimen-easy" lang="es">Tienes 15 días para pedir la ayuda.</p>
+    </figure>
   </div>
 
-  <form class="login-form" (submit)="submit($event)" novalidate>
-    <mat-form-field appearance="outline">
-      <mat-label>{{ texts.emailLabel }}</mat-label>
-      <input
-        matInput
-        name="email"
-        type="email"
-        autocomplete="username"
-        maxlength="256"
-        required
-        [value]="email()"
-        (input)="onEmailInput($event)"
-        [attr.aria-invalid]="error() ? true : null"
-        [attr.aria-describedby]="error() ? 'login-error' : null"
-      />
-    </mat-form-field>
+  <section class="login" aria-labelledby="page-title">
+    <h1 id="page-title">{{ appTexts.name }}</h1>
 
-    <mat-form-field appearance="outline">
-      <mat-label>{{ texts.passwordLabel }}</mat-label>
-      <input
-        matInput
-        name="password"
-        type="password"
-        autocomplete="current-password"
-        maxlength="128"
-        required
-        [value]="password()"
-        (input)="onPasswordInput($event)"
-        [attr.aria-invalid]="error() ? true : null"
-        [attr.aria-describedby]="error() ? 'login-error' : null"
-      />
-    </mat-form-field>
+    <form class="login-form" (submit)="submit($event)" novalidate>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ texts.emailLabel }}</mat-label>
+        <input
+          matInput
+          name="email"
+          type="email"
+          autocomplete="username"
+          maxlength="256"
+          required
+          [value]="email()"
+          (input)="onEmailInput($event)"
+          [attr.aria-invalid]="error() ? true : null"
+          [attr.aria-describedby]="error() ? 'login-error' : null"
+        />
+      </mat-form-field>
 
-    @if (error(); as message) {
-      <div id="login-error" class="error" role="alert">
-        <p>{{ message }}</p>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ texts.passwordLabel }}</mat-label>
+        <input
+          matInput
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          maxlength="128"
+          required
+          [value]="password()"
+          (input)="onPasswordInput($event)"
+          [attr.aria-invalid]="error() ? true : null"
+          [attr.aria-describedby]="error() ? 'login-error' : null"
+        />
+      </mat-form-field>
+
+      @if (error(); as message) {
+        <div id="login-error" class="error" role="alert">
+          <p>{{ message }}</p>
+        </div>
+      }
+
+      <div class="actions">
+        <button mat-flat-button type="submit" [disabled]="busy()">
+          {{ busy() ? texts.submitting : texts.submit }}
+        </button>
       </div>
-    }
-
-    <div class="actions">
-      <button mat-flat-button type="submit" [disabled]="busy()">
-        {{ busy() ? texts.submitting : texts.submit }}
-      </button>
-    </div>
-  </form>
-</section>
+    </form>
+  </section>
+</div>

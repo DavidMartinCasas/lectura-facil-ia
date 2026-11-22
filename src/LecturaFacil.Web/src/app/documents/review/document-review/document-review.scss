@@ -11,7 +11,8 @@
 // Barra del documento: la etiqueta de borrador, la versión y la exportación se quedan a la vista al desplazarse.
 .banner {
   position: sticky;
-  inset-block-start: 0;
+  // Justo debajo de la barra superior fija.
+  inset-block-start: var(--lf-topbar-height);
   z-index: 2;
   display: flex;
   flex-wrap: wrap;
@@ -22,7 +23,7 @@
   border-radius: var(--lf-radius-m);
   background: var(--lf-surface);
   color: var(--lf-ink);
-  box-shadow: 0 8px 20px -16px rgb(0 0 0 / 45%);
+  box-shadow: var(--lf-shadow);
 }
 
 // Sello de borrador: un recuadro con el borde del color de "pendiente".

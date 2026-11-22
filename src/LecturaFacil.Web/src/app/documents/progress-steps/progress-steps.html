@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <section class="progress" aria-labelledby="progress-title">
-  <h2 id="progress-title">{{ texts.title }}</h2>
+  <h2 id="progress-title" [class.visually-hidden]="!showTitle()">{{ texts.title }}</h2>
   <ol class="steps">
     @for (step of steps(); track step.label) {
       <li

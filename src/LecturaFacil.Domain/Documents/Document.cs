@@ -52,6 +52,12 @@ public sealed class Document
 
     public AdaptedVersion? LatestAdaptedVersion => _adaptedVersions.MaxBy(version => version.Number);
 
+    /// <summary>
+    /// Fase de la adaptación mientras el documento está en <see cref="DocumentStatus.Processing"/>; <c>null</c> en
+    /// cualquier otro estado.
+    /// </summary>
+    public ProcessingStage? Stage { get; private set; }
+
     /// <summary>Código del motivo del último error (por ejemplo <c>llm.provider_unavailable</c>), sin detalles internos.</summary>
     public string? FailureCode { get; private set; }
 
@@ -148,6 +154,18 @@ public sealed class Document
         TransitionTo(DocumentStatus.Draft, now);
     }
 
+    /// <summary>Pasa a otra fase de la adaptación. Solo mientras el documento está en <see cref="DocumentStatus.Processing"/>.</summary>
+    public void EnterStage(ProcessingStage stage, DateTimeOffset now)
+    {
+        if (Status != DocumentStatus.Processing)
+        {
+            throw new InvalidOperationException($"A document in {Status} has no processing stage.");
+        }
+
+        Stage = stage;
+        UpdatedAt = now;
+    }
+
     /// <summary>La adaptación ha fallado. <paramref name="failureCode"/> es un código estable, sin detalles internos.</summary>
     public void FailProcessing(string failureCode, DateTimeOffset now)
     {
@@ -173,6 +191,10 @@ public sealed class Document
 
         Status = next;
         UpdatedAt = now;
+        if (next != DocumentStatus.Processing)
+        {
+            Stage = null;
+        }
     }
 
     private AdaptedVersion EnsureEditable() =>

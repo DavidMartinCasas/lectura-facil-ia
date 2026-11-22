@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { DocumentSubmission } from '../../core/documents/document.models';
 import { TurnstileService } from '../../core/turnstile/turnstile.service';
 import { TURNSTILE_TEXTS } from '../../core/ui-texts';
@@ -16,6 +17,7 @@ describe('UploadFormComponent with the anti-bot challenge', () => {
     turnstile = new FakeTurnstile();
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: TurnstileService, useValue: { load: () => Promise.resolve(turnstile) } },
       ],
     });

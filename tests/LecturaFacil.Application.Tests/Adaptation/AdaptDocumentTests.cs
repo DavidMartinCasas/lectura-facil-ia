@@ -341,6 +341,35 @@ public sealed class AdaptDocumentTests
     }
 
     [Fact]
+    public async Task Adapt_SavesEachStageSoTheScreenCanShowTheRealProgress()
+    {
+        var document = Store(Paragraph);
+
+        await CreateUseCase(FakeLlmProvider.FromFixture("adapter/ok")).ExecuteAsync(document.Id, Token);
+
+        _repository.SavedStages.ShouldBe([ProcessingStage.Adapting, ProcessingStage.ReviewingGuidelines, ProcessingStage.Verifying]);
+        document.Stage.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Adapt_WhenItRetries_SavesTheRetryStageAndReviewsAgain()
+    {
+        UseRealGuidelines();
+        var document = Store(Paragraph);
+
+        await CreateUseCase(Sequence("adapter/sigla-sin-explicar", "adapter/sigla-en-glosario")).ExecuteAsync(document.Id, Token);
+
+        _repository.SavedStages.ShouldBe(
+        [
+            ProcessingStage.Adapting,
+            ProcessingStage.ReviewingGuidelines,
+            ProcessingStage.Retrying,
+            ProcessingStage.ReviewingGuidelines,
+            ProcessingStage.Verifying,
+        ]);
+    }
+
+    [Fact]
     public async Task Adapt_WhenTheRetryIsBetter_KeepsTheRetryAndCountsTheCostOfBothAttempts()
     {
         UseRealGuidelines();

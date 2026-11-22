@@ -12,8 +12,8 @@ const STATE_LABELS: Readonly<Record<StepState, string>> = {
 
 const MARKERS: Readonly<Record<StepState, string>> = {
   done: '✓',
-  current: '…',
-  pending: '·',
+  current: '',
+  pending: '',
   failed: '✕',
 };
 
@@ -26,6 +26,8 @@ const MARKERS: Readonly<Record<StepState, string>> = {
 })
 export class ProgressStepsComponent {
   readonly steps = input.required<readonly ProgressStep[]>();
+  /** Sin título visible cuando ya lo pone quien lo usa (el panel de "Nuevo documento"). Se sigue leyendo en voz alta. */
+  readonly showTitle = input(true);
 
   protected readonly texts = PROGRESS_TEXTS;
   protected readonly stateLabels = STATE_LABELS;

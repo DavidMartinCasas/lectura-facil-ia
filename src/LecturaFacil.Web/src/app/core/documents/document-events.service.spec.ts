@@ -93,6 +93,27 @@ describe('DocumentEventsService', () => {
     expect(sources[0].closed).toBe(true);
   });
 
+  it('sends each stage while processing, and only status changes to whoever just wants the status', () => {
+    const progress: unknown[] = [];
+    service.watchProgress('doc-1').subscribe((next) => progress.push(next));
+    const { statuses } = watch('doc-1');
+
+    for (const source of sources) {
+      source.emit('{"status":"Processing","stage":"Adapting"}');
+      source.emit('{"status":"Processing","stage":"ReviewingGuidelines"}');
+      source.emit('{"status":"Processing","stage":"Inventada"}');
+      source.emit('{"status":"Draft","stage":null}');
+    }
+
+    expect(progress).toEqual([
+      { status: 'Processing', stage: 'Adapting' },
+      { status: 'Processing', stage: 'ReviewingGuidelines' },
+      { status: 'Processing', stage: null },
+      { status: 'Draft', stage: null },
+    ]);
+    expect(statuses).toEqual(['Processing', 'Draft']);
+  });
+
   it('ignores malformed events and unknown statuses', () => {
     const { statuses } = watch();
 

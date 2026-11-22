@@ -47,6 +47,11 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("owner_id");
 
+                    b.Property<string>("Stage")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("processing_stage");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 import { Injectable, InjectionToken, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, distinctUntilChanged, map } from 'rxjs';
 import { ApiError } from '../errors/api-error';
 import { ERROR_TEXTS } from '../ui-texts';
+import { DocumentProgress, isProcessingStage } from './document-progress';
 import { DOCUMENTS_PATH } from './documents-api.service';
 import { DocumentStatus, isAwaitingAdaptation, isDocumentStatus } from './document.models';
 
@@ -29,7 +30,7 @@ const STATUS_EVENT = 'status';
 const CLOSED = 2;
 
 /**
- * Sigue el estado de un documento por Server-Sent Events. Emite cada estado y termina cuando el documento deja de
+ * Sigue el estado de un documento por Server-Sent Events. Emite cada estado (y, mientras se adapta, cada fase) y termina cuando el documento deja de
  * estar en la cola o adaptándose. Si se corta la conexión, vuelve a conectarse: el navegador lo hace solo y, si
  * el EventSource se cierra del todo, lo reabre el servicio. Tras demasiados fallos seguidos, emite un ApiError.
  */
@@ -38,10 +39,19 @@ export class DocumentEventsService {
   private readonly createEventSource = inject(EVENT_SOURCE_FACTORY);
   private readonly retry = inject(DOCUMENT_EVENTS_RETRY);
 
+  /** Solo los cambios de estado, sin las fases. */
   watch(id: string): Observable<DocumentStatus> {
+    return this.watchProgress(id).pipe(
+      map((progress) => progress.status),
+      distinctUntilChanged(),
+    );
+  }
+
+  /** Cada cambio de estado o de fase. */
+  watchProgress(id: string): Observable<DocumentProgress> {
     const url = `${DOCUMENTS_PATH}/${encodeURIComponent(id)}/events`;
 
-    return new Observable<DocumentStatus>((subscriber) => {
+    return new Observable<DocumentProgress>((subscriber) => {
       let source: EventSourceLike | null = null;
       let failures = 0;
       let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
@@ -49,13 +59,13 @@ export class DocumentEventsService {
       const open = (): void => {
         source = this.createEventSource(url);
         source.addEventListener(STATUS_EVENT, (event: MessageEvent<string>) => {
-          const status = parseStatus(event.data);
-          if (status === null) {
+          const progress = parseProgress(event.data);
+          if (progress === null) {
             return;
           }
           failures = 0;
-          subscriber.next(status);
-          if (!isAwaitingAdaptation(status)) {
+          subscriber.next(progress);
+          if (!isAwaitingAdaptation(progress.status)) {
             source?.close();
             subscriber.complete();
           }
@@ -83,12 +93,15 @@ export class DocumentEventsService {
   }
 }
 
-function parseStatus(data: string): DocumentStatus | null {
+function parseProgress(data: string): DocumentProgress | null {
   try {
     const parsed: unknown = JSON.parse(data);
     if (typeof parsed === 'object' && parsed !== null && 'status' in parsed) {
-      const status = (parsed as { status: unknown }).status;
-      return isDocumentStatus(status) ? status : null;
+      const { status, stage } = parsed as { status: unknown; stage?: unknown };
+      // Una fase desconocida no rompe el seguimiento: se sigue solo con el estado.
+      return isDocumentStatus(status)
+        ? { status, stage: isProcessingStage(stage) ? stage : null }
+        : null;
     }
   } catch {
     // Un evento mal formado se ignora: el siguiente traerá el estado.

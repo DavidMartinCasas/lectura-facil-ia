@@ -4,6 +4,12 @@
     <div class="page-header">
       <h1 id="page-title">{{ texts.pageTitle }}</h1>
     </div>
+    <a mat-flat-button routerLink="/nuevo" class="new-document">
+      <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+        <path d="M10 4v12M4 10h12" />
+      </svg>
+      {{ texts.newDocument }}
+    </a>
   </header>
 
   @if (!loading() && (documents()?.length || hasFilters())) {

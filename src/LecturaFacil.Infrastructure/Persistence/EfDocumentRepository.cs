@@ -35,6 +35,12 @@ public sealed class EfDocumentRepository(AppDbContext context) : IDocumentReposi
             .Select(document => (DocumentStatus?)document.Status)
             .FirstOrDefaultAsync(cancellationToken);
 
+    public Task<DocumentProgress?> FindProgressForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
+        Documents.AsNoTracking()
+            .Where(document => document.Id == id && document.OwnerId == ownerId)
+            .Select(document => new DocumentProgress(document.Status, document.Stage))
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<IReadOnlyList<DocumentId>> ListAwaitingAdaptationAsync(CancellationToken cancellationToken) =>
         await Documents.AsNoTracking()
             .Where(document => DocumentStatusTransitions.AwaitingAdaptation.Contains(document.Status))
