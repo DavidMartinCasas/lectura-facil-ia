@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 :host {
   display: block;
+  // Los botones de la revisión, al tamaño del texto de los paneles.
+  --mat-button-filled-label-text-size: var(--lf-fs-body);
+  --mat-button-outlined-label-text-size: var(--lf-fs-body);
+  --mat-button-text-label-text-size: var(--lf-fs-body);
+  --mat-button-protected-label-text-size: var(--lf-fs-body);
 }
 
 .review {
@@ -33,12 +38,12 @@
   border-radius: var(--lf-radius-s);
   background: var(--lf-amber-soft);
   color: var(--lf-amber);
-  font-size: 0.9375rem;
+  font-size: var(--lf-fs-label);
   font-weight: 700;
 }
 
 .meta {
-  font-size: 0.9375rem;
+  font-size: var(--lf-fs-label);
   color: var(--lf-muted);
 
   strong {
@@ -55,8 +60,8 @@
 }
 
 .export-status {
-  max-inline-size: 22rem;
-  font-size: 0.875rem;
+  max-inline-size: 17rem;
+  font-size: var(--lf-fs-label);
   line-height: 1.35;
   color: var(--lf-muted);
   text-align: end;
@@ -99,46 +104,227 @@ mat-tab-group app-original-text {
   background: var(--lf-gazette);
 }
 
-// Paneles de revisión debajo de los textos, en rejilla, cuando no caben al lado.
+// Botón de la barra que abre y cierra el panel de la revisión, con el total de avisos.
+.review-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--lf-rule);
+  border-radius: var(--lf-radius-s);
+  background: var(--lf-surface);
+  color: var(--lf-ink);
+  font: inherit;
+  font-size: var(--lf-fs-body);
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--lf-primary);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--lf-primary);
+    outline-offset: 2px;
+  }
+}
+
+.review-toggle--open {
+  border-color: var(--lf-primary);
+  background: var(--lf-primary-soft);
+}
+
+.review-toggle-icon {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+}
+
+// Recuento pequeño: gris si está todo bien, amarillo si hay avisos.
+.figure {
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  background: var(--lf-page);
+  color: var(--lf-muted);
+  font-size: var(--lf-fs-label);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.figure--warning {
+  background: var(--lf-amber-soft);
+  color: var(--lf-amber);
+}
+
+// Cerrado, los textos ocupan todo el ancho. Abierto, el panel va a la derecha y los textos se estrechan.
 .workarea {
   display: grid;
-  gap: 1.25rem;
-}
-
-.inspector {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
-  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
+  gap: 1.25rem;
 }
 
-.inspector app-key-facts-panel {
-  grid-column: 1 / -1;
+.workarea--open {
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
 }
 
-// Pantallas anchas: los textos a la izquierda y la revisión en una columna a la derecha, como un inspector.
-@media (min-width: 88rem) {
-  .workarea {
-    grid-template-columns: minmax(0, 1fr) 24rem;
-    align-items: start;
+.texts {
+  min-inline-size: 0;
+}
+
+.review-panel {
+  position: sticky;
+  isolation: isolate;
+  // Debajo de la barra superior y de la del documento, que también son fijas.
+  inset-block-start: calc(var(--lf-topbar-height) + 5.5rem);
+  max-block-size: calc(100dvh - var(--lf-topbar-height) - 6.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--lf-rule);
+  border-radius: var(--lf-radius-m);
+  background: var(--lf-surface);
+}
+
+// La cabecera y la legibilidad se quedan arriba al desplazar los apartados.
+.panel-top {
+  position: sticky;
+  inset-block-start: 0;
+  // Por encima de las etiquetas de los botones de Material, que llevan z-index 1.
+  z-index: 2;
+  border-block-end: 1px solid var(--lf-rule);
+  background: var(--lf-surface);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0.75rem 0.25rem 1.25rem;
+
+  h2 {
+    margin: 0;
+    font-size: var(--lf-fs-heading);
+    font-weight: 700;
+    color: var(--lf-ink);
+  }
+}
+
+.panel-close {
+  display: grid;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--lf-muted);
+  cursor: pointer;
+
+  svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
   }
 
-  .inspector {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    border: 1px solid var(--lf-rule);
-    border-radius: var(--lf-radius-m);
-    background: var(--lf-surface);
+  &:hover {
+    background: var(--lf-page);
+    color: var(--lf-ink);
   }
 
-  .inspector > * {
-    border: 0;
-    border-radius: 0;
-    background: transparent;
+  &:focus-visible {
+    outline: 3px solid var(--lf-primary);
+    outline-offset: -3px;
+  }
+}
+
+.part + .part {
+  border-block-start: 1px solid var(--lf-rule);
+}
+
+.part h3 {
+  margin: 0;
+}
+
+.part-head {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  inline-size: 100%;
+  padding: 0.875rem 1.25rem;
+  border: 0;
+  background: none;
+  color: var(--lf-ink);
+  font: inherit;
+  font-size: var(--lf-fs-body);
+  font-weight: 700;
+  text-align: start;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--lf-page);
   }
 
-  .inspector > * + * {
-    border-block-start: 1px solid var(--lf-rule);
+  &:focus-visible {
+    outline: 3px solid var(--lf-primary);
+    outline-offset: -3px;
+  }
+}
+
+.part-title {
+  flex: 1;
+}
+
+.chevron {
+  flex: none;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  color: var(--lf-muted);
+  transition: transform 150ms ease;
+}
+
+.part--open .chevron {
+  transform: rotate(90deg);
+}
+
+// La legibilidad, fija arriba: sin recuadro y compacta.
+.pinned {
+  padding: 0.25rem 1.25rem 0.75rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+// Los paneles, sin su recuadro ni su título: el apartado ya los pone.
+.part-body app-key-facts-panel,
+.part-body app-guidelines-panel {
+  padding: 0 1.25rem 1.25rem;
+  border: 0;
+  border-radius: 0;
+}
+
+// En pantallas pequeñas el panel se abre por encima de los textos, desde la derecha.
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: rgb(0 0 0 / 40%);
+}
+
+.review-panel--overlay {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 11;
+  inline-size: min(26rem, 92vw);
+  max-block-size: none;
+  border-radius: 0;
+  border-block: 0;
+  border-inline-end: 0;
+  box-shadow: var(--lf-shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
   }
 }
 
@@ -150,13 +336,8 @@ mat-tab-group app-original-text {
     border-radius: var(--lf-radius-s);
   }
 
-  .draft {
-    font-size: 0.875rem;
-  }
-
   .meta,
   .export-status {
-    font-size: 0.8125rem;
     line-height: 1.4;
   }
 

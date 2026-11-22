@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import { segmentText } from './text-segments';
+import { findFragment, segmentText } from './text-segments';
 
 describe('segmentText', () => {
   it('returns the whole text as one plain segment when there are no ranges', () => {
@@ -107,5 +107,22 @@ describe('segmentText', () => {
       '<script>',
       'alert(1)</script>',
     ]);
+  });
+});
+
+describe('findFragment', () => {
+  const text = 'La ayuda ascenderá al 40 % de la Renta mensual.';
+
+  it('finds the first place where the fragment appears', () => {
+    expect(findFragment(text, '40 % de la Renta')).toEqual({ start: 22, end: 38 });
+  });
+
+  it('ignores upper and lower case when there is no exact match', () => {
+    expect(findFragment(text, 'renta mensual')).toEqual({ start: 33, end: 46 });
+  });
+
+  it('returns null when the fragment is not in the text or is blank', () => {
+    expect(findFragment(text, '250 euros')).toBeNull();
+    expect(findFragment(text, '   ')).toBeNull();
   });
 });

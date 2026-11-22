@@ -165,7 +165,6 @@ export const REVIEW_TEXTS = {
   closeSelection: 'Cerrar',
   adaptedTitle: 'Adaptación',
   tabsLabel: 'Original y adaptación',
-  inspectorLabel: 'Revisión',
   glossaryTitle: 'Glosario',
   editSection: 'Editar sección',
   questionLabel: 'Pregunta',
@@ -208,6 +207,15 @@ export const REVIEW_TEXTS = {
   exported: 'Fichero exportado. Revisa tus descargas.',
   saved: 'Cambios guardados. Se han vuelto a revisar las pautas y la legibilidad.',
   acknowledgedAnnouncement: 'Dato marcado como revisado.',
+  locate: 'Ver en el original',
+  locateOff: 'Quitar la marca',
+  reviewLabel: 'Revisión',
+  closeReview: 'Cerrar la revisión',
+  noWarnings: 'Sin avisos',
+  warnings: (count: number) => (count === 1 ? '1 aviso' : `${count} avisos`),
+  notChecked: 'Sin comprobar',
+  guidelinesOf: (compliant: number, total: number) => `${compliant} de ${total}`,
+  noReport: 'Sin informe',
 } as const;
 
 export const GUIDELINE_STATUS_LABELS: Readonly<Record<GuidelineStatus, string>> = {

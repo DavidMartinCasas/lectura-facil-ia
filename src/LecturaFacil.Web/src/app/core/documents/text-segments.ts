@@ -55,6 +55,25 @@ export function segmentText(text: string, ranges: readonly TextRange[]): TextSeg
   return segments;
 }
 
+/**
+ * Dónde está `fragment` dentro de `text` (la primera vez), o `null` si no está. Si no aparece tal cual, se busca sin
+ * distinguir mayúsculas. Sirve para señalar en el original un dato clave, que el verificador copia del texto.
+ */
+export function findFragment(text: string, fragment: string): TextRange | null {
+  const needle = fragment.trim();
+  if (needle.length === 0) {
+    return null;
+  }
+  let start = text.indexOf(needle);
+  if (start < 0) {
+    const lower = text.toLocaleLowerCase('es');
+    const lowerNeedle = needle.toLocaleLowerCase('es');
+    // Solo si pasar a minúsculas no cambia las posiciones.
+    start = lower.length === text.length ? lower.indexOf(lowerNeedle) : -1;
+  }
+  return start < 0 ? null : { start, end: start + needle.length };
+}
+
 function clamp(position: number, length: number): number {
   return Math.min(Math.max(position, 0), length);
 }

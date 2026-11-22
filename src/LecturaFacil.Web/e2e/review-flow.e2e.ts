@@ -80,9 +80,26 @@ test('revisa un borrador: aviso, marcar revisado, editar y legibilidad recalcula
   await expect(banner).toContainText('Servidor propio');
   await expect(banner).toContainText('marca como revisado el dato clave con aviso');
 
+  // En móvil el panel de la revisión se abre a mano; en pantallas anchas se abre solo, con los datos clave desplegados.
+  const toggle = page.getByRole('button', { name: /^Revisión/ });
+  if (isMobile) {
+    await toggle.click();
+  }
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('button', { name: /Datos clave/ })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
   const warning = page.locator('app-key-facts-panel .item--warning');
   await expect(warning).toContainText('40 % de la renta mensual');
   await expect(warning).toContainText('No aparece en la adaptación');
+  // El valor del dato se puede señalar en el original.
+  await warning.getByRole('button', { name: /Ver en el original/ }).click();
+  await expect(page.locator('app-original-text .spot').first()).toBeVisible();
+  if (isMobile) {
+    // Para ver el dato en el original, el panel se ha cerrado.
+    await toggle.click();
+  }
   await page.getByRole('button', { name: /Marcar como revisado/ }).click();
 
   await expect(page.locator('app-key-facts-panel')).toContainText('Revisado');
@@ -90,6 +107,7 @@ test('revisa un borrador: aviso, marcar revisado, editar y legibilidad recalcula
   expect(calls.acknowledged).toEqual([{ factId: '0', body: { version: 1 } }]);
 
   if (isMobile) {
+    await page.getByRole('button', { name: 'Cerrar la revisión' }).click();
     await page.getByRole('tab', { name: 'Adaptación' }).click();
   }
   await page.getByRole('button', { name: /Editar sección/ }).click();
@@ -100,6 +118,10 @@ test('revisa un borrador: aviso, marcar revisado, editar y legibilidad recalcula
 
   await expect(banner).toContainText('Versión 2');
   await expect(page.getByText(EDITED_SENTENCE)).toBeVisible();
+  if (isMobile) {
+    await toggle.click();
+  }
+  // La legibilidad está fija arriba del panel: se ve sin desplegar nada.
   const readability = page.locator('app-readability-panel');
   await expect(readability).toContainText('85');
   await expect(readability).toContainText('Muy fácil');

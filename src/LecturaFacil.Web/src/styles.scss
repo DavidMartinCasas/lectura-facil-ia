@@ -49,6 +49,22 @@
   --lf-page-width: 100%;
   --lf-gutter: clamp(1.25rem, 3vw, 3rem);
   --lf-reading-width: 42rem;
+  // Escala de letra de la revisión: todos los apartados usan los mismos tamaños.
+  // Los mismos tamaños que "Nuevo documento": el texto que se lee, como la hoja donde se pega.
+  // Etiquetas (estados, «Original:», extremos de la escala).
+  --lf-fs-label: 0.8125rem;
+  // Texto de los paneles, explicaciones y botones.
+  --lf-fs-body: 0.9375rem;
+  // Texto que se lee: el original y la adaptación, al mismo tamaño.
+  --lf-fs-reading: 0.9375rem;
+  // Título de cada apartado (Texto original, Adaptación, Datos clave, Pautas, Legibilidad).
+  --lf-fs-heading: 1rem;
+  // Preguntas de la adaptación y glosario.
+  --lf-fs-subheading: 1.0625rem;
+  // Título de la adaptación.
+  --lf-fs-title: 1.25rem;
+  // Cifras de las fichas de resumen y de la legibilidad.
+  --lf-fs-figure: 1.5rem;
   // Alto de la barra superior fija. En pantallas estrechas la barra no se queda fija: lo pegajoso va arriba del todo.
   --lf-topbar-height: 3.5rem;
 }
@@ -242,12 +258,13 @@ a {
 
 // Etiqueta de estado (documentos, datos clave, pautas). El estado se dice siempre con texto, no solo con color.
 .chip {
+  // Mismo tamaño que el resto de etiquetas de la revisión.
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   padding: 0.125rem 0.625rem;
   border-radius: 999px;
-  font-size: 0.875rem;
+  font-size: var(--lf-fs-label);
   font-weight: 600;
   line-height: 1.6;
   white-space: nowrap;

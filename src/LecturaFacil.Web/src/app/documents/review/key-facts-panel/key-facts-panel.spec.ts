@@ -2,7 +2,7 @@
 import { TestBed } from '@angular/core/testing';
 import { MeaningVerification } from '../../../core/documents/document.models';
 import { REVIEW_TEXTS } from '../../../core/ui-texts';
-import { adaptationFixture } from '../../../testing/document-fixtures';
+import { ORIGINAL_TEXT, adaptationFixture } from '../../../testing/document-fixtures';
 import { KeyFactsPanelComponent } from './key-facts-panel';
 
 const verification = adaptationFixture().verification!;
@@ -60,5 +60,27 @@ describe('KeyFactsPanelComponent', () => {
     const { element } = await render(verification, false);
 
     expect(element.querySelector('button')).toBeNull();
+  });
+
+  it('offers to point out in the original the values that are there', async () => {
+    const fixture = TestBed.createComponent(KeyFactsPanelComponent);
+    fixture.componentRef.setInput('verification', verification);
+    fixture.componentRef.setInput('originalText', ORIGINAL_TEXT);
+    const located: number[] = [];
+    fixture.componentInstance.locate.subscribe((id) => located.push(id));
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+
+    const locate = [...element.querySelectorAll<HTMLButtonElement>('button.locate')];
+    expect(locate.map((button) => button.getAttribute('aria-label'))).toEqual(
+      verification.keyFacts.map((fact) => `${REVIEW_TEXTS.locate}: ${fact.originalValue}`),
+    );
+    locate[0].click();
+    expect(located).toEqual([verification.keyFacts[0].id]);
+
+    fixture.componentRef.setInput('located', verification.keyFacts[0].id);
+    await fixture.whenStable();
+    expect(locate[0].getAttribute('aria-pressed')).toBe('true');
+    expect(locate[0].textContent?.trim()).toBe(REVIEW_TEXTS.locateOff);
   });
 });
