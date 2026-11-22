@@ -1,45 +1,130 @@
 // SPDX-License-Identifier: Apache-2.0
+:host {
+  display: block;
+}
+
 .upload {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
+}
+
+mat-button-toggle-group {
+  justify-self: start;
+  border-radius: var(--lf-radius-m);
+  --mat-button-toggle-selected-state-background-color: var(--lf-primary);
+  --mat-button-toggle-selected-state-text-color: var(--lf-on-primary);
+  --mat-button-toggle-shape: var(--lf-radius-m);
+  --mat-button-toggle-label-text-weight: 600;
 }
 
 .field {
   inline-size: 100%;
 }
 
+textarea {
+  min-block-size: 16rem;
+  line-height: 1.6;
+}
+
 .drop-zone {
   display: grid;
-  gap: 0.5rem;
-  padding: 1.5rem;
-  border: 2px dashed var(--mat-sys-outline);
-  border-radius: var(--mat-sys-corner-medium);
+  justify-items: center;
+  text-align: center;
+  gap: 0.75rem;
+  padding: clamp(2rem, 5vw, 3rem) 1.5rem;
+  border: 2px dashed var(--lf-rule);
+  border-radius: var(--lf-radius-m);
+  background: var(--lf-page);
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
+
+  &:focus-within {
+    border-color: var(--lf-primary);
+  }
 }
 
 .drop-zone--active {
-  border-color: var(--mat-sys-primary);
-  background: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
+  border-color: var(--lf-primary);
+  border-style: solid;
+  background: var(--lf-primary-soft);
 }
 
+.drop-zone--filled {
+  border-style: solid;
+  border-color: var(--lf-primary);
+}
+
+.drop-icon {
+  inline-size: 3rem;
+  block-size: 3rem;
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.drop-icon__sheet {
+  fill: var(--lf-surface);
+  stroke: var(--lf-muted);
+}
+
+.drop-icon__fold {
+  stroke: var(--lf-muted);
+}
+
+.drop-icon__lines {
+  stroke: var(--lf-primary);
+}
+
+.hint {
+  margin: 0;
+  max-inline-size: 28rem;
+  color: var(--lf-muted);
+}
+
+// El campo de fichero se ve como un botón: la etiqueta es la parte visible y el campo sigue siendo accesible.
 .file-label {
-  font: var(--mat-sys-title-medium);
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  padding-inline: 1.25rem;
+  border-radius: var(--lf-radius-s);
+  border: 1px solid var(--lf-primary);
+  color: var(--lf-primary);
+  background: var(--lf-surface);
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--lf-primary-soft);
+  }
 }
 
-.hint,
+.file-input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+}
+
+.file-input:focus-visible + .selected,
+.drop-zone:has(.file-input:focus-visible) .file-label {
+  outline: 3px solid var(--lf-primary);
+  outline-offset: 2px;
+}
+
 .selected {
   margin: 0;
-}
-
-.error {
-  margin: 0;
-  padding: 0.75rem 1rem;
-  border-radius: var(--mat-sys-corner-small);
-  background: var(--mat-sys-error-container);
-  color: var(--mat-sys-on-error-container);
+  overflow-wrap: anywhere;
 }
 
 .actions {
-  display: flex;
-  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.submit {
+  min-block-size: 48px;
+  padding-inline: 2rem;
+  font-size: 1.0625rem;
 }

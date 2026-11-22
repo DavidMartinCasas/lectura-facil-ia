@@ -29,6 +29,13 @@ Licencias comprobadas en el `.nuspec` de cada paquete publicado en NuGet (noviem
 | Paquete | Versión | Licencia | Para qué |
 |---|---|---|---|
 | @sentry/angular (y @sentry/browser, @sentry/core) | 11.10.0 | MIT | Errores de JavaScript en Sentry (US-17) |
+| @fontsource-variable/atkinson-hyperlegible-next | 5.3.0 | SIL OFL 1.1 (fuente) | Tipografía de la interfaz y de la adaptación. Diseñada por el Braille Institute para personas con baja visión |
+| @fontsource-variable/source-serif-4 | 5.3.1 | SIL OFL 1.1 (fuente) | Tipografía del texto original (aspecto de boletín oficial) |
+
+> **Fuentes con licencia SIL OFL 1.1:** permite usarlas, empaquetarlas y redistribuirlas con cualquier software,
+> también comercial; solo prohíbe venderlas por separado. Es la licencia estándar de las fuentes libres y no
+> afecta a la licencia Apache 2.0 del proyecto. Se sirven desde la propia aplicación (`src/fonts.css`, solo
+> alfabetos latino y latino extendido): no se pide nada a Google Fonts ni a otros terceros.
 
 ## Tests
 

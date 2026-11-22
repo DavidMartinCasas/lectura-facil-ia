@@ -38,14 +38,21 @@
     <div
       class="drop-zone"
       [class.drop-zone--active]="dragging()"
+      [class.drop-zone--filled]="file() !== null"
       (dragover)="onDragOver($event)"
       (dragleave)="onDragLeave()"
       (drop)="onDrop($event)"
     >
-      <label for="upload-file" class="file-label">{{ texts.fileLabel }}</label>
+      <svg class="drop-icon" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+        <path d="M13 5h15l10 10v28H13z" class="drop-icon__sheet" />
+        <path d="M28 5v10h10" class="drop-icon__fold" />
+        <path d="M19 26h13M19 31h9M19 36h11" class="drop-icon__lines" />
+      </svg>
       <p id="upload-file-hint" class="hint">{{ texts.dropHint }}</p>
+      <label for="upload-file" class="file-label">{{ texts.fileLabel }}</label>
       <input
         id="upload-file"
+        class="file-input"
         type="file"
         name="file"
         accept="application/pdf,.pdf"
@@ -54,7 +61,9 @@
         [attr.aria-describedby]="error() ? 'upload-file-hint upload-error' : 'upload-file-hint'"
       />
       @if (file(); as selected) {
-        <p class="selected">{{ texts.selectedFile }} {{ selected.name }}</p>
+        <p class="selected">
+          {{ texts.selectedFile }} <strong>{{ selected.name }}</strong>
+        </p>
       }
     </div>
   }
@@ -68,7 +77,12 @@
   }
 
   <div class="actions">
-    <button mat-flat-button type="submit" [attr.aria-disabled]="busy() ? true : null">
+    <button
+      mat-flat-button
+      class="submit"
+      type="submit"
+      [attr.aria-disabled]="busy() ? true : null"
+    >
       {{ busy() ? texts.submitting : texts.submit }}
     </button>
   </div>

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { Router } from '@angular/router';
 import { PublicConfigService } from '../../core/config/public-config.service';
 import { DocumentSubmissionStore } from '../../core/documents/document-submission.store';
@@ -13,7 +12,7 @@ import { UploadFormComponent } from '../upload-form/upload-form';
 /** Pantalla "Nuevo documento": formulario, progreso y, al terminar, paso a la vista del documento. */
 @Component({
   selector: 'app-new-document-page',
-  imports: [MatButtonModule, MatCardModule, ProgressStepsComponent, UploadFormComponent],
+  imports: [MatButtonModule, ProgressStepsComponent, UploadFormComponent],
   providers: [DocumentSubmissionStore],
   templateUrl: './new-document-page.html',
   styleUrl: './page.scss',

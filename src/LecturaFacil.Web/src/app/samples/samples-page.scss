@@ -1,27 +1,64 @@
 // SPDX-License-Identifier: Apache-2.0
+.draft-note {
+  max-inline-size: var(--lf-reading-width);
+}
+
 .samples {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  gap: 1.25rem;
+}
+
+li {
+  display: grid;
+}
+
+mat-card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  border-radius: var(--lf-radius-l);
+  border-color: var(--lf-rule);
+  background: var(--lf-surface);
+  padding: 0.5rem 0.25rem;
 }
 
 h2 {
-  font: var(--mat-sys-title-large);
+  font-size: 1.1875rem;
+  line-height: 1.3;
   margin: 0;
 }
 
 .source {
-  font: var(--mat-sys-body-small);
-  margin-block-end: 0.75rem;
-}
-
-.sample-text {
-  white-space: pre-line;
-  margin-block-start: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--lf-muted);
+  margin: 0.25rem 0 0.75rem;
 }
 
 summary {
   cursor: pointer;
+  font-weight: 600;
+  color: var(--lf-primary);
+}
+
+// El texto de ejemplo se ve como el original: tipo boletín.
+.sample-text {
+  white-space: pre-line;
+  margin: 0.75rem 0 0;
+  padding: 1rem;
+  border-radius: var(--lf-radius-s);
+  background: var(--lf-gazette);
+  font-family: var(--lf-font-serif);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+mat-card-actions {
+  padding-inline: 1rem;
+}
+
+.loading {
+  color: var(--lf-muted);
 }

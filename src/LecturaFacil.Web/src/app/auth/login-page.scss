@@ -1,9 +1,32 @@
 // SPDX-License-Identifier: Apache-2.0
 .login {
-  max-inline-size: 28rem;
+  box-sizing: border-box;
+  max-inline-size: 30rem;
+  margin: clamp(2rem, 8vh, 5rem) auto 4rem;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  display: grid;
+  gap: 1.5rem;
+  background: var(--lf-surface);
+  border: 1px solid var(--lf-rule);
+  border-radius: var(--lf-radius-l);
+}
+
+@media (max-width: 34rem) {
+  .login {
+    margin-inline: 1rem;
+  }
 }
 
 .login-form {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.25rem;
+}
+
+mat-form-field {
+  inline-size: 100%;
+}
+
+.actions button {
+  inline-size: 100%;
+  min-block-size: 48px;
 }

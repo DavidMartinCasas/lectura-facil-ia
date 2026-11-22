@@ -18,7 +18,19 @@
         </dd>
       </div>
     </dl>
-    <p>
+    <div class="scale" aria-hidden="true">
+      <span class="scale-band"></span>
+      <span
+        class="scale-dot scale-dot--before"
+        [style.inset-inline-start.%]="clamp(readability.original.value)"
+      ></span>
+      <span
+        class="scale-dot scale-dot--after"
+        [style.inset-inline-start.%]="clamp(readability.adapted.value)"
+      ></span>
+      <span class="scale-ends"><span>Muy difícil</span><span>Muy fácil</span></span>
+    </div>
+    <p class="improvement">
       {{ texts.improvement }} {{ readability.improvement > 0 ? '+' : ''
       }}{{ readability.improvement | number: '1.0-0' }} {{ texts.points }}
     </p>
