@@ -9,10 +9,10 @@ import {
   untracked,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { RouterLink } from '@angular/router';
 import { DocumentViewStore } from '../../core/documents/document-view.store';
 import { isAwaitingAdaptation, isReviewable } from '../../core/documents/document.models';
+import { statusTone } from '../../core/documents/status-tone';
 import { APP_TEXTS, DOCUMENT_TEXTS, REVIEW_TEXTS, STATUS_LABELS } from '../../core/ui-texts';
 import { ProgressStepsComponent } from '../progress-steps/progress-steps';
 import { DocumentReviewComponent } from '../review/document-review/document-review';
@@ -20,13 +20,7 @@ import { DocumentReviewComponent } from '../review/document-review/document-revi
 /** Vista de un documento: su estado, su progreso y, cuando ya está adaptado, la revisión lado a lado (US-13). */
 @Component({
   selector: 'app-document-page',
-  imports: [
-    DocumentReviewComponent,
-    MatButtonModule,
-    MatCardModule,
-    ProgressStepsComponent,
-    RouterLink,
-  ],
+  imports: [DocumentReviewComponent, MatButtonModule, ProgressStepsComponent, RouterLink],
   providers: [DocumentViewStore],
   templateUrl: './document-page.html',
   styleUrl: './page.scss',
@@ -41,6 +35,7 @@ export class DocumentPage {
   protected readonly statusLabels = STATUS_LABELS;
   protected readonly draftNotice = APP_TEXTS.draftNotice;
   protected readonly isAwaitingAdaptation = isAwaitingAdaptation;
+  protected readonly tone = statusTone;
   protected readonly reviewable = computed(() => {
     const document = this.store.document();
     return document && isReviewable(document) ? document : null;

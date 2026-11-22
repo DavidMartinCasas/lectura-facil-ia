@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { MatButtonModule } from '@angular/material/button';
+import { RouterLink } from '@angular/router';
 import { DocumentListItem } from '../../core/documents/document.models';
 import { DocumentsApiService } from '../../core/documents/documents-api.service';
 import { ApiError } from '../../core/errors/api-error';
@@ -10,10 +12,15 @@ import { DocumentListComponent } from '../document-list/document-list';
 /** Pantalla "Mis documentos". */
 @Component({
   selector: 'app-documents-page',
-  imports: [DocumentListComponent],
+  imports: [DocumentListComponent, MatButtonModule, RouterLink],
   template: `
     <section class="page" aria-labelledby="page-title">
-      <h1 id="page-title">{{ texts.pageTitle }}</h1>
+      <header class="doc-header">
+        <div class="page-header">
+          <h1 id="page-title">{{ texts.pageTitle }}</h1>
+        </div>
+        <a mat-flat-button routerLink="/nuevo">{{ texts.createFirst }}</a>
+      </header>
       <app-document-list
         [documents]="documents()"
         [loading]="loading()"

@@ -3,13 +3,21 @@
   <h2 id="guidelines-title">{{ texts.guidelinesTitle }}</h2>
   @if (report(); as report) {
     <p class="summary">{{ report.summary }}</p>
-    <ul>
+    <ul class="checklist">
       @for (item of report.items; track item.code) {
-        <li class="item" [class.item--warning]="item.status === 'NotCompliant'">
-          <span class="status">{{ statusLabels[item.status] }}</span>
-          · {{ item.description }}
+        <li class="item check" [class.item--warning]="item.status === 'NotCompliant'">
+          <span class="check-head">
+            <span [class]="'chip chip--' + tones[item.status]">{{
+              statusLabels[item.status]
+            }}</span>
+            <span class="check-text">
+              {{ item.description }}
+              @if (item.status === 'NotCompliant') {
+                ({{ item.findingCount }})
+              }
+            </span>
+          </span>
           @if (item.status === 'NotCompliant') {
-            ({{ item.findingCount }})
             <ul class="findings">
               @for (finding of item.findings; track $index) {
                 <li>«{{ finding.fragment }}»: {{ finding.suggestion }}</li>

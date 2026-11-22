@@ -2,25 +2,82 @@
 .scores {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin: 0 0 0.75rem;
-
-  div {
-    padding: 0.5rem 0.75rem;
-    border-radius: var(--mat-sys-corner-small);
-    background: var(--mat-sys-surface);
-  }
+  gap: 1rem;
+  margin: 0 0 1rem;
 
   dt {
-    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--lf-muted);
   }
 
   dd {
     margin: 0;
+    font-weight: 600;
+  }
+
+  div:last-child .value {
+    color: var(--lf-primary);
   }
 }
 
 .value {
   display: block;
-  font: var(--mat-sys-headline-medium);
+  font-size: 2.5rem;
+  line-height: 1.1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+// Escala INFLESZ de 0 a 100 con la posición del original (hueco) y de la adaptación (relleno).
+.scale {
+  position: relative;
+  margin: 0.5rem 0 1rem;
+  padding-block-end: 1.5rem;
+}
+
+.scale-band {
+  display: block;
+  block-size: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--lf-danger-soft),
+    var(--lf-amber-soft),
+    var(--lf-primary-soft)
+  );
+  border: 1px solid var(--lf-rule);
+}
+
+.scale-dot {
+  position: absolute;
+  inset-block-start: -5px;
+  inline-size: 18px;
+  block-size: 18px;
+  margin-inline-start: -9px;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.scale-dot--before {
+  border: 3px solid var(--lf-muted);
+  background: var(--lf-surface);
+}
+
+.scale-dot--after {
+  background: var(--lf-primary);
+  border: 3px solid var(--lf-surface);
+}
+
+.scale-ends {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  color: var(--lf-muted);
+}
+
+.improvement {
+  font-weight: 700;
 }

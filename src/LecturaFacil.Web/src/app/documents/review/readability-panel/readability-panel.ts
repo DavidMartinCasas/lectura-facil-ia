@@ -16,4 +16,9 @@ export class ReadabilityPanelComponent {
   readonly readability = input.required<ReadabilityComparison | null>();
 
   protected readonly texts = REVIEW_TEXTS;
+
+  /** Posición en la escala INFLESZ (0 – 100) para el dibujo; el valor exacto se escribe aparte. */
+  protected clamp(value: number): number {
+    return Math.min(100, Math.max(0, value));
+  }
 }

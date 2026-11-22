@@ -1,22 +1,174 @@
 // SPDX-License-Identifier: Apache-2.0
 .home {
-  max-width: 48rem;
+  max-inline-size: var(--lf-page-width);
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: clamp(2.5rem, 6vw, 4.5rem) var(--lf-gutter) 4rem;
+  display: grid;
+  gap: clamp(2.5rem, 5vw, 4rem);
+  box-sizing: border-box;
+}
+
+.hero {
+  display: grid;
+  gap: 1rem;
+  max-inline-size: 46rem;
 }
 
 h1 {
-  font: var(--mat-sys-display-small);
-  margin: 0 0 1rem;
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--lf-primary);
+}
+
+.claim {
+  margin: 0;
+  font-size: clamp(2rem, 1.4rem + 2.6vw, 3.25rem);
+  line-height: 1.08;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 
 .intro {
-  margin: 0 0 1.5rem;
+  margin: 0;
+  font-size: 1.1875rem;
+  color: var(--lf-muted);
+  max-inline-size: 38rem;
 }
 
 .actions {
-  display: flex;
-  flex-wrap: wrap;
+  margin-block-start: 0.5rem;
+}
+
+// El ejemplo: el mismo contenido en el formato del boletín y en lectura fácil.
+.specimen {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  align-items: stretch;
+  border-radius: var(--lf-radius-l);
+  overflow: hidden;
+  border: 1px solid var(--lf-rule);
+  background: var(--lf-surface);
+}
+
+.sheet {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+.sheet--original {
+  background: var(--lf-gazette);
+  border-inline-end: 1px solid var(--lf-rule);
+}
+
+.sheet-label {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--lf-muted);
+}
+
+.sheet--adapted .sheet-label {
+  color: var(--lf-primary);
+}
+
+.gazette {
+  margin: 0;
+  font-family: var(--lf-font-serif);
+  font-size: 1rem;
+  line-height: 1.65;
+  text-align: justify;
+  hyphens: auto;
+  color: var(--lf-muted);
+}
+
+.easy {
+  display: grid;
   gap: 0.75rem;
-  margin-block-start: 1.5rem;
+  font-size: 1.3125rem;
+  line-height: 1.5;
+}
+
+.easy-question {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.375rem;
+}
+
+.easy ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.625rem;
+}
+
+.easy li {
+  padding-inline-start: 1rem;
+  border-inline-start: 4px solid var(--lf-primary);
+}
+
+.how {
+  display: grid;
+  gap: 1.25rem;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1.5rem 2rem;
+
+  li {
+    counter-increment: step;
+    display: grid;
+    gap: 0.375rem;
+    padding-block-start: 1rem;
+    border-block-start: 2px solid var(--lf-ink);
+  }
+
+  li::before {
+    content: counter(step);
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--lf-primary);
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1.1875rem;
+  }
+
+  p {
+    margin: 0;
+    color: var(--lf-muted);
+  }
+}
+
+.draft-note {
+  max-inline-size: var(--lf-reading-width);
+}
+
+@media (max-width: 720px) {
+  .specimen {
+    grid-template-columns: 1fr;
+  }
+
+  .sheet--original {
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--lf-rule);
+  }
 }

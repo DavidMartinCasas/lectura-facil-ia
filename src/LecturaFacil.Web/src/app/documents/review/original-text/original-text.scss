@@ -1,30 +1,41 @@
 // SPDX-License-Identifier: Apache-2.0
+// El original se presenta como un boletín oficial: serif, denso y en papel gris. Así el contraste con la
+// adaptación se ve sin leer nada.
 :host {
   display: block;
 }
 
 h2 {
-  font: var(--mat-sys-title-large);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--lf-muted);
   margin: 0 0 0.5rem;
 }
 
 h3 {
-  font: var(--mat-sys-title-medium);
+  font-size: 1.0625rem;
   margin: 0 0 0.5rem;
   overflow-wrap: anywhere;
 }
 
 .hint {
-  margin: 0 0 0.75rem;
-  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 1.25rem;
+  font-size: 0.9375rem;
+  color: var(--lf-muted);
 }
 
 .text {
+  font-family: var(--lf-font-serif);
+  font-size: 1rem;
+  line-height: 1.7;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  line-height: 1.7;
+  hyphens: auto;
+  color: var(--lf-ink);
+  max-inline-size: 40rem;
 }
 
+// Fragmento con problemas: subrayado ondulado y fondo ámbar. Es un botón: se puede activar con el teclado.
 .mark {
   display: inline;
   font: inherit;
@@ -35,27 +46,41 @@ h3 {
   padding: 0;
   border: 0;
   border-radius: 2px;
-  background: var(--mat-sys-tertiary-container);
-  text-decoration: underline wavy var(--mat-sys-error);
+  background: var(--lf-amber-soft);
+  text-decoration: underline wavy var(--lf-amber);
+  text-decoration-thickness: 1.5px;
   text-underline-offset: 3px;
   cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--lf-amber) 22%, transparent);
+  }
 }
 
 .mark--selected {
-  background: var(--mat-sys-primary-container);
-  outline: 2px solid var(--mat-sys-primary);
+  background: var(--lf-primary-soft);
+  text-decoration-color: var(--lf-primary);
+  outline: 2px solid var(--lf-primary);
 }
 
+// Detalle del fragmento seleccionado: se queda a la vista al bajar por el texto.
 .detail:not(:empty) {
-  margin-block-start: 1rem;
-  padding: 0.75rem 1rem;
-  border-radius: var(--mat-sys-corner-small);
-  border: 1px solid var(--mat-sys-outline-variant);
+  position: sticky;
+  inset-block-end: 1rem;
+  margin-block-start: 1.25rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--lf-radius-m);
+  border: 1px solid var(--lf-rule);
+  border-inline-start: 4px solid var(--lf-amber);
+  background: var(--lf-surface);
+  box-shadow: 0 10px 24px -16px rgb(0 0 0 / 45%);
 }
 
 ul {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.75rem;
   padding-inline-start: 1.25rem;
+  display: grid;
+  gap: 0.5rem;
 }
 
 p {
@@ -64,15 +89,21 @@ p {
 
 .severity {
   margin-inline-start: 0.25rem;
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--lf-muted);
 }
 
 .close {
   font: inherit;
-  padding: 0.25rem 0.75rem;
-  border-radius: var(--mat-sys-corner-small);
-  border: 1px solid var(--mat-sys-outline);
-  background: transparent;
+  font-weight: 600;
+  min-block-size: 40px;
+  padding: 0.25rem 1rem;
+  border-radius: var(--lf-radius-s);
+  border: 1px solid var(--lf-rule);
+  background: var(--lf-surface);
   color: inherit;
   cursor: pointer;
+
+  &:hover {
+    background: var(--lf-page);
+  }
 }

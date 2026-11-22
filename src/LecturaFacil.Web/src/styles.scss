@@ -1,43 +1,239 @@
 // SPDX-License-Identifier: Apache-2.0
-// Tema de Angular Material (Material 3). Fuentes del sistema: no se cargan recursos de terceros.
+// Tema de Angular Material (Material 3) y tokens de diseño de la aplicación.
+//
+// Idea visual: "del boletín a la hoja clara". El texto original se presenta como un boletín oficial (serif, denso,
+// papel gris); la adaptación, como una hoja de lectura fácil (Atkinson Hyperlegible, grande y con aire). El resto
+// de la interfaz es sobrio para que ese contraste sea lo que se recuerde.
+//
+// Las fuentes van dentro de la aplicación (@fontsource, licencia OFL; src/fonts.css): no se pide
+// ningún recurso a terceros y la CSP (font-src 'self') no cambia.
 @use '@angular/material' as mat;
+
+:root {
+  // Colores base. light-dark() elige el valor según el tema claro u oscuro del sistema.
+  --lf-ink: light-dark(#17252f, #e3e9ee);
+  --lf-muted: light-dark(#4b5a63, #a9b6bd);
+  --lf-page: light-dark(#edf1f0, #0f1619);
+  --lf-surface: light-dark(#ffffff, #172126);
+  --lf-rule: light-dark(#c9d3d1, #2e3b41);
+  // Verde sello: el color de la administración que firma y valida.
+  --lf-primary: light-dark(#0d6b5e, #6fd3c1);
+  --lf-on-primary: light-dark(#ffffff, #00201b);
+  --lf-primary-soft: light-dark(#d8efea, #14403a);
+  // Ámbar: todo lo que está pendiente de una persona (borrador, revisar).
+  --lf-amber: light-dark(#8f4504, #f5b56b);
+  --lf-amber-soft: light-dark(#fdebd3, #3a2810);
+  // Papel del boletín para el texto original.
+  --lf-gazette: light-dark(#f5f6f3, #1b2328);
+  --lf-danger: light-dark(#a3231c, #ffb4ab);
+  --lf-danger-soft: light-dark(#fbe3e0, #4a1612);
+
+  // Tipografía.
+  --lf-font-sans: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
+  --lf-font-serif: 'Source Serif 4 Variable', Georgia, 'Times New Roman', serif;
+
+  // Medidas.
+  --lf-radius-s: 6px;
+  --lf-radius-m: 10px;
+  --lf-radius-l: 16px;
+  // Ancho completo de la pantalla; solo los textos largos tienen una medida máxima de lectura.
+  --lf-page-width: 100%;
+  --lf-gutter: clamp(1.25rem, 3vw, 3rem);
+  --lf-reading-width: 42rem;
+}
 
 html {
   height: 100%;
-  // Tema claro u oscuro según la preferencia del sistema: los tokens de Material 3 usan light-dark().
   color-scheme: light dark;
   @include mat.theme(
     (
       color: (
-        primary: mat.$azure-palette,
-        tertiary: mat.$blue-palette,
+        primary: mat.$cyan-palette,
+        tertiary: mat.$orange-palette,
       ),
       typography: (
-        plain-family: system-ui,
-        brand-family: system-ui,
+        plain-family: var(--lf-font-sans),
+        brand-family: var(--lf-font-sans),
       ),
       density: 0,
+    )
+  );
+
+  // Los componentes de Material usan estos tokens: así heredan la paleta propia.
+  @include mat.theme-overrides(
+    (
+      primary: var(--lf-primary),
+      on-primary: var(--lf-on-primary),
+      primary-container: var(--lf-primary-soft),
+      on-primary-container: var(--lf-ink),
+      tertiary: var(--lf-amber),
+      tertiary-container: var(--lf-amber-soft),
+      on-tertiary-container: var(--lf-ink),
+      error: var(--lf-danger),
+      error-container: var(--lf-danger-soft),
+      on-error-container: var(--lf-ink),
+      surface: var(--lf-surface),
+      on-surface: var(--lf-ink),
+      on-surface-variant: var(--lf-muted),
+      surface-container-lowest: var(--lf-surface),
+      surface-container-low: var(--lf-surface),
+      surface-container: var(--lf-surface),
+      outline: var(--lf-muted),
+      outline-variant: var(--lf-rule),
+    )
+  );
+
+  @include mat.button-overrides(
+    (
+      filled-container-shape: var(--lf-radius-s),
+      outlined-container-shape: var(--lf-radius-s),
+      text-container-shape: var(--lf-radius-s),
     )
   );
 }
 
 body {
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-large);
+  background-color: var(--lf-page);
+  color: var(--lf-ink);
+  font-family: var(--lf-font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.55;
   margin: 0;
-  height: 100%;
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--lf-font-sans);
+  color: var(--lf-ink);
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 // Foco siempre visible al usar el teclado (WCAG 2.4.7 y 2.4.11). Con !important porque los componentes de
 // Material quitan el contorno y su indicador por defecto es poco visible.
 :focus-visible {
-  outline: 3px solid var(--mat-sys-primary) !important;
+  outline: 3px solid var(--lf-primary) !important;
   outline-offset: 2px !important;
 }
 
 a {
-  color: var(--mat-sys-primary);
+  color: var(--lf-primary);
+  text-underline-offset: 0.2em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+// Contenedor de página y su cabecera: las pantallas comparten el mismo ritmo.
+.page {
+  max-inline-size: var(--lf-page-width);
+  margin: 0 auto;
+  padding: 2.5rem var(--lf-gutter) 4rem;
+  display: grid;
+  gap: 1.75rem;
+  box-sizing: border-box;
+}
+
+.page-header {
+  display: grid;
+  gap: 0.5rem;
+  max-inline-size: var(--lf-reading-width);
+
+  h1 {
+    font-size: clamp(1.75rem, 1.4rem + 1.2vw, 2.375rem);
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  .intro,
+  p {
+    margin: 0;
+    color: var(--lf-muted);
+    font-size: 1.125rem;
+  }
+}
+
+// Aviso de borrador: aparece en varias pantallas con el mismo aspecto.
+.draft-note {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0.875rem 1rem;
+  border-inline-start: 4px solid var(--lf-amber);
+  border-radius: 0 var(--lf-radius-s) var(--lf-radius-s) 0;
+  background: var(--lf-amber-soft);
+  color: var(--lf-ink);
+}
+
+// Mensajes de error con acción.
+.error {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+  margin: 0;
+  padding: 0.875rem 1rem;
+  border-radius: var(--lf-radius-s);
+  border: 1px solid var(--lf-danger);
+  background: var(--lf-danger-soft);
+  color: var(--lf-ink);
+
+  p {
+    margin: 0;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+// Etiqueta de estado (documentos, datos clave, pautas). El estado se dice siempre con texto, no solo con color.
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+  background: var(--lf-page);
+  color: var(--lf-ink);
+  border: 1px solid var(--lf-rule);
+}
+
+.chip--ok {
+  background: var(--lf-primary-soft);
+  border-color: transparent;
+}
+
+.chip--pending {
+  background: var(--lf-amber-soft);
+  border-color: transparent;
+}
+
+.chip--danger {
+  background: var(--lf-danger-soft);
+  border-color: transparent;
 }
 
 // Texto solo para lectores de pantalla.
@@ -60,9 +256,9 @@ a {
   inset-inline-start: 1rem;
   z-index: 10;
   padding: 0.5rem 1rem;
-  background: var(--mat-sys-primary);
-  color: var(--mat-sys-on-primary);
-  border-radius: var(--mat-sys-corner-small);
+  background: var(--lf-primary);
+  color: var(--lf-on-primary);
+  border-radius: var(--lf-radius-s);
 
   &:focus {
     inset-block-start: 0.5rem;

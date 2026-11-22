@@ -2,10 +2,10 @@
 <div class="review">
   <div class="banner" role="region" [attr.aria-label]="texts.draftLabel">
     <strong class="draft">{{ texts.draftLabel }}</strong>
-    <span>
-      {{ texts.processedBy }} <strong>{{ adaptation().provider }}</strong> · {{ texts.version }}
-      {{ adaptation().version }}
+    <span class="meta">
+      {{ texts.processedBy }} <strong>{{ adaptation().provider }}</strong>
     </span>
+    <span class="meta">{{ texts.version }} {{ adaptation().version }}</span>
     <span class="export" [class.export--blocked]="!adaptation().canExport">{{
       exportMessage()
     }}</span>
@@ -47,18 +47,19 @@
 
   <div class="panels">
     <app-key-facts-panel
+      class="panel-wide"
       [verification]="adaptation().verification"
       [editable]="editable()"
       [saving]="saving()"
       (acknowledge)="acknowledge.emit($event)"
     />
+    <app-guidelines-panel [report]="adaptation().guidelines" />
+    <app-readability-panel [readability]="document().readability" />
     <app-export-panel
       [canExport]="adaptation().canExport"
       [blockedMessage]="exportMessage()"
       [exporting]="exporting() || saving()"
       (exportAdaptation)="exportAdaptation.emit($event)"
     />
-    <app-guidelines-panel [report]="adaptation().guidelines" />
-    <app-readability-panel [readability]="document().readability" />
   </div>
 </div>

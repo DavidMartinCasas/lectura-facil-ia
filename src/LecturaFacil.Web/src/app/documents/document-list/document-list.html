@@ -12,7 +12,8 @@
 } @else if (documents(); as items) {
   @if (items.length === 0) {
     <div class="empty">
-      <p>{{ texts.empty }}</p>
+      <p class="empty-title">{{ texts.empty }}</p>
+      <p>Pega un texto o sube un PDF y en unos minutos tendrás una propuesta en lectura fácil.</p>
       <a mat-flat-button routerLink="/nuevo">{{ texts.createFirst }}</a>
     </div>
   } @else {
@@ -27,7 +28,7 @@
         <ng-container matColumnDef="title">
           <th mat-header-cell *matHeaderCellDef scope="col">{{ texts.columnTitle }}</th>
           <td mat-cell *matCellDef="let item">
-            <a [routerLink]="['/documentos', item.id]">{{ item.title }}</a>
+            <a class="title-link" [routerLink]="['/documentos', item.id]">{{ item.title }}</a>
           </td>
         </ng-container>
 
@@ -40,7 +41,9 @@
 
         <ng-container matColumnDef="status">
           <th mat-header-cell *matHeaderCellDef scope="col">{{ texts.columnStatus }}</th>
-          <td mat-cell *matCellDef="let item">{{ statusLabel(item) }}</td>
+          <td mat-cell *matCellDef="let item">
+            <span [class]="'chip chip--' + tone(item.status)">{{ statusLabel(item) }}</span>
+          </td>
         </ng-container>
 
         <ng-container matColumnDef="provider">

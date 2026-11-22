@@ -1,37 +1,52 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <section class="page" aria-labelledby="page-title">
-  <h1 id="page-title">{{ texts.pageTitle }}</h1>
-  <p class="intro">{{ texts.intro }}</p>
+  <div class="page-header">
+    <h1 id="page-title">{{ texts.pageTitle }}</h1>
+    <p class="intro">{{ texts.intro }}</p>
+  </div>
 
-  <mat-card appearance="outlined" class="notice" role="note">
-    <mat-card-content>{{ draftNotice }}</mat-card-content>
-  </mat-card>
+  <div class="compose">
+    <div class="compose-main">
+      @if (showForm()) {
+        <app-upload-form
+          [busy]="store.phase() === 'submitting'"
+          [turnstileSiteKey]="turnstileSiteKey()"
+          (submitted)="submit($event)"
+        />
+      }
 
-  @if (showForm()) {
-    <app-upload-form
-      [busy]="store.phase() === 'submitting'"
-      [turnstileSiteKey]="turnstileSiteKey()"
-      (submitted)="submit($event)"
-    />
-  }
+      @if (store.steps(); as steps) {
+        <app-progress-steps [steps]="steps" />
+      }
 
-  @if (store.steps(); as steps) {
-    <app-progress-steps [steps]="steps" />
-  }
-
-  @if (store.error(); as message) {
-    <div class="error" role="alert">
-      <p>{{ message }}</p>
-      <div class="actions">
-        <button mat-flat-button type="button" (click)="store.retry()">
-          {{ progressTexts.retry }}
-        </button>
-        @if (!showForm()) {
-          <button mat-stroked-button type="button" (click)="store.reset()">
-            {{ progressTexts.startOver }}
-          </button>
-        }
-      </div>
+      @if (store.error(); as message) {
+        <div class="error" role="alert">
+          <p>{{ message }}</p>
+          <div class="actions">
+            <button mat-flat-button type="button" (click)="store.retry()">
+              {{ progressTexts.retry }}
+            </button>
+            @if (!showForm()) {
+              <button mat-stroked-button type="button" (click)="store.reset()">
+                {{ progressTexts.startOver }}
+              </button>
+            }
+          </div>
+        </div>
+      }
     </div>
-  }
+
+    @if (showForm() && !store.steps()) {
+      <aside class="compose-aside" aria-labelledby="next-title">
+        <h2 id="next-title">Qué pasa después</h2>
+        <ol>
+          <li>Se marcan los problemas de lectura fácil del texto original.</li>
+          <li>La IA propone una adaptación y se comprueban las pautas.</li>
+          <li>Otro modelo revisa que no se pierdan plazos, importes ni requisitos.</li>
+          <li>Revisas el resultado, lo corriges si hace falta y lo exportas.</li>
+        </ol>
+        <p class="draft-note" role="note">{{ draftNotice }}</p>
+      </aside>
+    }
+  </div>
 </section>

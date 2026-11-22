@@ -5,48 +5,116 @@
 
 .review {
   display: grid;
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
 // La etiqueta de borrador se queda siempre a la vista al desplazarse.
 .banner {
   position: sticky;
   inset-block-start: 0;
-  z-index: 1;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1rem;
-  padding: 0.75rem 1rem;
-  border-radius: var(--mat-sys-corner-small);
-  border: 2px solid var(--mat-sys-tertiary);
-  background: var(--mat-sys-tertiary-container);
-  color: var(--mat-sys-on-tertiary-container);
+  gap: 0.5rem 1.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--lf-radius-m);
+  border: 1px solid var(--lf-amber);
+  background: var(--lf-amber-soft);
+  color: var(--lf-ink);
+  box-shadow: 0 6px 16px -12px rgb(0 0 0 / 35%);
 }
 
+// Sello de borrador: un recuadro con el borde del color de "pendiente".
 .draft {
-  font: var(--mat-sys-title-medium);
+  padding: 0.125rem 0.625rem;
+  border: 2px solid var(--lf-amber);
+  border-radius: var(--lf-radius-s);
+  color: var(--lf-amber);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.meta {
+  font-size: 0.9375rem;
+}
+
+.export {
+  margin-inline-start: auto;
+  font-size: 0.9375rem;
+  color: var(--lf-muted);
 }
 
 .export--blocked {
-  font-weight: 600;
+  color: var(--lf-ink);
+  font-weight: 700;
 }
 
+// En pantallas pequeñas el aviso sigue fijo (US-13: la etiqueta de borrador se ve siempre), pero más compacto.
+@media (max-width: 48rem) {
+  .banner {
+    gap: 0.125rem 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--lf-radius-s);
+  }
+
+  .draft {
+    font-size: 0.9375rem;
+  }
+
+  .meta,
+  .export {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+
+  .export {
+    margin-inline-start: 0;
+    flex-basis: 100%;
+  }
+}
+
+// Original y adaptación: dos hojas distintas, una al lado de la otra.
 .columns {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2rem;
-  align-items: start;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 0;
+  align-items: stretch;
+  border: 1px solid var(--lf-rule);
+  border-radius: var(--lf-radius-l);
+  overflow: hidden;
+  background: var(--lf-surface);
 }
 
-.panels {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-  gap: 1rem;
-  align-items: start;
+.columns app-original-text {
+  background: var(--lf-gazette);
+  border-inline-end: 1px solid var(--lf-rule);
+}
+
+mat-tab-group {
+  border: 1px solid var(--lf-rule);
+  border-radius: var(--lf-radius-l);
+  overflow: hidden;
+  background: var(--lf-surface);
 }
 
 app-original-text,
 app-adapted-text {
-  padding-block-start: 0.5rem;
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+}
+
+mat-tab-group app-original-text {
+  background: var(--lf-gazette);
+}
+
+// Paneles: los datos clave primero y a lo ancho, porque son lo que más hay que revisar.
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.panel-wide {
+  grid-column: 1 / -1;
 }

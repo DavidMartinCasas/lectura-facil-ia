@@ -5,6 +5,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { DocumentListItem } from '../../core/documents/document.models';
+import { statusTone } from '../../core/documents/status-tone';
 import { LIST_TEXTS, STATUS_LABELS } from '../../core/ui-texts';
 
 const DATE_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
@@ -24,6 +25,7 @@ export class DocumentListComponent {
   readonly retry = output();
 
   protected readonly texts = LIST_TEXTS;
+  protected readonly tone = statusTone;
   protected readonly columns = ['title', 'createdAt', 'status', 'provider'] as const;
 
   protected statusLabel(item: DocumentListItem): string {

@@ -7,35 +7,44 @@
       <p class="hint">{{ texts.notVerified }}</p>
     }
     <p class="hint">{{ texts.keyFactsHint }}</p>
-    <ul>
+    <ul class="facts">
       @for (fact of verification.keyFacts; track fact.id) {
         <li
           class="item"
           [class.item--warning]="fact.requiresAcknowledgement"
           [class.item--done]="fact.acknowledged"
         >
-          <p>
-            <span class="status">{{ statusLabels[fact.status] }}</span>
-            · {{ typeLabels[fact.type] }}
+          <p class="fact-head">
+            <span [class]="'chip chip--' + factTone(fact.status)">{{
+              statusLabels[fact.status]
+            }}</span>
+            <span class="fact-type">{{ typeLabels[fact.type] }}</span>
             @if (fact.acknowledged) {
-              · <span class="status">✓ {{ texts.acknowledged }}</span>
+              <span class="chip chip--ok">✓ {{ texts.acknowledged }}</span>
             }
           </p>
-          <p>{{ texts.original }} «{{ fact.originalValue }}»</p>
-          <p>
-            {{ texts.adapted }}
-            @if (fact.adaptedValue; as adapted) {
-              «{{ adapted }}»
-            } @else {
-              {{ texts.notInAdaptation }}
-            }
-          </p>
+          <dl class="fact-values">
+            <div>
+              <dt>{{ texts.original }}</dt>
+              <dd>«{{ fact.originalValue }}»</dd>
+            </div>
+            <div>
+              <dt>{{ texts.adapted }}</dt>
+              <dd>
+                @if (fact.adaptedValue; as adapted) {
+                  «{{ adapted }}»
+                } @else {
+                  <em>{{ texts.notInAdaptation }}</em>
+                }
+              </dd>
+            </div>
+          </dl>
           @if (fact.reasonMessage) {
             <p class="reason">{{ fact.reasonMessage }}</p>
           }
           @if (fact.requiresAcknowledgement && editable()) {
             <button
-              mat-flat-button
+              mat-stroked-button
               type="button"
               [attr.aria-label]="texts.acknowledge + ': ' + fact.originalValue"
               [disabled]="saving()"

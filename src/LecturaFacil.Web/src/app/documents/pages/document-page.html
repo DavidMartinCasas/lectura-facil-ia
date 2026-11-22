@@ -1,14 +1,28 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <section class="page" aria-labelledby="page-title">
+  <a class="back" routerLink="/documentos">
+    <span aria-hidden="true">←</span> {{ texts.backToList }}
+  </a>
+
   @if (store.document(); as document) {
-    <h1 id="page-title">{{ document.title }}</h1>
+    <header class="doc-header">
+      <div class="page-header">
+        <h1 id="page-title">{{ document.title }}</h1>
+        @if (store.status(); as status) {
+          <p class="status-line">
+            {{ texts.statusLabel }}
+            <span [class]="'chip chip--' + tone(status)">{{ statusLabels[status] }}</span>
+          </p>
+        }
+      </div>
+    </header>
+
     @if (store.status(); as status) {
-      <p>
-        <strong>{{ texts.statusLabel }}</strong> {{ statusLabels[status] }}
-      </p>
       @if (isAwaitingAdaptation(status) || status === 'Error') {
         @if (store.steps(); as steps) {
-          <app-progress-steps [steps]="steps" />
+          <div class="progress-card">
+            <app-progress-steps [steps]="steps" />
+          </div>
         }
       }
       @if (status === 'Error') {
@@ -16,9 +30,9 @@
       }
     }
 
-    <mat-card appearance="outlined" role="note">
-      <mat-card-content>{{ draftNotice }}</mat-card-content>
-    </mat-card>
+    @if (!reviewable()) {
+      <p class="draft-note" role="note">{{ draftNotice }}</p>
+    }
 
     @if (store.actionError(); as message) {
       <p class="error" role="alert">{{ message }}</p>
@@ -37,7 +51,7 @@
   } @else {
     <h1 id="page-title" class="visually-hidden">{{ texts.loading }}</h1>
     @if (store.loading()) {
-      <p role="status">{{ texts.loading }}</p>
+      <p class="loading" role="status">{{ texts.loading }}</p>
     }
   }
 
@@ -49,6 +63,4 @@
       </div>
     </div>
   }
-
-  <a mat-stroked-button routerLink="/documentos">{{ texts.backToList }}</a>
 </section>

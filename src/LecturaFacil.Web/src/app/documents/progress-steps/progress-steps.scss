@@ -1,70 +1,122 @@
 // SPDX-License-Identifier: Apache-2.0
-h2 {
-  font: var(--mat-sys-title-large);
-  margin: 0 0 0.75rem;
+:host {
+  display: block;
 }
 
+h2 {
+  font-size: 1.25rem;
+  margin: 0 0 1.25rem;
+}
+
+// Línea de tiempo vertical: cada paso es un punto unido al siguiente.
 .steps {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.5rem;
 }
 
 .step {
-  display: flex;
+  position: relative;
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--mat-sys-corner-small);
-  border: 1px solid var(--mat-sys-outline-variant);
+  column-gap: 1rem;
+  padding-block-end: 1.25rem;
+
+  // Tramo que une este paso con el siguiente.
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: calc(1rem - 1px);
+    inset-block: 2rem 0;
+    inline-size: 2px;
+    background: var(--lf-rule);
+  }
 }
 
 .marker {
   display: inline-grid;
   place-items: center;
-  inline-size: 1.75rem;
-  block-size: 1.75rem;
+  inline-size: 2rem;
+  block-size: 2rem;
+  box-sizing: border-box;
   border-radius: 50%;
-  border: 2px solid currentColor;
+  border: 2px solid var(--lf-rule);
+  background: var(--lf-surface);
+  color: var(--lf-muted);
   font-weight: 700;
+  font-size: 0.9375rem;
 }
 
 .label {
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--lf-muted);
 }
 
 .state {
-  color: var(--mat-sys-on-surface-variant);
+  font-weight: 400;
+  color: var(--lf-muted);
 }
 
 .step--done {
+  &::after {
+    background: var(--lf-primary) !important;
+  }
+
   .marker {
-    background: var(--mat-sys-primary);
-    border-color: var(--mat-sys-primary);
-    color: var(--mat-sys-on-primary);
+    background: var(--lf-primary);
+    border-color: var(--lf-primary);
+    color: var(--lf-on-primary);
+  }
+
+  .label {
+    color: var(--lf-ink);
   }
 }
 
 .step--current {
-  border-color: var(--mat-sys-primary);
-  border-width: 2px;
-  background: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
+  .marker {
+    border-color: var(--lf-primary);
+    border-inline-end-color: transparent;
+    color: transparent;
+    animation: spin 0.9s linear infinite;
+  }
+
+  .label {
+    color: var(--lf-ink);
+    font-size: 1.125rem;
+  }
 
   .state {
-    color: inherit;
+    color: var(--lf-primary);
+    font-weight: 600;
   }
 }
 
 .step--failed {
-  border-color: var(--mat-sys-error);
-  border-width: 2px;
-  background: var(--mat-sys-error-container);
-  color: var(--mat-sys-on-error-container);
+  .marker {
+    background: var(--lf-danger);
+    border-color: var(--lf-danger);
+    color: var(--lf-surface);
+  }
 
+  .label,
   .state {
-    color: inherit;
+    color: var(--lf-danger);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step--current .marker {
+    animation: none;
+    border-inline-end-color: var(--lf-primary);
+    background: var(--lf-primary-soft);
   }
 }
