@@ -16,7 +16,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import {
   DOCUMENT_STATUSES,
@@ -47,7 +47,6 @@ export const SEARCH_DEBOUNCE_MS = 300;
     MatInputModule,
     MatProgressBarModule,
     MatSelectModule,
-    RouterLink,
   ],
   templateUrl: './documents-page.html',
   styleUrls: ['./page.scss', './documents-page.scss'],

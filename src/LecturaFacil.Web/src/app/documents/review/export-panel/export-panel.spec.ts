@@ -16,48 +16,49 @@ async function render(canExport: boolean, exporting = false) {
   fixture.componentInstance.exportAdaptation.subscribe((format) => exported.push(format));
   await fixture.whenStable();
   const element = fixture.nativeElement as HTMLElement;
-  const button = () => element.querySelector<HTMLButtonElement>('button')!;
-  return { fixture, element, exported, button };
+  const button = () => element.querySelector<HTMLButtonElement>('.export-button')!;
+  /** El menú se pinta en una capa fuera del componente. */
+  const menuItems = async () => {
+    button().click();
+    await fixture.whenStable();
+    return [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')];
+  };
+  return { element, exported, button, menuItems };
 }
 
 describe('ExportPanelComponent', () => {
-  it('offers the four formats with DOCX selected by default', async () => {
-    const { element, exported, button } = await render(true);
+  afterEach(() => document.querySelectorAll('.cdk-overlay-container').forEach((c) => c.remove()));
 
-    const options = [...element.querySelectorAll('mat-radio-button')].map((option) =>
-      option.textContent?.trim(),
-    );
+  it('offers the four formats in a menu', async () => {
+    const { menuItems } = await render(true);
+
+    const options = (await menuItems()).map((item) => item.textContent?.trim());
+
     expect(options).toEqual(['DOCX (Word o LibreOffice)', 'PDF', 'Markdown', 'Texto']);
-    button().click();
-
-    expect(exported).toEqual(['docx']);
   });
 
   it('exports in the format the person chooses', async () => {
-    const { fixture, element, exported, button } = await render(true);
+    const { exported, menuItems } = await render(true);
 
-    element.querySelectorAll<HTMLInputElement>('input[type="radio"]')[2].click();
-    await fixture.whenStable();
-    button().click();
+    (await menuItems())[2].click();
 
     expect(exported).toEqual(['md']);
   });
 
   it('is disabled and explains why while there are pending warnings', async () => {
-    const { element, exported, button } = await render(false);
+    const { element, button } = await render(false);
 
     expect(button().disabled).toBe(true);
-    expect(element.textContent).toContain('marca como revisado el dato clave con aviso');
-    button().click();
-    expect(exported).toEqual([]);
+    const describedBy = button().getAttribute('aria-describedby')!;
+    expect(element.querySelector(`#${describedBy}`)?.textContent).toContain(
+      'marca como revisado el dato clave con aviso',
+    );
   });
 
-  it('shows the progress and does not export twice', async () => {
-    const { exported, button } = await render(true, true);
+  it('shows the progress while exporting', async () => {
+    const { button } = await render(true, true);
 
     expect(button().disabled).toBe(true);
     expect(button().textContent).toContain(REVIEW_TEXTS.exporting);
-    button().click();
-    expect(exported).toEqual([]);
   });
 });

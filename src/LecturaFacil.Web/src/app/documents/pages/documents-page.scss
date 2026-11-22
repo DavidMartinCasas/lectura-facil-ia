@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // "Mis documentos": barra de búsqueda y filtro encima de la tabla, y "Cargar más" debajo.
+@use '@angular/material' as mat;
 
 .filters {
+  @include mat.form-field-density(-3);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -28,7 +30,7 @@
   inset-inline: 0;
   inset-block-start: 0;
   z-index: 1;
-  border-radius: var(--lf-radius-l) var(--lf-radius-l) 0 0;
+  border-radius: var(--lf-radius-m) var(--lf-radius-m) 0 0;
   overflow: hidden;
 }
 

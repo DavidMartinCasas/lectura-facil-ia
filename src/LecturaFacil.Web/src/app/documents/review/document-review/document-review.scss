@@ -5,10 +5,10 @@
 
 .review {
   display: grid;
-  gap: 2rem;
+  gap: 1.25rem;
 }
 
-// La etiqueta de borrador se queda siempre a la vista al desplazarse.
+// Barra del documento: la etiqueta de borrador, la versión y la exportación se quedan a la vista al desplazarse.
 .banner {
   position: sticky;
   inset-block-start: 0;
@@ -16,13 +16,13 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1.5rem;
-  padding: 0.75rem 1.25rem;
+  gap: 0.5rem 1.25rem;
+  padding: 0.625rem 0.75rem 0.625rem 1rem;
+  border: 1px solid var(--lf-rule);
   border-radius: var(--lf-radius-m);
-  border: 1px solid var(--lf-amber);
-  background: var(--lf-amber-soft);
+  background: var(--lf-surface);
   color: var(--lf-ink);
-  box-shadow: 0 6px 16px -12px rgb(0 0 0 / 35%);
+  box-shadow: 0 8px 20px -16px rgb(0 0 0 / 45%);
 }
 
 // Sello de borrador: un recuadro con el borde del color de "pendiente".
@@ -30,58 +30,49 @@
   padding: 0.125rem 0.625rem;
   border: 2px solid var(--lf-amber);
   border-radius: var(--lf-radius-s);
+  background: var(--lf-amber-soft);
   color: var(--lf-amber);
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 700;
 }
 
 .meta {
   font-size: 0.9375rem;
-}
-
-.export {
-  margin-inline-start: auto;
-  font-size: 0.9375rem;
   color: var(--lf-muted);
+
+  strong {
+    color: var(--lf-ink);
+    font-weight: 600;
+  }
 }
 
-.export--blocked {
-  color: var(--lf-ink);
+.banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-inline-start: auto;
+}
+
+.export-status {
+  max-inline-size: 22rem;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--lf-muted);
+  text-align: end;
+}
+
+.export-status--blocked {
+  color: var(--lf-amber);
   font-weight: 700;
-}
-
-// En pantallas pequeñas el aviso sigue fijo (US-13: la etiqueta de borrador se ve siempre), pero más compacto.
-@media (max-width: 48rem) {
-  .banner {
-    gap: 0.125rem 0.75rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: var(--lf-radius-s);
-  }
-
-  .draft {
-    font-size: 0.9375rem;
-  }
-
-  .meta,
-  .export {
-    font-size: 0.8125rem;
-    line-height: 1.4;
-  }
-
-  .export {
-    margin-inline-start: 0;
-    flex-basis: 100%;
-  }
 }
 
 // Original y adaptación: dos hojas distintas, una al lado de la otra.
 .columns {
   display: grid;
   grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
-  gap: 0;
   align-items: stretch;
   border: 1px solid var(--lf-rule);
-  border-radius: var(--lf-radius-l);
+  border-radius: var(--lf-radius-m);
   overflow: hidden;
   background: var(--lf-surface);
 }
@@ -93,7 +84,7 @@
 
 mat-tab-group {
   border: 1px solid var(--lf-rule);
-  border-radius: var(--lf-radius-l);
+  border-radius: var(--lf-radius-m);
   overflow: hidden;
   background: var(--lf-surface);
 }
@@ -107,14 +98,74 @@ mat-tab-group app-original-text {
   background: var(--lf-gazette);
 }
 
-// Paneles: los datos clave primero y a lo ancho, porque son lo que más hay que revisar.
-.panels {
+// Paneles de revisión debajo de los textos, en rejilla, cuando no caben al lado.
+.workarea {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.inspector {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
   gap: 1.25rem;
   align-items: start;
 }
 
-.panel-wide {
+.inspector app-key-facts-panel {
   grid-column: 1 / -1;
+}
+
+// Pantallas anchas: los textos a la izquierda y la revisión en una columna a la derecha, como un inspector.
+@media (min-width: 88rem) {
+  .workarea {
+    grid-template-columns: minmax(0, 1fr) 24rem;
+    align-items: start;
+  }
+
+  .inspector {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    border: 1px solid var(--lf-rule);
+    border-radius: var(--lf-radius-m);
+    background: var(--lf-surface);
+  }
+
+  .inspector > * {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .inspector > * + * {
+    border-block-start: 1px solid var(--lf-rule);
+  }
+}
+
+// En pantallas pequeñas la barra sigue fija (US-13: la etiqueta de borrador se ve siempre), pero más compacta.
+@media (max-width: 48rem) {
+  .banner {
+    gap: 0.25rem 0.75rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: var(--lf-radius-s);
+  }
+
+  .draft {
+    font-size: 0.875rem;
+  }
+
+  .meta,
+  .export-status {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+
+  .banner-actions {
+    flex-basis: 100%;
+    justify-content: space-between;
+    margin-inline-start: 0;
+  }
+
+  .export-status {
+    text-align: start;
+  }
 }

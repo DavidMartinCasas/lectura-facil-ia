@@ -1,27 +1,25 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-<section aria-labelledby="export-title">
-  <h2 id="export-title">{{ texts.exportTitle }}</h2>
-  <mat-radio-group
-    class="formats"
-    [attr.aria-label]="texts.exportFormatLabel"
-    [value]="format()"
-    (change)="select($event.value)"
-  >
-    @for (option of formats; track option) {
-      <mat-radio-button [value]="option">{{ labels[option] }}</mat-radio-button>
-    }
-  </mat-radio-group>
-  <p class="hint" id="export-hint">{{ texts.exportHint }}</p>
-  @if (!canExport()) {
-    <p class="hint" id="export-blocked">{{ blockedMessage() }}</p>
+<button
+  mat-flat-button
+  type="button"
+  class="export-button"
+  [matMenuTriggerFor]="formatsMenu"
+  [disabled]="!canExport() || exporting()"
+  [attr.aria-describedby]="canExport() ? 'export-hint' : 'export-blocked'"
+>
+  <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+    <path d="M10 3v9.5M6 8.75l4 4 4-4M4 16.25h12" />
+  </svg>
+  {{ exporting() ? texts.exporting : texts.exportButton }}
+</button>
+<span class="visually-hidden" id="export-hint">{{ texts.exportHint }}</span>
+@if (!canExport()) {
+  <span class="visually-hidden" id="export-blocked">{{ blockedMessage() }}</span>
+}
+
+<mat-menu #formatsMenu="matMenu" xPosition="before" [ariaLabel]="texts.exportFormatLabel">
+  @for (option of formats; track option) {
+    <button mat-menu-item type="button" (click)="submit(option)">{{ labels[option] }}</button>
   }
-  <button
-    mat-flat-button
-    type="button"
-    [disabled]="!canExport() || exporting()"
-    [attr.aria-describedby]="canExport() ? 'export-hint' : 'export-blocked'"
-    (click)="submit()"
-  >
-    {{ exporting() ? texts.exporting : texts.exportButton }}
-  </button>
-</section>
+  <p class="export-menu-hint" aria-hidden="true">{{ texts.exportHint }}</p>
+</mat-menu>

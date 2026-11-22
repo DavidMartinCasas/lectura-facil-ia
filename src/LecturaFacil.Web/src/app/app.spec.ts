@@ -22,12 +22,12 @@ describe('App', () => {
     });
   });
 
-  it('shows the project name in the toolbar', async () => {
+  it('shows the project name in the sidebar', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(element.querySelector('mat-toolbar')?.textContent).toContain('Lectura Fácil IA');
+    expect(element.querySelector('header .brand')?.textContent).toContain('Lectura Fácil IA');
     expect(element.querySelector('main')).not.toBeNull();
   });
 

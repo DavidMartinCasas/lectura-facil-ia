@@ -2,64 +2,67 @@
 <div class="review">
   <div class="banner" role="region" [attr.aria-label]="texts.draftLabel">
     <strong class="draft">{{ texts.draftLabel }}</strong>
+    <span class="meta">{{ texts.version }} {{ adaptation().version }}</span>
     <span class="meta">
       {{ texts.processedBy }} <strong>{{ adaptation().provider }}</strong>
     </span>
-    <span class="meta">{{ texts.version }} {{ adaptation().version }}</span>
-    <span class="export" [class.export--blocked]="!adaptation().canExport">{{
-      exportMessage()
-    }}</span>
+    <div class="banner-actions">
+      <span class="export-status" [class.export-status--blocked]="!adaptation().canExport">{{
+        exportMessage()
+      }}</span>
+      <app-export-panel
+        [canExport]="adaptation().canExport"
+        [blockedMessage]="exportMessage()"
+        [exporting]="exporting() || saving()"
+        (exportAdaptation)="exportAdaptation.emit($event)"
+      />
+    </div>
   </div>
 
-  @if (smallScreen()) {
-    <mat-tab-group [attr.aria-label]="texts.tabsLabel" mat-stretch-tabs>
-      <mat-tab [label]="texts.originalTitle">
+  <div class="workarea">
+    @if (smallScreen()) {
+      <mat-tab-group [attr.aria-label]="texts.tabsLabel" mat-stretch-tabs>
+        <mat-tab [label]="texts.originalTitle">
+          <app-original-text
+            headingId="original-title-tab"
+            [text]="document().original.text"
+            [findings]="document().original.findings"
+          />
+        </mat-tab>
+        <mat-tab [label]="texts.adaptedTitle">
+          <app-adapted-text
+            headingId="adapted-title-tab"
+            [adaptation]="adaptation()"
+            [editable]="editable()"
+            [saving]="saving()"
+            (save)="save.emit($event)"
+          />
+        </mat-tab>
+      </mat-tab-group>
+    } @else {
+      <div class="columns">
         <app-original-text
-          headingId="original-title-tab"
           [text]="document().original.text"
           [findings]="document().original.findings"
         />
-      </mat-tab>
-      <mat-tab [label]="texts.adaptedTitle">
         <app-adapted-text
-          headingId="adapted-title-tab"
           [adaptation]="adaptation()"
           [editable]="editable()"
           [saving]="saving()"
           (save)="save.emit($event)"
         />
-      </mat-tab>
-    </mat-tab-group>
-  } @else {
-    <div class="columns">
-      <app-original-text
-        [text]="document().original.text"
-        [findings]="document().original.findings"
-      />
-      <app-adapted-text
-        [adaptation]="adaptation()"
+      </div>
+    }
+
+    <aside class="inspector" [attr.aria-label]="texts.inspectorLabel">
+      <app-key-facts-panel
+        [verification]="adaptation().verification"
         [editable]="editable()"
         [saving]="saving()"
-        (save)="save.emit($event)"
+        (acknowledge)="acknowledge.emit($event)"
       />
-    </div>
-  }
-
-  <div class="panels">
-    <app-key-facts-panel
-      class="panel-wide"
-      [verification]="adaptation().verification"
-      [editable]="editable()"
-      [saving]="saving()"
-      (acknowledge)="acknowledge.emit($event)"
-    />
-    <app-guidelines-panel [report]="adaptation().guidelines" />
-    <app-readability-panel [readability]="document().readability" />
-    <app-export-panel
-      [canExport]="adaptation().canExport"
-      [blockedMessage]="exportMessage()"
-      [exporting]="exporting() || saving()"
-      (exportAdaptation)="exportAdaptation.emit($event)"
-    />
+      <app-guidelines-panel [report]="adaptation().guidelines" />
+      <app-readability-panel [readability]="document().readability" />
+    </aside>
   </div>
 </div>
