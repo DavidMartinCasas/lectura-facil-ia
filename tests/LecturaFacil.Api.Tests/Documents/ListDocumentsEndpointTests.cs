@@ -17,7 +17,7 @@ public sealed class ListDocumentsEndpointTests
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     [Fact]
-    public async Task List_WhenThereAreNoDocuments_ReturnsAnEmptyArray()
+    public async Task List_WhenThereAreNoDocuments_ReturnsAnEmptyPageWithoutNextCursor()
     {
         await using var factory = new DocumentsApiFactory();
         using var client = await factory.CreateApiClientAsync();
@@ -26,8 +26,8 @@ public sealed class ListDocumentsEndpointTests
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token));
-        json.RootElement.ValueKind.ShouldBe(JsonValueKind.Array);
-        json.RootElement.GetArrayLength().ShouldBe(0);
+        json.RootElement.GetProperty("items").GetArrayLength().ShouldBe(0);
+        json.RootElement.GetProperty("nextCursor").ValueKind.ShouldBe(JsonValueKind.Null);
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public sealed class ListDocumentsEndpointTests
 
         var body = await response.Content.ReadAsStringAsync(Token);
         using var json = JsonDocument.Parse(body);
-        var items = json.RootElement.EnumerateArray().ToList();
+        var items = json.RootElement.GetProperty("items").EnumerateArray().ToList();
         items.Count.ShouldBe(2);
         items[0].GetProperty("id").GetGuid().ShouldBe(adapted.Id.Value);
         items[0].GetProperty("title").GetString().ShouldBe("Convocatoria");
@@ -55,6 +55,63 @@ public sealed class ListDocumentsEndpointTests
         body.ShouldNotContain("Ajeno");
         body.ShouldNotContain("modelo-secreto");
         body.ShouldNotContain("Texto de prueba");
+    }
+
+    [Fact]
+    public async Task List_PagesWithTheNextCursor_UntilThereAreNoMoreDocuments()
+    {
+        await using var factory = new DocumentsApiFactory();
+        var third = await SeedAsync(factory, TestUsers.DefaultOwner, "Uno", Now.AddMinutes(-2));
+        var second = await SeedAsync(factory, TestUsers.DefaultOwner, "Dos", Now.AddMinutes(-1));
+        var first = await SeedAsync(factory, TestUsers.DefaultOwner, "Tres", Now);
+        using var client = await factory.CreateApiClientAsync();
+
+        var (firstIds, cursor) = await GetPageAsync(client, "/api/documents?limit=2");
+        var (secondIds, lastCursor) = await GetPageAsync(client, $"/api/documents?limit=2&cursor={Uri.EscapeDataString(cursor!)}");
+
+        firstIds.ShouldBe([first.Id.Value, second.Id.Value]);
+        secondIds.ShouldBe([third.Id.Value]);
+        lastCursor.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task List_FiltersByTitleAndRepeatedStatus()
+    {
+        await using var factory = new DocumentsApiFactory();
+        var adaptedBases = await SeedAsync(factory, TestUsers.DefaultOwner, "Bases de ayudas", Now, Adapt);
+        await SeedAsync(factory, TestUsers.DefaultOwner, "Bases de empleo", Now.AddMinutes(1));
+        await SeedAsync(factory, TestUsers.DefaultOwner, "Convocatoria", Now.AddMinutes(2), Adapt);
+        using var client = await factory.CreateApiClientAsync();
+
+        var (ids, _) = await GetPageAsync(client, "/api/documents?title=BASES&status=Draft&status=Validated");
+
+        ids.ShouldBe([adaptedBases.Id.Value]);
+    }
+
+    [Theory]
+    [InlineData("/api/documents?status=Archivado", "documents.invalid_status")]
+    [InlineData("/api/documents?cursor=no-vale", "documents.invalid_cursor")]
+    [InlineData("/api/documents?limit=0", "documents.invalid_page_size")]
+    [InlineData("/api/documents?limit=1000", "documents.invalid_page_size")]
+    public async Task List_WhenTheQueryIsNotValid_Returns400WithTheErrorCode(string uri, string code)
+    {
+        await using var factory = new DocumentsApiFactory();
+        using var client = await factory.CreateApiClientAsync();
+
+        using var response = await client.GetAsync(new Uri(uri, UriKind.Relative), Token);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token));
+        json.RootElement.GetProperty("code").GetString().ShouldBe(code);
+    }
+
+    private static async Task<(List<Guid> Ids, string? NextCursor)> GetPageAsync(HttpClient client, string uri)
+    {
+        using var response = await client.GetAsync(new Uri(uri, UriKind.Relative), Token);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token));
+        var ids = json.RootElement.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("id").GetGuid()).ToList();
+        return (ids, json.RootElement.GetProperty("nextCursor").GetString());
     }
 
     private static void Adapt(Document document)

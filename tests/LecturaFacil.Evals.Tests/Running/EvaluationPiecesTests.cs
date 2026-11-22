@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using LecturaFacil.Application.Adaptation;
+using LecturaFacil.Application.Documents;
 using LecturaFacil.Application.Llm;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Evals.Dataset;
@@ -83,6 +84,6 @@ public sealed class EvaluationPiecesTests
         (await repository.FindForOwnerAsync(document.Id, OwnerId.From(Guid.NewGuid()), token)).ShouldBeNull();
         (await repository.FindStatusForOwnerAsync(document.Id, owner, token)).ShouldBe(DocumentStatus.Received);
         (await repository.ListAwaitingAdaptationAsync(token)).ShouldBe([document.Id]);
-        await Should.ThrowAsync<NotSupportedException>(() => repository.ListForOwnerAsync(owner, 10, token));
+        await Should.ThrowAsync<NotSupportedException>(() => repository.ListForOwnerAsync(owner, new DocumentListQuery(null, new HashSet<DocumentStatus>(), null, 10), token));
     }
 }

@@ -3,11 +3,12 @@ using System.Runtime.CompilerServices;
 using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Domain.Documents;
+using Microsoft.AspNetCore.Mvc;
 
 namespace LecturaFacil.Api.Documents;
 
 /// <summary>
-/// <c>GET /api/documents</c> (lista del usuario), <c>GET /api/documents/{id}</c> y <c>GET /api/documents/{id}/events</c> (SSE). Un documento que no existe y uno de otro
+/// <c>GET /api/documents</c> (lista del usuario, paginada), <c>GET /api/documents/{id}</c> y <c>GET /api/documents/{id}/events</c> (SSE). Un documento que no existe y uno de otro
 /// usuario responden igual, 404, para no revelar que existe (OWASP API1 · BOLA).
 /// </summary>
 internal static class DocumentQueryEndpoints
@@ -17,9 +18,10 @@ internal static class DocumentQueryEndpoints
     public static RouteGroupBuilder MapDocumentQueries(this RouteGroupBuilder group)
     {
         group.MapGet("/", ListAsync)
-            .Produces<IReadOnlyList<DocumentListItemResponse>>()
+            .Produces<DocumentListResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
             .WithName("ListDocuments")
-            .WithSummary("Documentos del usuario, del más nuevo al más antiguo: título, fecha, estado y proveedor.");
+            .WithSummary("Documentos del usuario, del más nuevo al más antiguo, por páginas y con filtro por título y estado.");
 
         group.MapGet("/{id:guid}", GetAsync)
             .Produces<DocumentResponse>()
@@ -36,10 +38,20 @@ internal static class DocumentQueryEndpoints
         return group;
     }
 
-    private static async Task<IResult> ListAsync(ListDocuments listDocuments, CancellationToken cancellationToken)
+    /// <param name="title">Texto que debe aparecer en el título, sin distinguir mayúsculas ni tildes.</param>
+    /// <param name="status">Estados admitidos; se puede repetir (<c>?status=Draft&amp;status=Validated</c>).</param>
+    /// <param name="cursor">El <c>nextCursor</c> de la página anterior.</param>
+    /// <param name="limit">Documentos por página.</param>
+    private static async Task<IResult> ListAsync(
+        ListDocuments listDocuments,
+        [FromQuery] string? title,
+        [FromQuery] string[]? status,
+        [FromQuery] string? cursor,
+        [FromQuery] int? limit,
+        CancellationToken cancellationToken)
     {
-        var documents = await listDocuments.ExecuteAsync(cancellationToken);
-        return TypedResults.Ok(documents.Select(DocumentListItemResponse.From).ToList());
+        var result = await listDocuments.ExecuteAsync(new DocumentListRequest(title, status, cursor, limit), cancellationToken);
+        return result.IsSuccess ? TypedResults.Ok(DocumentListResponse.From(result.Value)) : ToProblem(result.Error!);
     }
 
     private static async Task<IResult> GetAsync(Guid id, GetDocument getDocument, CancellationToken cancellationToken)

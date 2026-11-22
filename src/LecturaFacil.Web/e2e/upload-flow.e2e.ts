@@ -2,11 +2,9 @@
 // Flujo de la US-12: subir texto → ver el progreso → llegar a la vista del documento. La API se simula con
 // respuestas fijas (como haría el backend con FakeLlmProvider); el E2E contra el backend real queda para la CI (US-19).
 import { Page, Route, expect, test } from '@playwright/test';
-import path from 'node:path';
 import { documentFixture } from '../src/app/testing/document-fixtures';
+import { expectNoAxeViolations } from './axe';
 import { mockSignedIn } from './session';
-
-const AXE_PATH = path.join(__dirname, '..', 'node_modules', 'axe-core', 'axe.min.js');
 
 const DOCUMENT_ID = '7f1c2a9e-0000-4000-8000-000000000001';
 const NOW = '2026-11-16T10:00:00Z';
@@ -41,16 +39,19 @@ async function mockApi(
       return route.fulfill({ status: 202, json: { id: DOCUMENT_ID, status: 'Received' } });
     }
     return route.fulfill({
-      json: [
-        {
-          id: DOCUMENT_ID,
-          title: 'Bases de la convocatoria',
-          status: 'Draft',
-          createdAt: NOW,
-          updatedAt: NOW,
-          provider: 'Servidor local',
-        },
-      ],
+      json: {
+        items: [
+          {
+            id: DOCUMENT_ID,
+            title: 'Bases de la convocatoria',
+            status: 'Draft',
+            createdAt: NOW,
+            updatedAt: NOW,
+            provider: 'Servidor local',
+          },
+        ],
+        nextCursor: null,
+      },
     });
   });
 
@@ -69,24 +70,6 @@ async function mockApi(
   );
 
   return counters;
-}
-
-async function expectNoAxeViolations(page: Page): Promise<void> {
-  await page.addScriptTag({ path: AXE_PATH });
-  const violations = await page.evaluate(async () => {
-    const axe = (
-      window as unknown as {
-        axe: {
-          run: (context: Document, options: object) => Promise<{ violations: { id: string }[] }>;
-        };
-      }
-    ).axe;
-    const result = await axe.run(document, {
-      runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] },
-    });
-    return result.violations.map((violation) => violation.id);
-  });
-  expect(violations).toEqual([]);
 }
 
 test('sube un texto, ve el progreso por pasos y llega a la vista del documento', async ({

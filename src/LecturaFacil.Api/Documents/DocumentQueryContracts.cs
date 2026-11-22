@@ -112,6 +112,17 @@ public sealed record ReadabilityScoreResponse(double Value, string Grade, string
     }
 }
 
+/// <summary>Una página de <c>GET /api/documents</c>.</summary>
+/// <param name="NextCursor">Para pedir la página siguiente (<c>?cursor=</c>); <c>null</c> si no hay más documentos.</param>
+public sealed record DocumentListResponse(IReadOnlyList<DocumentListItemResponse> Items, string? NextCursor)
+{
+    public static DocumentListResponse From(DocumentPage page)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        return new DocumentListResponse([.. page.Items.Select(DocumentListItemResponse.From)], page.Next?.Encode());
+    }
+}
+
 /// <summary>Un documento de la lista "Mis documentos".</summary>
 /// <param name="Provider">
 /// Nombre visible del proveedor que hizo la última adaptación (el que configura quien despliega); <c>null</c> si aún no

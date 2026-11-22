@@ -60,12 +60,14 @@ public sealed class RecordingDocumentRepository : IDocumentRepository
         Task.FromResult<IReadOnlyList<DocumentId>>(
             [.. _added.Where(document => DocumentStatusTransitions.IsAwaitingAdaptation(document.Status)).Select(document => document.Id)]);
 
-    public Task<IReadOnlyList<DocumentSummary>> ListForOwnerAsync(OwnerId ownerId, int maxCount, CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyList<DocumentSummary>>(
-            [.. _added.Where(document => document.OwnerId == ownerId)
+    public Task<DocumentPage> ListForOwnerAsync(OwnerId ownerId, DocumentListQuery query, CancellationToken cancellationToken) =>
+        Task.FromResult(DocumentPage.FromFetched(
+            [.. _added.Where(document => document.OwnerId == ownerId && query.Matches(document))
                 .OrderByDescending(document => document.CreatedAt)
-                .Take(maxCount)
-                .Select(DocumentSummary.From)]);
+                .ThenByDescending(document => document.Id.Value)
+                .Take(query.PageSize + 1)
+                .Select(DocumentSummary.From)],
+            query.PageSize));
 
     public Task SaveAsync(Document document, CancellationToken cancellationToken) => Task.CompletedTask;
 }

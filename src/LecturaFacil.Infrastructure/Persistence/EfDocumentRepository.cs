@@ -8,6 +8,8 @@ namespace LecturaFacil.Infrastructure.Persistence;
 
 public sealed class EfDocumentRepository(AppDbContext context) : IDocumentRepository
 {
+    private const string LikeEscapeCharacter = "\\";
+
     private DbSet<Document> Documents => context.Set<Document>();
 
     public async Task AddAsync(Document document, CancellationToken cancellationToken)
@@ -40,13 +42,41 @@ public sealed class EfDocumentRepository(AppDbContext context) : IDocumentReposi
             .Select(document => document.Id)
             .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<DocumentSummary>> ListForOwnerAsync(OwnerId ownerId, int maxCount, CancellationToken cancellationToken)
+    public async Task<DocumentPage> ListForOwnerAsync(OwnerId ownerId, DocumentListQuery query, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(query);
+        var documents = Documents.AsNoTracking().Where(document => document.OwnerId == ownerId);
+
+        if (query.TitleContains is { Length: > 0 } title)
+        {
+            // Sin distinguir mayúsculas (ILIKE) ni tildes (unaccent): "constitucion" encuentra "Constitución".
+            var pattern = "%" + EscapeLikePattern(title) + "%";
+            documents = documents.Where(document => EF.Functions.ILike(
+                EF.Functions.Unaccent(EF.Property<string>(document, nameof(Document.Title))),
+                EF.Functions.Unaccent(pattern),
+                LikeEscapeCharacter));
+        }
+
+        if (query.Statuses.Count > 0)
+        {
+            var statuses = query.Statuses.ToArray();
+            documents = documents.Where(document => statuses.Contains(document.Status));
+        }
+
+        if (query.After is { } after)
+        {
+            // Paginación por cursor (keyset): (fecha, id) < (fecha, id) del último documento ya mostrado.
+            var afterId = DocumentId.From(after.Id);
+            documents = documents.Where(document => EF.Functions.LessThan(
+                ValueTuple.Create(document.CreatedAt, document.Id),
+                ValueTuple.Create(after.CreatedAt, afterId)));
+        }
+
         // Solo las columnas de la lista: ni el texto original ni el contenido de las versiones.
-        var rows = await Documents.AsNoTracking()
-            .Where(document => document.OwnerId == ownerId)
+        var rows = await documents
             .OrderByDescending(document => document.CreatedAt)
-            .Take(maxCount)
+            .ThenByDescending(document => document.Id)
+            .Take(query.PageSize + 1)
             .Select(document => new
             {
                 document.Id,
@@ -61,7 +91,8 @@ public sealed class EfDocumentRepository(AppDbContext context) : IDocumentReposi
             })
             .ToListAsync(cancellationToken);
 
-        return [.. rows.Select(row => new DocumentSummary(row.Id, row.Title.Value, row.Status, row.CreatedAt, row.UpdatedAt, row.Provider))];
+        var summaries = rows.Select(row => new DocumentSummary(row.Id, row.Title.Value, row.Status, row.CreatedAt, row.UpdatedAt, row.Provider)).ToList();
+        return DocumentPage.FromFetched(summaries, query.PageSize);
     }
 
     public async Task SaveAsync(Document document, CancellationToken cancellationToken)
@@ -81,4 +112,10 @@ public sealed class EfDocumentRepository(AppDbContext context) : IDocumentReposi
             throw new ConcurrentUpdateException("The document was changed by another request.", exception);
         }
     }
+
+    /// <summary>El texto del usuario se busca literalmente: %, _ y \ no actúan como comodines.</summary>
+    private static string EscapeLikePattern(string value) =>
+        value.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", @"\%", StringComparison.Ordinal)
+            .Replace("_", @"\_", StringComparison.Ordinal);
 }

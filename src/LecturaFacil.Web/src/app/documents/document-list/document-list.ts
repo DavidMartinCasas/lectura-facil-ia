@@ -10,7 +10,7 @@ import { LIST_TEXTS, STATUS_LABELS } from '../../core/ui-texts';
 
 const DATE_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
 
-/** Tabla de "Mis documentos" con sus estados de carga, vacío y error. No llama a la API: emite "retry". */
+/** Tabla de "Mis documentos" con sus estados de carga, vacío y error. No llama a la API: emite "retry" y "clearFilters". */
 @Component({
   selector: 'app-document-list',
   imports: [MatButtonModule, MatProgressBarModule, MatTableModule, RouterLink],
@@ -22,7 +22,10 @@ export class DocumentListComponent {
   readonly documents = input<readonly DocumentListItem[] | null>(null);
   readonly loading = input(false);
   readonly error = input<string | null>(null);
+  /** Hay búsqueda o filtro de estado: una lista vacía significa "nada coincide", no "no tienes documentos". */
+  readonly filtered = input(false);
   readonly retry = output();
+  readonly clearFilters = output();
 
   protected readonly texts = LIST_TEXTS;
   protected readonly tone = statusTone;

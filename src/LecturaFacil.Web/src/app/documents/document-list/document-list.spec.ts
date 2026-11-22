@@ -54,6 +54,17 @@ describe('DocumentListComponent', () => {
     expect(element.querySelector('a')?.getAttribute('href')).toBe('/nuevo');
   });
 
+  it('when filtered and empty, says nothing matches and offers to clear the filters', async () => {
+    const element = await render({ documents: [], filtered: true });
+    let cleared = 0;
+    fixture.componentInstance.clearFilters.subscribe(() => cleared++);
+
+    expect(element.textContent).toContain(LIST_TEXTS.noMatches);
+    expect(element.textContent).not.toContain(LIST_TEXTS.empty);
+    element.querySelector<HTMLButtonElement>('button')!.click();
+    expect(cleared).toBe(1);
+  });
+
   it('shows the error with a retry button', async () => {
     const element = await render({ error: 'No se puede conectar.' });
     let retried = 0;

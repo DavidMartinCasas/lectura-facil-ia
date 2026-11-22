@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: Apache-2.0
+// "Mis documentos": barra de búsqueda y filtro encima de la tabla, y "Cargar más" debajo.
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+}
+
+.filter-search {
+  flex: 1 1 22rem;
+  max-inline-size: 36rem;
+}
+
+.filter-status {
+  flex: 0 1 16rem;
+  min-inline-size: 12rem;
+}
+
+.results {
+  position: relative;
+}
+
+// La barra va pegada al borde superior de la tabla para que se vea que esa lista es la que se actualiza.
+.refreshing {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 0;
+  z-index: 1;
+  border-radius: var(--lf-radius-l) var(--lf-radius-l) 0 0;
+  overflow: hidden;
+}
+
+.load-more {
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 40rem) {
+  .filter-search,
+  .filter-status {
+    flex-basis: 100%;
+    max-inline-size: none;
+  }
+}

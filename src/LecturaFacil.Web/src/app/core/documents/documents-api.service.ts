@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
-import { HttpClient, HttpHeaders, HttpResponse } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import {
   DocumentDetails,
-  DocumentListItem,
+  DocumentListFilter,
+  DocumentListPage,
   DocumentSubmission,
+  NO_DOCUMENT_FILTER,
   ExportFormat,
   ManualEdit,
   SubmitDocumentResponse,
@@ -38,8 +40,23 @@ export class DocumentsApiService {
     );
   }
 
-  list(): Observable<readonly DocumentListItem[]> {
-    return this.http.get<readonly DocumentListItem[]>(DOCUMENTS_PATH);
+  /** Una página de "Mis documentos". Sin `cursor`, la primera; con el `nextCursor` de una página, la siguiente. */
+  list(
+    filter: DocumentListFilter = NO_DOCUMENT_FILTER,
+    cursor: string | null = null,
+  ): Observable<DocumentListPage> {
+    let params = new HttpParams();
+    const title = filter.title.trim();
+    if (title) {
+      params = params.set('title', title);
+    }
+    for (const status of filter.statuses) {
+      params = params.append('status', status);
+    }
+    if (cursor) {
+      params = params.set('cursor', cursor);
+    }
+    return this.http.get<DocumentListPage>(DOCUMENTS_PATH, { params });
   }
 
   get(id: string): Observable<DocumentDetails> {

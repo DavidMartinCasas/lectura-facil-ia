@@ -218,8 +218,8 @@ public sealed class AdaptationWorkerTests(PostgreSqlFixture database) : IClassFi
         public Task<IReadOnlyList<DocumentId>> ListAwaitingAdaptationAsync(CancellationToken cancellationToken) =>
             inner.ListAwaitingAdaptationAsync(cancellationToken);
 
-        public Task<IReadOnlyList<DocumentSummary>> ListForOwnerAsync(OwnerId ownerId, int maxCount, CancellationToken cancellationToken) =>
-            inner.ListForOwnerAsync(ownerId, maxCount, cancellationToken);
+        public Task<DocumentPage> ListForOwnerAsync(OwnerId ownerId, DocumentListQuery query, CancellationToken cancellationToken) =>
+            inner.ListForOwnerAsync(ownerId, query, cancellationToken);
 
         public async Task SaveAsync(Document document, CancellationToken cancellationToken)
         {

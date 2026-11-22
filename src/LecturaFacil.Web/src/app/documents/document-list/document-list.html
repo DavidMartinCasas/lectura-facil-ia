@@ -10,7 +10,15 @@
     <button mat-stroked-button type="button" (click)="retry.emit()">{{ texts.retry }}</button>
   </div>
 } @else if (documents(); as items) {
-  @if (items.length === 0) {
+  @if (items.length === 0 && filtered()) {
+    <div class="empty">
+      <p class="empty-title">{{ texts.noMatches }}</p>
+      <p>{{ texts.noMatchesHint }}</p>
+      <button mat-stroked-button type="button" (click)="clearFilters.emit()">
+        {{ texts.clearFilters }}
+      </button>
+    </div>
+  } @else if (items.length === 0) {
     <div class="empty">
       <p class="empty-title">{{ texts.empty }}</p>
       <p>Pega un texto o sube un PDF y en unos minutos tendrás una propuesta en lectura fácil.</p>

@@ -1,30 +1,50 @@
 // SPDX-License-Identifier: Apache-2.0
 import { Type } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { DocumentEventsService } from '../../core/documents/document-events.service';
 import {
   DocumentDetails,
+  DocumentListFilter,
   DocumentListItem,
+  DocumentListPage,
   DocumentStatus,
   SubmitDocumentResponse,
 } from '../../core/documents/document.models';
 import { DocumentsApiService } from '../../core/documents/documents-api.service';
 import { ApiError } from '../../core/errors/api-error';
-import { ERROR_TEXTS, PROGRESS_TEXTS, REVIEW_TEXTS } from '../../core/ui-texts';
+import { ERROR_TEXTS, LIST_TEXTS, PROGRESS_TEXTS, REVIEW_TEXTS } from '../../core/ui-texts';
 import { documentFixture } from '../../testing/document-fixtures';
 import { DocumentPage } from './document-page';
-import { DocumentsPage } from './documents-page';
+import { DocumentsPage, SEARCH_DEBOUNCE_MS } from './documents-page';
 import { NewDocumentPage } from './new-document-page';
 
 const details = (status: DocumentStatus): DocumentDetails => documentFixture(status);
+
+const listItem = (id: string, title = `Documento ${id}`): DocumentListItem => ({
+  id,
+  title,
+  status: 'Draft',
+  createdAt: '2026-11-16T10:00:00Z',
+  updatedAt: '2026-11-16T10:00:00Z',
+  provider: 'Servidor local',
+});
+
+const page = (
+  items: readonly DocumentListItem[],
+  nextCursor: string | null = null,
+): DocumentListPage => ({ items, nextCursor });
 
 describe('pages', () => {
   let statuses: Subject<DocumentStatus>;
   let api: {
     submit: ReturnType<typeof vi.fn<() => Observable<SubmitDocumentResponse>>>;
-    list: ReturnType<typeof vi.fn<() => Observable<readonly DocumentListItem[]>>>;
+    list: ReturnType<
+      typeof vi.fn<
+        (filter?: DocumentListFilter, cursor?: string | null) => Observable<DocumentListPage>
+      >
+    >;
     get: ReturnType<typeof vi.fn<() => Observable<DocumentDetails>>>;
   };
 
@@ -32,7 +52,7 @@ describe('pages', () => {
     statuses = new Subject<DocumentStatus>();
     api = {
       submit: vi.fn(() => of<SubmitDocumentResponse>({ id: 'doc-1', status: 'Received' })),
-      list: vi.fn(() => of<readonly DocumentListItem[]>([])),
+      list: vi.fn(() => of(page([]))),
       get: vi.fn(() => of(details('Draft'))),
     };
     TestBed.configureTestingModule({
@@ -120,24 +140,22 @@ describe('pages', () => {
   });
 
   describe('DocumentsPage', () => {
-    it('loads the list of documents', async () => {
-      api.list.mockReturnValue(
-        of([
-          {
-            id: 'doc-1',
-            title: 'Bases',
-            status: 'Draft',
-            createdAt: '2026-11-16T10:00:00Z',
-            updatedAt: '2026-11-16T10:00:00Z',
-            provider: 'Servidor local',
-          },
-        ]),
-      );
+    it('loads the first page of documents without filters', async () => {
+      api.list.mockReturnValue(of(page([listItem('doc-1', 'Bases')])));
 
       const { element } = await render(DocumentsPage);
 
       expect(element.querySelector('h1')?.textContent).toBe('Mis documentos');
       expect(element.querySelector('td')?.textContent).toContain('Bases');
+      expect(api.list).toHaveBeenCalledWith({ title: '', statuses: [] });
+      expect(element.querySelector('[role="search"]')).not.toBeNull();
+    });
+
+    it('does not show the filters when the user has no documents yet', async () => {
+      const { element } = await render(DocumentsPage);
+
+      expect(element.textContent).toContain(LIST_TEXTS.empty);
+      expect(element.querySelector('[role="search"]')).toBeNull();
     });
 
     it('shows the error and loads again on retry', async () => {
@@ -151,7 +169,94 @@ describe('pages', () => {
       expect(api.list).toHaveBeenCalledTimes(2);
       expect(element.textContent).toContain('Todavía no tienes documentos.');
     });
+
+    it('loads the next page with the cursor and moves the focus to the first new document', async () => {
+      api.list
+        .mockReturnValueOnce(of(page([listItem('1'), listItem('2')], 'cursor-1')))
+        .mockReturnValueOnce(of(page([listItem('3')])));
+      const { fixture, element } = await render(DocumentsPage);
+
+      loadMoreButton(element)!.click();
+      await fixture.whenStable();
+
+      expect(api.list).toHaveBeenLastCalledWith({ title: '', statuses: [] }, 'cursor-1');
+      const links = [...element.querySelectorAll<HTMLAnchorElement>('.title-link')];
+      expect(links.map((link) => link.textContent?.trim())).toEqual([
+        'Documento 1',
+        'Documento 2',
+        'Documento 3',
+      ]);
+      expect(document.activeElement).toBe(links[2]);
+      expect(loadMoreButton(element)).toBeUndefined();
+      expect(element.querySelector('p[role="status"]')?.textContent).toBe(
+        'Se muestran 3 documentos.',
+      );
+    });
+
+    it('searches by title after the user stops typing and keeps the search in the URL', async () => {
+      api.list.mockReturnValue(of(page([listItem('1')])));
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const { fixture, element } = await render(DocumentsPage);
+
+      const input = element.querySelector<HTMLInputElement>('input[type="search"]')!;
+      input.value = 'ba';
+      input.dispatchEvent(new Event('input'));
+      input.value = 'bases';
+      input.dispatchEvent(new Event('input'));
+      await new Promise((resolve) => setTimeout(resolve, SEARCH_DEBOUNCE_MS + 50));
+      await fixture.whenStable();
+
+      expect(api.list).toHaveBeenCalledTimes(2);
+      expect(api.list).toHaveBeenLastCalledWith({ title: 'bases', statuses: [] });
+      expect(navigate).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({
+          queryParams: { buscar: 'bases', estado: null },
+          replaceUrl: true,
+        }),
+      );
+    });
+
+    it('when nothing matches, offers to clear the filters and loads everything again', async () => {
+      api.list.mockReturnValueOnce(of(page([listItem('1')]))).mockReturnValueOnce(of(page([])));
+      vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const { fixture, element } = await render(DocumentsPage);
+
+      const input = element.querySelector<HTMLInputElement>('input[type="search"]')!;
+      input.value = 'nada';
+      input.dispatchEvent(new Event('input'));
+      element.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+      await fixture.whenStable();
+
+      expect(element.textContent).toContain(LIST_TEXTS.noMatches);
+      api.list.mockReturnValueOnce(of(page([listItem('1')])));
+      element.querySelector<HTMLButtonElement>('.empty button')!.click();
+      await fixture.whenStable();
+
+      expect(api.list).toHaveBeenLastCalledWith({ title: '', statuses: [] });
+      expect(element.querySelector<HTMLInputElement>('input[type="search"]')!.value).toBe('');
+    });
+
+    it('starts with the search and the valid statuses of the URL', async () => {
+      TestBed.overrideProvider(ActivatedRoute, {
+        useValue: {
+          snapshot: {
+            queryParamMap: convertToParamMap({ buscar: 'bases', estado: ['Draft', 'Inventado'] }),
+          },
+        },
+      });
+
+      await render(DocumentsPage);
+
+      expect(api.list).toHaveBeenCalledWith({ title: 'bases', statuses: ['Draft'] });
+    });
   });
+
+  function loadMoreButton(element: HTMLElement): HTMLButtonElement | undefined {
+    return [...element.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
+      button.textContent?.includes(LIST_TEXTS.loadMore),
+    );
+  }
 
   describe('DocumentPage', () => {
     it('shows the title, the status and the side-by-side review of a draft', async () => {
