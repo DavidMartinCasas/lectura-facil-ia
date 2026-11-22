@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 using System.ClientModel;
+using System.ClientModel.Primitives;
 using LecturaFacil.Application.Common;
 using Microsoft.Extensions.Logging;
 using OpenAI;
@@ -20,8 +21,12 @@ public sealed class OpenAICompatibleProvider(
     private static OpenAIClient CreateClient(LlmProviderOptions options, HttpClient httpClient, LimitsOptions limits)
     {
         ArgumentNullException.ThrowIfNull(options);
-        return new OpenAIClient(
-            new ApiKeyCredential(options.ApiKey),
-            ClientOptions(new Uri(options.Endpoint.TrimEnd('/')), httpClient, limits));
+        var clientOptions = ClientOptions(new Uri(options.Endpoint.TrimEnd('/')), httpClient, limits);
+        if (options.DisableThinking)
+        {
+            clientOptions.AddPolicy(new DisableThinkingPolicy(), PipelinePosition.PerCall);
+        }
+
+        return new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
     }
 }
