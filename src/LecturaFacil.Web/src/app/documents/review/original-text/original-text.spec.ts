@@ -121,4 +121,20 @@ describe('OriginalTextComponent', () => {
     await fixture.whenStable();
     expect(element.querySelector('.spot')).toBeNull();
   });
+
+  it('outlines the fragment it is asked to point out, keeping the guideline marks', async () => {
+    const { fixture, element } = await render(ORIGINAL_TEXT, findings);
+
+    fixture.componentRef.setInput('spotlight', '40 % de la renta mensual');
+    await fixture.whenStable();
+
+    const spots = [...element.querySelectorAll('.spot')];
+    expect(spots.map((spot) => spot.textContent).join('')).toBe('40 % de la renta mensual');
+    expect(element.querySelector('button.mark.spot')?.textContent).toBe('40 %');
+    expect(element.querySelector('.text')?.textContent).toBe(ORIGINAL_TEXT);
+
+    fixture.componentRef.setInput('spotlight', null);
+    await fixture.whenStable();
+    expect(element.querySelector('.spot')).toBeNull();
+  });
 });

@@ -89,6 +89,36 @@ h3 {
   }
 }
 
+// Fragmento señalado desde un dato clave: recuadro azul, distinto del rotulador de las pautas.
+.spot {
+  color: var(--lf-ink);
+  background: var(--lf-primary-soft);
+  border-radius: 0.2em;
+  outline: 2px solid var(--lf-primary);
+  outline-offset: 1px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  animation: spot-in 900ms ease-out;
+}
+
+.mark.spot {
+  color: var(--lf-marker-ink);
+  background: var(--lf-marker);
+}
+
+@keyframes spot-in {
+  from {
+    outline-offset: 6px;
+    outline-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spot {
+    animation: none;
+  }
+}
+
 .mark--selected {
   background: color-mix(in srgb, var(--lf-marker) 80%, #ff9f1c);
   outline: 2px solid var(--lf-primary);
