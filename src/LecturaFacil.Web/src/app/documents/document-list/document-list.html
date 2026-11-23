@@ -38,18 +38,12 @@
           <td mat-cell *matCellDef="let item">
             <a class="title-link" [routerLink]="['/documentos', item.id]">{{ item.title }}</a>
             <!-- En pantallas estrechas la columna de fecha se oculta y la fecha va bajo el título. -->
-            <time class="title-date" [attr.datetime]="item.createdAt">{{
-              formatDate(item.createdAt)
-            }}</time>
-          </td>
-        </ng-container>
-
-        <ng-container matColumnDef="createdAt">
-          <th mat-header-cell *matHeaderCellDef scope="col" class="col-date">
-            {{ texts.columnDate }}
-          </th>
-          <td mat-cell *matCellDef="let item" class="col-date">
-            <time [attr.datetime]="item.createdAt">{{ formatDate(item.createdAt) }}</time>
+            <time
+              class="title-date"
+              [attr.datetime]="item.updatedAt"
+              [attr.title]="formatDate(item.updatedAt)"
+              >{{ texts.updatedAt(relativeDate(item.updatedAt)) }}</time
+            >
           </td>
         </ng-container>
 
@@ -57,6 +51,53 @@
           <th mat-header-cell *matHeaderCellDef scope="col">{{ texts.columnStatus }}</th>
           <td mat-cell *matCellDef="let item">
             <span [class]="'chip chip--' + tone(item.status)">{{ statusLabel(item) }}</span>
+            <!-- En pantallas estrechas la columna de avisos se oculta y su etiqueta va bajo el estado. -->
+            @if (item.warningCount !== null) {
+              <span class="status-warnings">
+                <ng-container *ngTemplateOutlet="warnings; context: { $implicit: item }" />
+              </span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="warnings">
+          <th mat-header-cell *matHeaderCellDef scope="col" class="col-warnings">
+            {{ texts.columnWarnings }}
+          </th>
+          <td mat-cell *matCellDef="let item" class="col-warnings">
+            <ng-container *ngTemplateOutlet="warnings; context: { $implicit: item }" />
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="readability">
+          <th mat-header-cell *matHeaderCellDef scope="col" class="col-readability">
+            {{ texts.columnReadability }}
+          </th>
+          <td mat-cell *matCellDef="let item" class="col-readability">
+            @if (item.readability; as readability) {
+              <span class="readability" aria-hidden="true">
+                <span class="scores"
+                  >{{ round(readability.original.value) }} →
+                  <strong>{{ round(readability.adapted.value) }}</strong></span
+                >
+                <span class="grade">{{ readability.adapted.gradeLabel }}</span>
+              </span>
+              <span class="visually-hidden">{{ readabilityLabel(readability) }}</span>
+            } @else {
+              <span class="none" aria-hidden="true">—</span>
+              <span class="visually-hidden">{{ texts.notAdapted }}</span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="updatedAt">
+          <th mat-header-cell *matHeaderCellDef scope="col" class="col-date">
+            {{ texts.columnUpdated }}
+          </th>
+          <td mat-cell *matCellDef="let item" class="col-date">
+            <time [attr.datetime]="item.updatedAt" [attr.title]="formatDate(item.updatedAt)">{{
+              relativeDate(item.updatedAt)
+            }}</time>
           </td>
         </ng-container>
 
@@ -75,3 +116,14 @@
     </div>
   }
 }
+
+<ng-template #warnings let-item>
+  @if (item.warningCount === null) {
+    <span class="none" aria-hidden="true">—</span>
+    <span class="visually-hidden">{{ texts.notAdapted }}</span>
+  } @else if (item.warningCount > 0) {
+    <span class="chip chip--pending">{{ texts.pendingWarnings(item.warningCount) }}</span>
+  } @else {
+    <span class="chip chip--ok">{{ texts.noWarnings }}</span>
+  }
+</ng-template>

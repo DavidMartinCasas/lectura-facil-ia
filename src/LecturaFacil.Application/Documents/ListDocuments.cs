@@ -2,17 +2,24 @@
 using System.Globalization;
 using System.Text;
 using LecturaFacil.Application.Common;
+using LecturaFacil.Application.Readability;
 using LecturaFacil.Application.Users;
 using LecturaFacil.Domain.Documents;
+using LecturaFacil.Domain.Readability;
 using Microsoft.Extensions.Options;
 
 namespace LecturaFacil.Application.Documents;
 
 /// <summary>
 /// Documentos del usuario actual, del más nuevo al más antiguo, por páginas y con filtro por título y estado.
-/// Cada página tiene como mucho <see cref="LimitsOptions.MaxDocumentsPerList"/> documentos.
+/// Cada página tiene como mucho <see cref="LimitsOptions.MaxDocumentsPerList"/> documentos. La legibilidad de cada
+/// documento se calcula al leer, igual que en su ficha: es cálculo en memoria y de coste lineal.
 /// </summary>
-public sealed class ListDocuments(IDocumentRepository repository, ICurrentUser currentUser, IOptions<LimitsOptions> limits)
+public sealed class ListDocuments(
+    IDocumentRepository repository,
+    ICurrentUser currentUser,
+    IOptions<LimitsOptions> limits,
+    CompareReadability compareReadability)
 {
     /// <summary>Documentos por página si el cliente no dice otra cosa.</summary>
     public const int DefaultPageSize = 20;
@@ -31,7 +38,23 @@ public sealed class ListDocuments(IDocumentRepository repository, ICurrentUser c
         }
 
         var page = await repository.ListForOwnerAsync(currentUser.OwnerId, query.Value, cancellationToken);
-        return Result<DocumentPage>.Success(page);
+        return Result<DocumentPage>.Success(page with { Items = [.. page.Items.Select(WithReadability)] });
+    }
+
+    /// <summary>Calcula la legibilidad con los textos que trae el resumen y los quita: no hacen falta fuera de aquí.</summary>
+    private DocumentSummary WithReadability(DocumentSummary summary)
+    {
+        if (summary.ReadabilityTexts is not { } texts)
+        {
+            return summary;
+        }
+
+        var readability = compareReadability.Compare(texts.Original, texts.Adapted);
+        return summary with
+        {
+            ReadabilityTexts = null,
+            Readability = readability.IsSuccess ? readability.Value : null,
+        };
     }
 
     private Result<DocumentListQuery> Parse(DocumentListRequest request)
@@ -122,23 +145,59 @@ public static class DocumentListErrors
 
 /// <summary>Un documento en la lista "Mis documentos".</summary>
 /// <param name="Provider">Nombre visible del proveedor que generó la última adaptación; <c>null</c> si aún no hay ninguna.</param>
+/// <param name="WarningCount">
+/// Avisos de la última versión: datos clave sin revisar y pautas sin cumplir. <c>null</c> si aún no hay ninguna versión.
+/// </param>
+/// <param name="ReadabilityTexts">
+/// El original y la última versión, para calcular la legibilidad. <see cref="ListDocuments"/> la calcula y los quita.
+/// </param>
+/// <param name="Readability">
+/// Legibilidad del original y de la última versión, la misma que en la ficha. <c>null</c> si no hay versión o no se puede
+/// calcular.
+/// </param>
 public sealed record DocumentSummary(
     DocumentId Id,
     string Title,
     DocumentStatus Status,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    string? Provider)
+    string? Provider,
+    int? WarningCount = null,
+    ReadabilityTexts? ReadabilityTexts = null,
+    ReadabilityComparison? Readability = null)
 {
     public static DocumentSummary From(Document document)
     {
         ArgumentNullException.ThrowIfNull(document);
-        return new DocumentSummary(
+        return Create(
             document.Id,
             document.Title.Value,
             document.Status,
             document.CreatedAt,
             document.UpdatedAt,
-            document.LatestAdaptedVersion?.Metadata.Provider);
+            document.OriginalText.Value,
+            document.LatestAdaptedVersion);
     }
+
+    /// <summary>El resumen de un documento a partir de su texto original y su última versión (<c>null</c> si no tiene).</summary>
+    public static DocumentSummary Create(
+        DocumentId id,
+        string title,
+        DocumentStatus status,
+        DateTimeOffset createdAt,
+        DateTimeOffset updatedAt,
+        string originalText,
+        AdaptedVersion? latest) =>
+        new(
+            id,
+            title,
+            status,
+            createdAt,
+            updatedAt,
+            latest?.Metadata.Provider,
+            latest?.ReviewWarningCount,
+            latest is null ? null : new ReadabilityTexts(originalText, latest.PlainText));
 }
+
+/// <summary>Los dos textos que compara la legibilidad: el original y el de la última versión.</summary>
+public sealed record ReadabilityTexts(string Original, string Adapted);

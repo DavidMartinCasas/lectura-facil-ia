@@ -51,6 +51,8 @@ async function mockApi(
             createdAt: NOW,
             updatedAt: NOW,
             provider: 'Servidor local',
+            warningCount: 0,
+            readability: null,
           },
         ],
         nextCursor: null,

@@ -78,7 +78,7 @@ public sealed class EfDocumentRepository(AppDbContext context) : IDocumentReposi
                 ValueTuple.Create(after.CreatedAt, afterId)));
         }
 
-        // Solo las columnas de la lista: ni el texto original ni el contenido de las versiones.
+        // Las columnas de la lista, el texto original y solo la última versión: de ellos salen los avisos y la legibilidad.
         var rows = await documents
             .OrderByDescending(document => document.CreatedAt)
             .ThenByDescending(document => document.Id)
@@ -90,14 +90,23 @@ public sealed class EfDocumentRepository(AppDbContext context) : IDocumentReposi
                 document.Status,
                 document.CreatedAt,
                 document.UpdatedAt,
-                Provider = document.AdaptedVersions
+                document.OriginalText,
+                Latest = document.AdaptedVersions
                     .OrderByDescending(version => version.Number)
-                    .Select(version => version.Metadata.Provider)
                     .FirstOrDefault(),
             })
             .ToListAsync(cancellationToken);
 
-        var summaries = rows.Select(row => new DocumentSummary(row.Id, row.Title.Value, row.Status, row.CreatedAt, row.UpdatedAt, row.Provider)).ToList();
+        var summaries = rows
+            .Select(row => DocumentSummary.Create(
+                row.Id,
+                row.Title.Value,
+                row.Status,
+                row.CreatedAt,
+                row.UpdatedAt,
+                row.OriginalText.Value,
+                row.Latest))
+            .ToList();
         return DocumentPage.FromFetched(summaries, query.PageSize);
     }
 
