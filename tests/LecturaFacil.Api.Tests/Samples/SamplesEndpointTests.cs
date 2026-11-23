@@ -6,7 +6,7 @@ using LecturaFacil.Api.Tests.Documents;
 
 namespace LecturaFacil.Api.Tests.Samples;
 
-/// <summary><c>GET /api/samples</c> (US-16): 3 textos de ejemplo, solo con sesión, que se pueden enviar tal cual.</summary>
+/// <summary><c>GET /api/samples</c> (US-16): 6 textos de ejemplo, solo con sesión, que se pueden enviar tal cual.</summary>
 public sealed class SamplesEndpointTests
 {
     private static readonly Uri SamplesUri = new("/api/samples", UriKind.Relative);
@@ -14,7 +14,7 @@ public sealed class SamplesEndpointTests
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     [Fact]
-    public async Task List_WithASession_ReturnsThreeSamplesWithTheirSource()
+    public async Task List_WithASession_ReturnsSixSamplesWithTheirSource()
     {
         await using var factory = new DocumentsApiFactory();
         using var client = await factory.CreateApiClientAsync();
@@ -24,7 +24,7 @@ public sealed class SamplesEndpointTests
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Token));
         var samples = json.RootElement.EnumerateArray().ToList();
-        samples.Count.ShouldBe(3);
+        samples.Count.ShouldBe(6);
         samples.ShouldAllBe(sample => !string.IsNullOrWhiteSpace(sample.GetProperty("source").GetString()));
     }
 
@@ -53,6 +53,6 @@ public sealed class SamplesEndpointTests
             response.StatusCode.ShouldBe(HttpStatusCode.Accepted);
         }
 
-        factory.Repository.Added.Count.ShouldBe(3);
+        factory.Repository.Added.Count.ShouldBe(6);
     }
 }

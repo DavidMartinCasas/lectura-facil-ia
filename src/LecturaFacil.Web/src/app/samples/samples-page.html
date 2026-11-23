@@ -5,8 +5,6 @@
     <p class="intro">{{ texts.intro }}</p>
   </div>
 
-  <p class="draft-note" role="note">{{ draftNotice }}</p>
-
   @if (turnstileSiteKey(); as siteKey) {
     <app-turnstile-widget [siteKey]="siteKey" (token)="onHumanToken($event)" />
   }
@@ -51,7 +49,11 @@
                   [attr.aria-disabled]="store.phase() === 'submitting' ? true : null"
                   (click)="adapt(sample)"
                 >
-                  {{ store.phase() === 'submitting' ? texts.submitting : texts.adapt }}
+                  {{
+                    store.phase() === 'submitting' && submittingId() === sample.id
+                      ? texts.submitting
+                      : texts.adapt
+                  }}
                 </button>
               </mat-card-actions>
             </mat-card>
@@ -59,10 +61,6 @@
         }
       </ul>
     }
-  }
-
-  @if (store.steps(); as steps) {
-    <app-progress-steps [steps]="steps" />
   }
 
   @if (store.error(); as message) {

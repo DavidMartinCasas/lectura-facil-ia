@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
-.draft-note {
-  max-inline-size: var(--lf-reading-width);
-}
-
 .samples {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
-  gap: 1.25rem;
+  // Como mucho 3 columnas (6 ejemplos = 2 filas completas); baja a 2 y a 1 cuando no caben de 22rem.
+  --gap: 1.25rem;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(100%, max(22rem, calc((100% - 2 * var(--gap)) / 3))), 1fr)
+  );
+  gap: var(--gap);
 }
 
 li {
