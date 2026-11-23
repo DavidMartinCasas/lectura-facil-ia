@@ -56,6 +56,10 @@ public sealed class DocxExporterTests
         texts.ShouldBe(
         [
             "Ayudas al alquiler",
+            "Adaptación a lectura fácil",
+            "Borrador · pendiente de validación",
+            "16 de noviembre de 2026",
+            "Ayudas al alquiler",
             "¿Qué es esta ayuda?",
             "Es una ayuda de 250 € al mes.",
             "Sirve para pagar el alquiler de tu casa.",
@@ -65,6 +69,41 @@ public sealed class DocxExporterTests
             "Glosario",
             "Alquiler: Dinero que pagas cada mes por vivir en una casa.",
         ]);
+    }
+
+    [Fact]
+    public void Export_StartsWithACoverAndPutsTheContentOnTheNextPage()
+    {
+        using var package = Open(ExportSamples.Rent());
+
+        Paragraphs(package).Take(4).ShouldBe(
+        [
+            ("Title", "Ayudas al alquiler"),
+            ("Subtitle", "Adaptación a lectura fácil"),
+            ("DraftStamp", "Borrador · pendiente de validación"),
+            (null, "16 de noviembre de 2026"),
+        ]);
+
+        // El encabezado de nivel 1 abre el contenido en una página nueva; la portada no repite encabezados.
+        var heading = Body(package).Elements<Paragraph>().Single(paragraph => paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value == "Heading1");
+        heading.ParagraphProperties!.PageBreakBefore.ShouldNotBeNull();
+        heading.InnerText.ShouldBe("Ayudas al alquiler");
+    }
+
+    [Fact]
+    public void Export_FramesTheDraftStampAndDoesNotTreatTheCoverAsAHeading()
+    {
+        using var package = Open(ExportSamples.Rent());
+
+        var styles = package.MainDocumentPart!.StyleDefinitionsPart!.Styles!.Elements<Style>().ToList();
+        var stamp = styles.Single(style => style.StyleId == "DraftStamp").StyleParagraphProperties!.ParagraphBorders!;
+        stamp.TopBorder!.Val!.Value.ShouldBe(BorderValues.Single);
+        stamp.LeftBorder!.Val!.Value.ShouldBe(BorderValues.Single);
+        stamp.BottomBorder!.Val!.Value.ShouldBe(BorderValues.Single);
+        stamp.RightBorder!.Val!.Value.ShouldBe(BorderValues.Single);
+
+        styles.Where(style => style.StyleId == "Title" || style.StyleId == "Subtitle" || style.StyleId == "DraftStamp")
+            .ShouldAllBe(style => style.StyleParagraphProperties!.OutlineLevel == null);
     }
 
     [Fact]

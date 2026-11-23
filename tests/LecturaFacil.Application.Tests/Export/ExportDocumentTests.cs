@@ -60,6 +60,17 @@ public sealed class ExportDocumentTests
     }
 
     [Fact]
+    public async Task Export_PreparesACoverWithWhatItIsTheDraftNoticeAndTheDate()
+    {
+        var document = Adapted(Owner, pendingWarning: false);
+
+        await CreateUseCase().ExecuteAsync(document.Id, "txt", Token);
+
+        _exporter.Exported.ShouldHaveSingleItem().Cover.ShouldBe(
+            new ExportCover("Adaptación a lectura fácil", "Borrador · pendiente de validación", "16 de noviembre de 2026"));
+    }
+
+    [Fact]
     public async Task Export_WhenAKeyFactWarningIsPending_ReturnsPendingWarnings()
     {
         var document = Adapted(Owner, pendingWarning: true);

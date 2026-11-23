@@ -9,6 +9,8 @@ internal static class ExportSamples
 {
     public const string Footer = "Borrador · pendiente de validación · 16 de noviembre de 2026";
 
+    public static readonly ExportCover Cover = new("Adaptación a lectura fácil", "Borrador · pendiente de validación", "16 de noviembre de 2026");
+
     public static ExportableDocument Rent() => new(
         "Ayudas al alquiler",
         [
@@ -18,7 +20,8 @@ internal static class ExportSamples
         "Glosario",
         [new GlossaryTerm("Alquiler", "Dinero que pagas cada mes por vivir en una casa.")],
         Footer,
-        "es");
+        "es",
+        Cover);
 
     public static ExportableDocument WithText(string sentence, string? title = null) => Rent() with
     {

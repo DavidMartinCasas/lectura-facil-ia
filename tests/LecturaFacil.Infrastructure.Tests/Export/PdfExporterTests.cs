@@ -46,6 +46,34 @@ public sealed class PdfExporterTests
     }
 
     [Fact]
+    public void Export_StartsWithACoverAndPutsTheContentOnTheNextPage()
+    {
+        using var pdf = PdfDocument.Open(_exporter.Export(ExportSamples.Rent()));
+
+        pdf.NumberOfPages.ShouldBeGreaterThanOrEqualTo(2);
+        var cover = Text(pdf.GetPage(1));
+        cover.ShouldContain("Ayudas al alquiler");
+        cover.ShouldContain("Adaptación a lectura fácil");
+        cover.ShouldContain("Borrador · pendiente de validación");
+        cover.ShouldContain("16 de noviembre de 2026");
+        cover.ShouldNotContain("¿Qué es esta ayuda?");
+        Text(pdf.GetPage(2)).ShouldContain("¿Qué es esta ayuda?");
+    }
+
+    [Fact]
+    public void Export_LowersTheCoverTitleWellBelowTheTopOfThePage()
+    {
+        using var pdf = PdfDocument.Open(_exporter.Export(ExportSamples.Rent()));
+
+        static double TitleTop(Page page) => page.GetWords().First(word => word.Text == "Ayudas").BoundingBox.Top;
+        var cover = pdf.GetPage(1);
+        var content = pdf.GetPage(2);
+
+        // El título de la portada queda al menos 5 cm (unos 140 puntos) más abajo que el del contenido.
+        (TitleTop(content) - TitleTop(cover)).ShouldBeGreaterThan(140);
+    }
+
+    [Fact]
     public void Export_EmbedsAtkinsonHyperlegibleAtLeast14Points()
     {
         using var pdf = PdfDocument.Open(_exporter.Export(ExportSamples.Rent()));
@@ -61,7 +89,8 @@ public sealed class PdfExporterTests
         var longSentence = string.Join(' ', Enumerable.Repeat("Esta frase es larga para que ocupe varias líneas.", 6));
         using var pdf = PdfDocument.Open(_exporter.Export(ExportSamples.WithText(longSentence)));
 
-        var words = pdf.GetPage(1).GetWords().ToList();
+        // La primera página es la portada: el contenido empieza en la segunda.
+        var words = pdf.GetPage(2).GetWords().ToList();
         var lines = words
             .Where(word => word.Letters[0].PointSize == 14 && !ExportSamples.Footer.Contains(word.Text, StringComparison.Ordinal))
             .GroupBy(word => Math.Round(word.BoundingBox.Bottom, 1))

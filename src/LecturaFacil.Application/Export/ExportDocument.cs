@@ -16,6 +16,7 @@ public sealed class ExportDocument
 {
     public const string DraftNotice = "Borrador · pendiente de validación";
     public const string GlossaryTitle = "Glosario";
+    public const string CoverSubtitle = "Adaptación a lectura fácil";
     public const string Language = "es";
 
     // La fecha escrita con letras, como piden las pautas de lectura fácil, y en una cultura fija.
@@ -73,12 +74,16 @@ public sealed class ExportDocument
             new ExportedFile(ExportFileName.Create(latest.Title, exporter.FileExtension), exporter.ContentType, content));
     }
 
-    private ExportableDocument ToExportable(AdaptedVersion version) =>
-        new(version.Title, version.Sections, GlossaryTitle, version.Glossary, Footer(), Language);
-
-    private string Footer()
+    private ExportableDocument ToExportable(AdaptedVersion version)
     {
-        var today = _timeProvider.GetLocalNow();
-        return $"{DraftNotice} · {today.ToString("d 'de' MMMM 'de' yyyy", Spanish)}";
+        var today = _timeProvider.GetLocalNow().ToString("d 'de' MMMM 'de' yyyy", Spanish);
+        return new ExportableDocument(
+            version.Title,
+            version.Sections,
+            GlossaryTitle,
+            version.Glossary,
+            $"{DraftNotice} · {today}",
+            Language,
+            new ExportCover(CoverSubtitle, DraftNotice, today));
     }
 }

@@ -12,7 +12,8 @@ namespace LecturaFacil.Infrastructure.Export;
 /// DOCX (Open XML SDK), el formato principal para seguir editando. Maquetación de lectura fácil: fuente sin serifa
 /// grande, interlineado amplio, texto alineado a la izquierda y una frase por párrafo. El título y las preguntas usan los
 /// estilos de encabezado de Word (navegables con un lector de pantalla), el documento declara su título y el idioma
-/// español, y el aviso de borrador va en el pie de cada página. Todo el texto se inserta como texto: nunca como campos,
+/// español, y el aviso de borrador va en el pie de cada página. La primera página es una portada (título, qué es, sello
+/// de borrador y fecha) y el contenido empieza en la segunda. Todo el texto se inserta como texto: nunca como campos,
 /// hipervínculos ni macros.
 /// </summary>
 public sealed class DocxExporter(IOptions<ExportOptions> options) : IDocumentExporter
@@ -20,6 +21,16 @@ public sealed class DocxExporter(IOptions<ExportOptions> options) : IDocumentExp
     public const string Heading1StyleId = "Heading1";
     public const string Heading2StyleId = "Heading2";
     public const string FooterStyleId = "Footer";
+    public const string CoverTitleStyleId = "Title";
+    public const string CoverSubtitleStyleId = "Subtitle";
+    public const string DraftStampStyleId = "DraftStamp";
+
+    // La portada: el título baja hasta un tercio de la página, y es más grande que el del contenido.
+    private const double CoverTopCentimeters = 6;
+    private const double CoverTitleScale = 1.5;
+
+    // Grosor del recuadro del sello, en octavos de punto.
+    private const uint StampBorderEighths = 12;
     public const string WordLanguage = "es-ES";
 
     private const int TwipsPerPoint = 20;
@@ -62,7 +73,16 @@ public sealed class DocxExporter(IOptions<ExportOptions> options) : IDocumentExp
 
     private Body Body(ExportableDocument document, string footerId)
     {
-        var body = new Body(TextParagraph(Heading1StyleId, document.Title));
+        var body = new Body(
+            TextParagraph(CoverTitleStyleId, document.Title),
+            TextParagraph(CoverSubtitleStyleId, document.Cover.Subtitle),
+            TextParagraph(DraftStampStyleId, document.Cover.DraftNotice),
+            TextParagraph(null, document.Cover.Date));
+
+        // El contenido empieza en una página nueva, con su título como encabezado de nivel 1.
+        var title = TextParagraph(Heading1StyleId, document.Title);
+        title.ParagraphProperties!.Append(new PageBreakBefore());
+        body.Append(title);
         foreach (var section in document.Sections)
         {
             body.Append(TextParagraph(Heading2StyleId, section.Question));
@@ -121,6 +141,9 @@ public sealed class DocxExporter(IOptions<ExportOptions> options) : IDocumentExp
             new Style(new StyleName { Val = "Normal" }, new PrimaryStyle()) { Type = StyleValues.Paragraph, StyleId = "Normal", Default = true },
             HeadingStyle(Heading1StyleId, "heading 1", outlineLevel: 0, _options.TitleFontSizePoints),
             HeadingStyle(Heading2StyleId, "heading 2", outlineLevel: 1, _options.HeadingFontSizePoints),
+            CoverTitleStyle(),
+            CoverStyle(CoverSubtitleStyleId, "Subtitle", _options.HeadingFontSizePoints, bold: false, borders: null),
+            CoverStyle(DraftStampStyleId, "Draft stamp", _options.HeadingFontSizePoints, bold: true, StampBorders()),
             new Style(
                 new StyleName { Val = "footer" },
                 new BasedOn { Val = "Normal" },
@@ -149,6 +172,74 @@ public sealed class DocxExporter(IOptions<ExportOptions> options) : IDocumentExp
             Type = StyleValues.Paragraph,
             StyleId = styleId,
         };
+
+    /// <summary>El título de la portada usa el estilo "Title" de Word: se reconoce como título sin repetir el encabezado.</summary>
+    private Style CoverTitleStyle()
+    {
+        var size = _options.TitleFontSizePoints * CoverTitleScale;
+        return new Style(
+            new StyleName { Val = "Title" },
+            new BasedOn { Val = "Normal" },
+            new NextParagraphStyle { Val = CoverSubtitleStyleId },
+            new UIPriority { Val = 10 },
+            new PrimaryStyle(),
+            new StyleParagraphProperties(
+                new KeepNext(),
+                new SpacingBetweenLines
+                {
+                    Before = ((int)Math.Round(CoverTopCentimeters * TwipsPerCentimeter)).ToString(CultureInfo.InvariantCulture),
+                    After = Twips(size / 2),
+                    Line = SingleLineSpacing.ToString(CultureInfo.InvariantCulture),
+                    LineRule = LineSpacingRuleValues.Auto,
+                }),
+            new StyleRunProperties(
+                new Bold(),
+                new BoldComplexScript(),
+                new FontSize { Val = HalfPoints(size) },
+                new FontSizeComplexScript { Val = HalfPoints(size) }))
+        {
+            Type = StyleValues.Paragraph,
+            StyleId = CoverTitleStyleId,
+        };
+    }
+
+    private Style CoverStyle(string styleId, string name, double sizePoints, bool bold, ParagraphBorders? borders)
+    {
+        var paragraph = new StyleParagraphProperties(new KeepNext());
+        if (borders is not null)
+        {
+            paragraph.Append(borders);
+        }
+
+        paragraph.Append(new SpacingBetweenLines { Before = Twips(sizePoints), After = Twips(sizePoints) });
+
+        var run = new StyleRunProperties();
+        if (bold)
+        {
+            run.Append(new Bold(), new BoldComplexScript());
+        }
+
+        run.Append(new FontSize { Val = HalfPoints(sizePoints) }, new FontSizeComplexScript { Val = HalfPoints(sizePoints) });
+
+        return new Style(
+            new StyleName { Val = name },
+            new BasedOn { Val = "Normal" },
+            new UIPriority { Val = 11 },
+            paragraph,
+            run)
+        {
+            Type = StyleValues.Paragraph,
+            StyleId = styleId,
+        };
+    }
+
+    /// <summary>Recuadro del sello de borrador: una línea continua alrededor del texto, separada de él.</summary>
+    private static ParagraphBorders StampBorders() =>
+        new(
+            new TopBorder { Val = BorderValues.Single, Size = StampBorderEighths, Space = 6 },
+            new LeftBorder { Val = BorderValues.Single, Size = StampBorderEighths, Space = 6 },
+            new BottomBorder { Val = BorderValues.Single, Size = StampBorderEighths, Space = 6 },
+            new RightBorder { Val = BorderValues.Single, Size = StampBorderEighths, Space = 6 });
 
     private static Paragraph TextParagraph(string? styleId, string text)
     {
