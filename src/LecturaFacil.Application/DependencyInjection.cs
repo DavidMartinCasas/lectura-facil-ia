@@ -5,6 +5,7 @@ using LecturaFacil.Application.Export;
 using LecturaFacil.Application.Readability;
 using LecturaFacil.Application.Review;
 using LecturaFacil.Application.Users;
+using LecturaFacil.Application.Validation;
 using LecturaFacil.Application.Verification;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -24,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<DescribeDocument>();
         services.AddScoped<GetDocument>();
         services.AddScoped<ListDocuments>();
+        services.AddScoped<RetryAdaptation>();
         services.AddScoped<WatchDocument>();
         services.AddScoped<ReviewAdaptation>();
         services.AddScoped<VerifyMeaning>();
@@ -32,6 +34,11 @@ public static class DependencyInjection
         services.AddScoped<SaveManualEdit>();
         services.AddScoped<AcknowledgeKeyFact>();
         services.AddScoped<AcknowledgeAllKeyFacts>();
+        services.AddScoped<ValidationStep>();
+        services.AddScoped<SendToValidation>();
+        services.AddScoped<RecordValidation>();
+        services.AddScoped<WithdrawFromValidation>();
+        services.AddScoped<PublishDocument>();
         services.AddScoped<ExportDocument>();
         services.AddScoped<SeedTestUser>();
         return services;

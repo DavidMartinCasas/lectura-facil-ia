@@ -29,6 +29,8 @@ public sealed record ExportableDocument(
 /// fácil, que solo pueden usar los textos validados por personas del grupo destinatario, ni metadatos internos.
 /// </summary>
 /// <param name="Subtitle">Qué es el documento ("Adaptación a lectura fácil").</param>
-/// <param name="DraftNotice">Sello de borrador, el mismo texto que la etiqueta de la aplicación.</param>
+/// <param name="DraftNotice">
+/// Sello del estado: de borrador (el mismo texto que la etiqueta de la aplicación) o de versión validada.
+/// </param>
 /// <param name="Date">Fecha de la exportación, escrita con letras.</param>
 public sealed record ExportCover(string Subtitle, string DraftNotice, string Date);

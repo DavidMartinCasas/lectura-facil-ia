@@ -10,10 +10,24 @@ import {
   DocumentStatus,
   ExportFormat,
   ManualEdit,
+  ValidationResult,
   isAwaitingAdaptation,
 } from './document.models';
 import { DocumentsApiService } from './documents-api.service';
 import { FileDownloadService } from './file-download.service';
+
+/** Acciones que terminan bien y se anuncian a los lectores de pantalla. */
+export type DocumentAction =
+  | 'saved'
+  | 'acknowledged'
+  | 'acknowledgedAll'
+  | 'exported'
+  | 'retried'
+  | 'sent'
+  | 'approved'
+  | 'changesRequested'
+  | 'withdrawn'
+  | 'published';
 
 /**
  * Estado de la página de un documento: lo carga y, si aún se está adaptando, sigue su progreso y lo vuelve a cargar
@@ -34,9 +48,7 @@ export class DocumentViewStore {
   private readonly _saving = signal(false);
   private readonly _actionError = signal<string | null>(null);
   private readonly _exporting = signal(false);
-  private readonly _lastAction = signal<
-    'saved' | 'acknowledged' | 'acknowledgedAll' | 'exported' | null
-  >(null);
+  private readonly _lastAction = signal<DocumentAction | null>(null);
   /** Peticiones en curso (envío o carga y SSE). Se cancelan todas juntas. */
   private active = new Subscription();
 
@@ -109,6 +121,72 @@ export class DocumentViewStore {
     );
   }
 
+  /** Envía a validación la versión en pantalla, si sus avisos de datos clave ya están revisados. */
+  sendToValidation(): void {
+    const document = this._document();
+    if (!document?.adaptation || !document.canSendToValidation || this._saving()) {
+      return;
+    }
+    this.run(this.api.sendToValidation(document.id, document.adaptation.version), 'sent');
+  }
+
+  /** Anota lo que decidió el grupo de validación. */
+  recordValidation(result: ValidationResult): void {
+    const document = this._document();
+    if (document?.status !== 'PendingValidation' || this._saving()) {
+      return;
+    }
+    this.run(
+      this.api.recordValidation(document.id, result),
+      result.outcome === 'Approved' ? 'approved' : 'changesRequested',
+    );
+  }
+
+  /** Retira el documento de la validación: vuelve a ser un borrador. */
+  withdrawFromValidation(): void {
+    const document = this._document();
+    if (document?.status !== 'PendingValidation' || this._saving()) {
+      return;
+    }
+    this.run(this.api.withdrawFromValidation(document.id), 'withdrawn');
+  }
+
+  /** Publica un documento validado. */
+  publish(): void {
+    const document = this._document();
+    if (document?.status !== 'Validated' || this._saving()) {
+      return;
+    }
+    this.run(this.api.publish(document.id), 'published');
+  }
+
+  /**
+   * Vuelve a adaptar un documento cuya adaptación ha fallado. El servidor lo deja en "Procesando" y aquí se sigue su
+   * progreso como al enviarlo.
+   */
+  retryAdaptation(): void {
+    const document = this._document();
+    if (!document?.canRetry || this._saving()) {
+      return;
+    }
+    this._saving.set(true);
+    this._actionError.set(null);
+    this._lastAction.set(null);
+    this.active.add(
+      this.api.retryAdaptation(document.id).subscribe({
+        next: (updated) => {
+          this._saving.set(false);
+          this._lastAction.set('retried');
+          this.show(updated);
+        },
+        error: (error: unknown) => {
+          this._saving.set(false);
+          this._actionError.set(error instanceof ApiError ? error.message : ERROR_TEXTS.generic);
+        },
+      }),
+    );
+  }
+
   /** Descarga la última versión en el formato elegido. Solo se ofrece cuando la adaptación se puede exportar. */
   exportAdaptation(format: ExportFormat): void {
     const document = this._document();
@@ -134,10 +212,7 @@ export class DocumentViewStore {
     );
   }
 
-  private run(
-    request: Observable<DocumentDetails>,
-    action: 'saved' | 'acknowledged' | 'acknowledgedAll',
-  ): void {
+  private run(request: Observable<DocumentDetails>, action: DocumentAction): void {
     this._saving.set(true);
     this._actionError.set(null);
     this._lastAction.set(null);

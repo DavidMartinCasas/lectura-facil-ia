@@ -23,6 +23,7 @@ internal static class ApiConfiguration
         services.AddSingleton<IValidator<SubmitPdfForm>, SubmitPdfFormValidator>();
         services.AddSingleton<IValidator<ManualEditRequest>, ManualEditRequestValidator>();
         services.AddSingleton<IValidator<AcknowledgeKeyFactRequest>, AcknowledgeKeyFactRequestValidator>();
+        services.AddSingleton<IValidator<RecordValidationRequest>, RecordValidationRequestValidator>();
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

@@ -4,10 +4,10 @@
   <div
     class="banner"
     role="region"
-    [attr.aria-label]="texts.draftLabel"
+    [attr.aria-label]="stateLabel()"
     [attr.inert]="overlayOpen() ? '' : null"
   >
-    <strong class="draft">{{ texts.draftLabel }}</strong>
+    <strong class="draft" [class.draft--validated]="validated()">{{ stateLabel() }}</strong>
     <span class="meta">{{ texts.version }} {{ adaptation().version }}</span>
     <span class="meta">
       {{ texts.processedBy }} <strong>{{ adaptation().provider }}</strong>

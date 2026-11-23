@@ -13,10 +13,17 @@ import { RouterLink } from '@angular/router';
 import { DocumentViewStore } from '../../core/documents/document-view.store';
 import { isAwaitingAdaptation, isReviewable } from '../../core/documents/document.models';
 import { statusTone } from '../../core/documents/status-tone';
-import { APP_TEXTS, DOCUMENT_TEXTS, REVIEW_TEXTS, STATUS_LABELS } from '../../core/ui-texts';
+import {
+  APP_TEXTS,
+  DOCUMENT_TEXTS,
+  REVIEW_TEXTS,
+  STATUS_LABELS,
+  VALIDATION_TEXTS,
+} from '../../core/ui-texts';
 import { ProgressStepsComponent } from '../progress-steps/progress-steps';
 import { DocumentReviewComponent } from '../review/document-review/document-review';
 import { ReadabilityPanelComponent } from '../review/readability-panel/readability-panel';
+import { ValidationPanelComponent } from '../review/validation-panel/validation-panel';
 
 /** Vista de un documento: su estado, su progreso y, cuando ya está adaptado, la revisión lado a lado (US-13). */
 @Component({
@@ -27,6 +34,7 @@ import { ReadabilityPanelComponent } from '../review/readability-panel/readabili
     ProgressStepsComponent,
     ReadabilityPanelComponent,
     RouterLink,
+    ValidationPanelComponent,
   ],
   providers: [DocumentViewStore],
   templateUrl: './document-page.html',
@@ -57,6 +65,18 @@ export class DocumentPage {
         return REVIEW_TEXTS.acknowledgedAllAnnouncement;
       case 'exported':
         return REVIEW_TEXTS.exported;
+      case 'retried':
+        return DOCUMENT_TEXTS.retriedAnnouncement;
+      case 'sent':
+        return VALIDATION_TEXTS.sentAnnouncement;
+      case 'approved':
+        return VALIDATION_TEXTS.approvedAnnouncement;
+      case 'changesRequested':
+        return VALIDATION_TEXTS.changesAnnouncement;
+      case 'withdrawn':
+        return VALIDATION_TEXTS.withdrawnAnnouncement;
+      case 'published':
+        return VALIDATION_TEXTS.publishedAnnouncement;
       default:
         return '';
     }

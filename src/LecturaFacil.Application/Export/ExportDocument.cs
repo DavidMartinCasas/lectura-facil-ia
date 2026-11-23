@@ -9,12 +9,14 @@ namespace LecturaFacil.Application.Export;
 
 /// <summary>
 /// Exporta la última versión adaptada de un documento del usuario actual (US-14). Solo se exporta cuando una persona ha
-/// marcado como revisados todos los avisos de datos clave, y siempre como borrador pendiente de validación. Elige la
+/// marcado como revisados todos los avisos de datos clave. Hasta que el grupo destinatario lo valida, sale con el sello de
+/// borrador pendiente de validación; validado o publicado, con el de versión validada. Elige la
 /// estrategia por formato entre los <see cref="IDocumentExporter"/> registrados: añadir un formato no cambia esta clase.
 /// </summary>
 public sealed class ExportDocument
 {
     public const string DraftNotice = "Borrador · pendiente de validación";
+    public const string ValidatedNotice = "Versión validada";
     public const string GlossaryTitle = "Glosario";
     public const string CoverSubtitle = "Adaptación a lectura fácil";
     public const string Language = "es";
@@ -69,21 +71,22 @@ public sealed class ExportDocument
 
         // Los exportadores solo usan CPU y no reciben el token: si la petición ya se ha cancelado, no se genera nada.
         cancellationToken.ThrowIfCancellationRequested();
-        var content = exporter.Export(ToExportable(latest));
+        var content = exporter.Export(ToExportable(latest, document.Status));
         return Result<ExportedFile>.Success(
             new ExportedFile(ExportFileName.Create(latest.Title, exporter.FileExtension), exporter.ContentType, content));
     }
 
-    private ExportableDocument ToExportable(AdaptedVersion version)
+    private ExportableDocument ToExportable(AdaptedVersion version, DocumentStatus status)
     {
         var today = _timeProvider.GetLocalNow().ToString("d 'de' MMMM 'de' yyyy", Spanish);
+        var notice = status is DocumentStatus.Validated or DocumentStatus.Published ? ValidatedNotice : DraftNotice;
         return new ExportableDocument(
             version.Title,
             version.Sections,
             GlossaryTitle,
             version.Glossary,
-            $"{DraftNotice} · {today}",
+            $"{notice} · {today}",
             Language,
-            new ExportCover(CoverSubtitle, DraftNotice, today));
+            new ExportCover(CoverSubtitle, notice, today));
     }
 }

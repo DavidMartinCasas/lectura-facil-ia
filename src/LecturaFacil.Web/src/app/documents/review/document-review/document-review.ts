@@ -24,7 +24,7 @@ import {
   ManualEdit,
   ReviewableDocument,
 } from '../../../core/documents/document.models';
-import { REVIEW_TEXTS } from '../../../core/ui-texts';
+import { REVIEW_TEXTS, STATUS_LABELS } from '../../../core/ui-texts';
 import { AdaptedTextComponent } from '../adapted-text/adapted-text';
 import { ExportPanelComponent } from '../export-panel/export-panel';
 import { GuidelinesPanelComponent } from '../guidelines-panel/guidelines-panel';
@@ -88,6 +88,17 @@ export class DocumentReviewComponent {
     { initialValue: false },
   );
   protected readonly adaptation = computed(() => this.document().adaptation);
+  /** Validado o publicado: ya no es un borrador. */
+  protected readonly validated = computed(() => {
+    const status = this.document().status;
+    return status === 'Validated' || status === 'Published';
+  });
+  /** El sello de la barra: borrador pendiente de validación hasta que se valida; después, su estado. */
+  protected readonly stateLabel = computed(() =>
+    this.document().status === 'Draft'
+      ? this.texts.draftLabel
+      : STATUS_LABELS[this.document().status],
+  );
   protected readonly editable = computed(() => this.document().editable);
   protected readonly exportMessage = computed(() => {
     const pending = this.adaptation().pendingKeyFactCount;

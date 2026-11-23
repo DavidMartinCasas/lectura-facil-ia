@@ -158,6 +158,10 @@ export const DOCUMENT_TEXTS = {
   statusLabel: 'Estado:',
   adaptationFailed:
     'No se ha podido adaptar el documento. Vuelve a enviarlo desde «Nuevo documento».',
+  retriableFailure: 'No se ha podido adaptar el documento. Puedes volver a intentarlo.',
+  retryAdaptation: 'Reintentar la adaptación',
+  retryingAdaptation: 'Reintentando…',
+  retriedAnnouncement: 'Adaptando de nuevo el documento.',
   backToList: 'Volver a Mis documentos',
   retry: 'Reintentar',
 } as const;
@@ -213,7 +217,8 @@ export const REVIEW_TEXTS = {
   exportReady: 'Todos los avisos de datos clave están revisados.',
   exportTitle: 'Exportar',
   exportFormatLabel: 'Formato',
-  exportHint: 'El fichero se marca como borrador pendiente de validación, con la fecha de hoy.',
+  exportHint:
+    'El fichero lleva la fecha de hoy y su estado: borrador pendiente de validación o versión validada.',
   exportButton: 'Exportar',
   exporting: 'Exportando…',
   exported: 'Fichero exportado. Revisa tus descargas.',
@@ -279,6 +284,45 @@ export const KEY_FACT_TYPE_LABELS: Readonly<Record<KeyFactType, string>> = {
   Figure: 'Cifra',
   Other: 'Otro dato',
 };
+
+/** Validación humana: la hacen personas del grupo destinatario fuera de la aplicación; aquí se anota. */
+export const VALIDATION_TEXTS = {
+  title: 'Validación',
+  draftHint:
+    'Cuando hayas revisado el borrador, envíalo a validación. Personas del grupo destinatario tienen que leerlo y entenderlo.',
+  send: 'Enviar a validación',
+  sending: 'Enviando…',
+  sendBlocked: 'Antes de enviarlo, marca como revisados los avisos de los datos clave.',
+  changesRequested: (date: string, by: string) => `El ${date}, ${by} pidió cambios.`,
+  pendingHint:
+    'Exporta el documento y llévalo al grupo de validación. Cuando lo hayan leído, anota aquí lo que han decidido. Mientras tanto no se puede editar.',
+  outcomeLegend: '¿El grupo lo entiende?',
+  outcomes: {
+    Approved: 'Sí, lo entiende',
+    ChangesRequested: 'No, pide cambios',
+  },
+  validatedByLabel: 'Quién lo ha validado',
+  validatedByHint:
+    'Por ejemplo, «Grupo de lectura de la asociación». No escribas nombres de personas.',
+  notesLabel: 'Observaciones (opcional)',
+  notesHint: 'Qué ha costado entender o qué hay que cambiar.',
+  outcomeRequired: 'Elige si el grupo lo entiende o pide cambios.',
+  validatedByRequired: 'Escribe quién lo ha validado.',
+  record: 'Guardar el resultado',
+  recording: 'Guardando…',
+  withdraw: 'Volver a borrador',
+  validated: (date: string, by: string) => `Validado el ${date} por ${by}.`,
+  publishHint: 'Al publicarlo, esta versión queda como la final y ya no se puede cambiar.',
+  publish: 'Publicar',
+  publishing: 'Publicando…',
+  published: 'Publicado. Esta es la versión final.',
+  notes: 'Observaciones:',
+  sentAnnouncement: 'Documento enviado a validación.',
+  approvedAnnouncement: 'Resultado guardado: el documento está validado.',
+  changesAnnouncement: 'Resultado guardado: el documento vuelve a borrador para hacer los cambios.',
+  withdrawnAnnouncement: 'El documento vuelve a ser un borrador.',
+  publishedAnnouncement: 'Documento publicado.',
+} as const;
 
 export const STATUS_LABELS: Readonly<Record<DocumentStatus, string>> = {
   Received: 'Recibido',

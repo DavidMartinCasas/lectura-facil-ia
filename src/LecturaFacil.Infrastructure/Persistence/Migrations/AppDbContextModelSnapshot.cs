@@ -401,6 +401,49 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
                                 .IsRequired();
                         });
 
+                    b.OwnsMany("LecturaFacil.Domain.Documents.ValidationRecord", "Validations", b1 =>
+                        {
+                            b1.Property<Guid>("DocumentId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("document_id");
+
+                            b1.Property<int>("Number")
+                                .HasColumnType("integer")
+                                .HasColumnName("number");
+
+                            b1.Property<string>("Notes")
+                                .HasMaxLength(2000)
+                                .HasColumnType("character varying(2000)")
+                                .HasColumnName("notes");
+
+                            b1.Property<string>("Outcome")
+                                .IsRequired()
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("outcome");
+
+                            b1.Property<DateTimeOffset>("RecordedAt")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("recorded_at");
+
+                            b1.Property<string>("ValidatedBy")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("validated_by");
+
+                            b1.Property<int>("VersionNumber")
+                                .HasColumnType("integer")
+                                .HasColumnName("version_number");
+
+                            b1.HasKey("DocumentId", "Number");
+
+                            b1.ToTable("validations", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("DocumentId");
+                        });
+
                     b.OwnsMany("LecturaFacil.Domain.Guidelines.Finding", "OriginalFindings", b1 =>
                         {
                             b1.Property<Guid>("Id")
@@ -463,6 +506,8 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
                     b.Navigation("AdaptedVersions");
 
                     b.Navigation("OriginalFindings");
+
+                    b.Navigation("Validations");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>

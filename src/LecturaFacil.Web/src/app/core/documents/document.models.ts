@@ -13,16 +13,8 @@ export const DOCUMENT_STATUSES = [
 
 export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
 
-/**
- * Estados a los que hoy puede llegar un documento, en este orden. Pendiente de validación, Validado y Publicado existen
- * en la API, pero ningún paso del MVP lleva a ellos: el flujo de validación humana es de la versión 2.
- */
-export const REACHABLE_STATUSES = [
-  'Received',
-  'Processing',
-  'Error',
-  'Draft',
-] as const satisfies readonly DocumentStatus[];
+/** Estados a los que puede llegar un documento, en el orden de su ciclo de vida (filtros de "Mis documentos"). */
+export const REACHABLE_STATUSES = DOCUMENT_STATUSES;
 
 export function isReachableStatus(value: unknown): value is DocumentStatus {
   return typeof value === 'string' && (REACHABLE_STATUSES as readonly string[]).includes(value);
@@ -97,6 +89,33 @@ export interface DocumentDetails {
   readonly readability: ReadabilityComparison | null;
   /** Un borrador ya adaptado: se puede editar y marcar sus avisos como revisados. Lo decide el servidor. */
   readonly editable: boolean;
+  /** La adaptación ha fallado y tiene sentido volver a intentarla. Lo decide el servidor. */
+  readonly canRetry: boolean;
+  /** Un borrador con sus avisos de datos clave revisados: se puede enviar a validación. Lo decide el servidor. */
+  readonly canSendToValidation: boolean;
+  /** La última validación anotada; `null` si aún no hay ninguna. */
+  readonly validation: ValidationRecord | null;
+}
+
+/** Lo que decidió el grupo de validación: lo entiende o pide cambios. */
+export type ValidationOutcome = 'Approved' | 'ChangesRequested';
+
+/** Una validación con personas del grupo destinatario, anotada por quien adaptó el documento. */
+export interface ValidationRecord {
+  /** Versión adaptada que leyó el grupo. */
+  readonly version: number;
+  readonly outcome: ValidationOutcome;
+  /** Quién lo validó, por ejemplo "Grupo de lectura de la asociación". */
+  readonly validatedBy: string;
+  readonly notes: string | null;
+  readonly recordedAt: string;
+}
+
+/** Resultado de la validación que se anota. */
+export interface ValidationResult {
+  readonly outcome: ValidationOutcome;
+  readonly validatedBy: string;
+  readonly notes: string | null;
 }
 
 /** Documento con una adaptación que revisar. */

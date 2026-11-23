@@ -18,6 +18,7 @@ import { PROGRESS_STEP_MS } from '../../core/documents/document-submission.store
 import { ApiError } from '../../core/errors/api-error';
 import {
   ERROR_TEXTS,
+  DOCUMENT_TEXTS,
   LIST_TEXTS,
   PROGRESS_TEXTS,
   REVIEW_TEXTS,
@@ -57,6 +58,7 @@ describe('pages', () => {
       >
     >;
     get: ReturnType<typeof vi.fn<() => Observable<DocumentDetails>>>;
+    retryAdaptation: ReturnType<typeof vi.fn<() => Observable<DocumentDetails>>>;
   };
 
   beforeEach(() => {
@@ -65,6 +67,7 @@ describe('pages', () => {
       submit: vi.fn(() => of<SubmitDocumentResponse>({ id: 'doc-1', status: 'Received' })),
       list: vi.fn(() => of(page([]))),
       get: vi.fn(() => of(details('Draft'))),
+      retryAdaptation: vi.fn(() => of(details('Processing'))),
     };
     TestBed.configureTestingModule({
       providers: [
@@ -198,7 +201,7 @@ describe('pages', () => {
       expect(element.querySelector('[role="search"]')).not.toBeNull();
     });
 
-    it('only offers to filter by the statuses a document can reach today', async () => {
+    it('offers to filter by every status of the life cycle, the validation ones included', async () => {
       api.list.mockReturnValue(of(page([listItem('doc-1', 'Bases')])));
 
       const { fixture, element } = await render(DocumentsPage);
@@ -209,7 +212,8 @@ describe('pages', () => {
         option.textContent?.trim(),
       );
       expect(options).toEqual(REACHABLE_STATUSES.map((status) => STATUS_LABELS[status]));
-      expect(options).not.toContain(STATUS_LABELS.Validated);
+      expect(options).toContain(STATUS_LABELS.PendingValidation);
+      expect(options).toContain(STATUS_LABELS.Published);
     });
 
     it('offers to create a new document from the header', async () => {
@@ -411,6 +415,43 @@ describe('pages', () => {
       const { element } = await render(DocumentPage, { id: 'doc-1' });
 
       expect(element.querySelector('app-progress-steps')).not.toBeNull();
+    });
+
+    it('offers to retry a failed adaptation and follows its progress again', async () => {
+      api.get.mockReturnValueOnce(
+        of({
+          ...details('Error'),
+          canRetry: true,
+          error: {
+            code: 'llm.provider_unavailable',
+            message: 'El servicio de IA no está disponible.',
+          },
+        }),
+      );
+      const { fixture, element } = await render(DocumentPage, { id: 'doc-1' });
+
+      const alert = element.querySelector('.error[role="alert"]')!;
+      expect(alert.textContent).toContain('El servicio de IA no está disponible.');
+      Array.from(alert.querySelectorAll('button'))
+        .find((button) => button.textContent?.includes(DOCUMENT_TEXTS.retryAdaptation))!
+        .click();
+      await fixture.whenStable();
+
+      expect(api.retryAdaptation).toHaveBeenCalledWith('doc-1');
+      expect(element.querySelector('.error[role="alert"]')).toBeNull();
+      expect(element.querySelector('app-progress-steps')).not.toBeNull();
+      expect(element.textContent).toContain(DOCUMENT_TEXTS.retriedAnnouncement);
+    });
+
+    it('does not offer to retry when retrying cannot fix the failure', async () => {
+      api.get.mockReturnValueOnce(of({ ...details('Error'), canRetry: false }));
+
+      const { element } = await render(DocumentPage, { id: 'doc-1' });
+
+      expect(element.querySelector('.error[role="alert"]')?.textContent).toContain(
+        DOCUMENT_TEXTS.adaptationFailed,
+      );
+      expect(element.querySelector('.error button')).toBeNull();
     });
 
     it('shows a not-found message', async () => {
