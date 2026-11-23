@@ -20,7 +20,7 @@ describe('OriginalTextComponent', () => {
     const { element } = await render(ORIGINAL_TEXT, findings);
 
     expect(element.querySelector('.text')?.textContent).toBe(ORIGINAL_TEXT);
-    const marks = [...element.querySelectorAll<HTMLButtonElement>('button.mark')];
+    const marks = [...element.querySelectorAll<HTMLElement>('.mark[role="button"]')];
     expect(marks.map((mark) => mark.textContent)).toEqual(['40 %', 'BOP']);
     expect(marks[0].getAttribute('aria-pressed')).toBe('false');
   });
@@ -28,18 +28,20 @@ describe('OriginalTextComponent', () => {
   it('shows the guideline and the suggestion of the selected fragment', async () => {
     const { fixture, element } = await render(ORIGINAL_TEXT, findings);
 
-    element.querySelector<HTMLButtonElement>('button.mark')!.click();
+    element.querySelector<HTMLElement>('.mark[role="button"]')!.click();
     await fixture.whenStable();
 
     const detail = element.querySelector('.detail')!;
     expect(detail.textContent).toContain('Sin porcentajes');
     expect(detail.textContent).toContain('Explica la cantidad sin porcentajes.');
-    expect(element.querySelector('button.mark')?.getAttribute('aria-pressed')).toBe('true');
+    expect(element.querySelector('.mark[role="button"]')?.getAttribute('aria-pressed')).toBe(
+      'true',
+    );
   });
 
   it('lets the keyboard reach the fragments and close the explanation', async () => {
     const { fixture, element } = await render(ORIGINAL_TEXT, findings);
-    const mark = element.querySelector<HTMLButtonElement>('button.mark')!;
+    const mark = element.querySelector<HTMLElement>('.mark[role="button"]')!;
 
     expect(mark.tabIndex).toBe(0);
     mark.focus();
@@ -53,6 +55,23 @@ describe('OriginalTextComponent', () => {
     expect(element.querySelector('.detail')?.textContent?.trim()).toBe('');
   });
 
+  it('selects a fragment with Enter and with the space bar, like a button', async () => {
+    const { fixture, element } = await render(ORIGINAL_TEXT, findings);
+    const [first, second] = [...element.querySelectorAll<HTMLElement>('.mark[role="button"]')];
+
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await fixture.whenStable();
+    expect(first.getAttribute('aria-pressed')).toBe('true');
+
+    const space = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+    second.dispatchEvent(space);
+    await fixture.whenStable();
+    expect(second.getAttribute('aria-pressed')).toBe('true');
+    expect(first.getAttribute('aria-pressed')).toBe('false');
+    // La barra espaciadora no desplaza la página.
+    expect(space.defaultPrevented).toBe(true);
+  });
+
   it('shows both guidelines where two findings overlap', async () => {
     const overlapping: OriginalFinding[] = [
       { ...findings[0], start: 0, end: 8, fragment: 'La ayuda' },
@@ -60,7 +79,7 @@ describe('OriginalTextComponent', () => {
     ];
     const { fixture, element } = await render(ORIGINAL_TEXT, overlapping);
 
-    const marks = [...element.querySelectorAll<HTMLButtonElement>('button.mark')];
+    const marks = [...element.querySelectorAll<HTMLElement>('.mark[role="button"]')];
     expect(marks.map((mark) => mark.textContent)).toEqual(['La ', 'ayuda', ' ascenderá']);
     marks[1].click();
     await fixture.whenStable();
@@ -77,14 +96,14 @@ describe('OriginalTextComponent', () => {
     expect(element.querySelector('.text')?.textContent).toBe(text);
     expect(element.querySelector('script')).toBeNull();
     expect(element.querySelector('img')).toBeNull();
-    expect(element.querySelector('button.mark')?.textContent).toBe('<script>');
+    expect(element.querySelector('.mark[role="button"]')?.textContent).toBe('<script>');
   });
 
   it('says so when the original has no findings', async () => {
     const { element } = await render('Un texto sin problemas.', []);
 
     expect(element.textContent).toContain(REVIEW_TEXTS.noOriginalFindings);
-    expect(element.querySelector('button.mark')).toBeNull();
+    expect(element.querySelector('.mark[role="button"]')).toBeNull();
   });
 
   it('outlines the fragment it is asked to point out, keeping the guideline marks', async () => {
@@ -95,7 +114,7 @@ describe('OriginalTextComponent', () => {
 
     const spots = [...element.querySelectorAll('.spot')];
     expect(spots.map((spot) => spot.textContent).join('')).toBe('40 % de la renta mensual');
-    expect(element.querySelector('button.mark.spot')?.textContent).toBe('40 %');
+    expect(element.querySelector('.mark.spot[role="button"]')?.textContent).toBe('40 %');
     expect(element.querySelector('.text')?.textContent).toBe(ORIGINAL_TEXT);
 
     fixture.componentRef.setInput('spotlight', null);
