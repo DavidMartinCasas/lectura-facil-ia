@@ -2,7 +2,7 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { Observable, of, throwError } from 'rxjs';
+import { NEVER, Observable, Subject, of, throwError } from 'rxjs';
 import { PublicConfigService } from '../core/config/public-config.service';
 import { DocumentEventsService } from '../core/documents/document-events.service';
 import { DocumentSubmission } from '../core/documents/document.models';
@@ -29,6 +29,7 @@ describe('SamplesPage', () => {
   function setUp(options: {
     samples?: Observable<readonly SampleText[]>;
     siteKey?: string | null;
+    accepted?: Observable<{ id: string; status: 'Received' }>;
   }): ComponentFixture<SamplesPage> {
     submitted = [];
     turnstile = new FakeTurnstile();
@@ -41,11 +42,12 @@ describe('SamplesPage', () => {
           useValue: {
             submit: (submission: DocumentSubmission) => {
               submitted.push(submission);
-              return of({ id: 'doc-1', status: 'Received' });
+              return options.accepted ?? of({ id: 'doc-1', status: 'Received' as const });
             },
           },
         },
-        { provide: DocumentEventsService, useValue: { watchProgress: () => of() } },
+        // El progreso no termina nunca: la página no espera al final para abrir el documento.
+        { provide: DocumentEventsService, useValue: { watchProgress: () => NEVER } },
         {
           provide: PublicConfigService,
           useValue: { turnstileSiteKey: signal(options.siteKey ?? null) },
@@ -91,6 +93,23 @@ describe('SamplesPage', () => {
       { kind: 'text', text: 'Texto del segundo.', title: 'Requerimiento' },
     ]);
     expect(TestBed.inject(Router).url).toBe('/documentos/doc-1');
+  });
+
+  it('marks only the pressed sample as being sent and shows no progress here', async () => {
+    const accepted = new Subject<{ id: string; status: 'Received' }>();
+    const fixture = setUp({ accepted });
+    await settle(fixture);
+
+    adaptButtons(fixture)[2].click();
+    await settle(fixture);
+
+    const labels = adaptButtons(fixture).map((button) => button.textContent?.trim());
+    expect(labels).toEqual([SAMPLES_TEXTS.adapt, SAMPLES_TEXTS.adapt, SAMPLES_TEXTS.submitting]);
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-progress-steps')).toBeNull();
+
+    accepted.next({ id: 'doc-3', status: 'Received' });
+    await settle(fixture);
+    expect(TestBed.inject(Router).url).toBe('/documentos/doc-3');
   });
 
   it('says so when the samples cannot be loaded', async () => {

@@ -5,7 +5,7 @@ using LecturaFacil.Application.Samples;
 namespace LecturaFacil.Infrastructure.Samples;
 
 /// <summary>
-/// Los 3 textos de ejemplo (US-16), embebidos en el ensamblado (<c>Samples/sample-texts.json</c>). Son ficticios, no
+/// Los 6 textos de ejemplo (US-16), embebidos en el ensamblado (<c>Samples/sample-texts.json</c>). Son ficticios, no
 /// contienen datos personales y declaran su fuente. Se leen una vez y no cambian.
 /// </summary>
 public sealed class EmbeddedSampleTextCatalog : ISampleTextCatalog

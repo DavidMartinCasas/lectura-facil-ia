@@ -42,7 +42,22 @@
         }
       }
       @if (status === 'Error') {
-        <p class="error" role="alert">{{ texts.adaptationFailed }}</p>
+        @if (document.canRetry) {
+          <!-- El fallo se puede arreglar reintentando (el servicio no respondió o respondió mal). -->
+          <div class="error" role="alert">
+            <p>{{ document.error?.message ?? texts.retriableFailure }}</p>
+            <button
+              mat-flat-button
+              type="button"
+              [disabled]="store.saving()"
+              (click)="store.retryAdaptation()"
+            >
+              {{ store.saving() ? texts.retryingAdaptation : texts.retryAdaptation }}
+            </button>
+          </div>
+        } @else {
+          <p class="error" role="alert">{{ texts.adaptationFailed }}</p>
+        }
       }
     }
 
@@ -54,6 +69,14 @@
       <p class="error" role="alert">{{ message }}</p>
     }
     @if (reviewable(); as reviewable) {
+      <app-validation-panel
+        [document]="reviewable"
+        [saving]="store.saving()"
+        (send)="store.sendToValidation()"
+        (record)="store.recordValidation($event)"
+        (withdraw)="store.withdrawFromValidation()"
+        (publish)="store.publish()"
+      />
       <app-document-review
         [document]="reviewable"
         [saving]="store.saving()"

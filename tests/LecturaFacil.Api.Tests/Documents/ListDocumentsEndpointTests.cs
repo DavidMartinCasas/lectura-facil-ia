@@ -51,10 +51,12 @@ public sealed class ListDocumentsEndpointTests
         items[0].GetProperty("createdAt").GetDateTimeOffset().ShouldBe(Now);
         items[0].GetProperty("provider").GetString().ShouldBe("Servidor local");
         items[1].GetProperty("id").GetGuid().ShouldBe(received.Id.Value);
-        items[0].GetProperty("warningCount").GetInt32().ShouldBeGreaterThanOrEqualTo(0);
+        items[0].GetProperty("pendingKeyFactCount").GetInt32().ShouldBeGreaterThanOrEqualTo(0);
+        items[0].GetProperty("brokenGuidelineCount").GetInt32().ShouldBeGreaterThanOrEqualTo(0);
         items[0].GetProperty("readability").GetProperty("adapted").GetProperty("value").ValueKind.ShouldBe(JsonValueKind.Number);
         items[1].GetProperty("provider").ValueKind.ShouldBe(JsonValueKind.Null);
-        items[1].GetProperty("warningCount").ValueKind.ShouldBe(JsonValueKind.Null);
+        items[1].GetProperty("pendingKeyFactCount").ValueKind.ShouldBe(JsonValueKind.Null);
+        items[1].GetProperty("brokenGuidelineCount").ValueKind.ShouldBe(JsonValueKind.Null);
         items[1].GetProperty("readability").ValueKind.ShouldBe(JsonValueKind.Null);
         body.ShouldNotContain("Ajeno");
         body.ShouldNotContain("modelo-secreto");

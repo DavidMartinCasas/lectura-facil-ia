@@ -39,6 +39,7 @@ Escenario: Elegir formato
 Escenario: Aviso de borrador
   Entonces todos los formatos incluyen "Borrador · pendiente de validación" y la fecha
   (en DOCX y PDF, en el pie de cada página; en Markdown y texto, al final)
+  Y si el documento ya está validado o publicado (US-21), el sello dice "Versión validada"
 
 Escenario: Bloqueo por avisos pendientes
   Dado un documento con datos clave en "revisar" sin marcar

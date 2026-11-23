@@ -42,6 +42,13 @@
   font-weight: 700;
 }
 
+// Validado o publicado: ya no avisa, confirma.
+.draft.draft--validated {
+  border-color: var(--lf-primary);
+  background: var(--lf-primary-soft);
+  color: var(--lf-primary);
+}
+
 .meta {
   font-size: var(--lf-fs-label);
   color: var(--lf-muted);

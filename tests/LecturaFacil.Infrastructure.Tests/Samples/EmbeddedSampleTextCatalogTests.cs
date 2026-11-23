@@ -9,12 +9,12 @@ public sealed class EmbeddedSampleTextCatalogTests
     private static readonly LimitsOptions DefaultLimits = new();
 
     [Fact]
-    public void All_ReturnsThreeSamplesWithDistinctIds()
+    public void All_ReturnsSixSamplesWithDistinctIds()
     {
         var samples = new EmbeddedSampleTextCatalog().All();
 
-        samples.Count.ShouldBe(3);
-        samples.Select(sample => sample.Id).Distinct(StringComparer.Ordinal).Count().ShouldBe(3);
+        samples.Count.ShouldBe(6);
+        samples.Select(sample => sample.Id).Distinct(StringComparer.Ordinal).Count().ShouldBe(6);
     }
 
     [Fact]

@@ -16,7 +16,8 @@
 
 ## Contexto para el agente
 - Referencia visual: la maqueta de la conversación de diseño (texto original con problemas subrayados, adaptación con glosario, paneles de pautas, legibilidad y significado).
-- La etiqueta **"Borrador · pendiente de validación"** debe verse siempre.
+- La etiqueta **"Borrador · pendiente de validación"** debe verse siempre mientras el documento es un borrador. Con la
+  validación (US-21), la barra enseña después su estado: pendiente de validación, validado o publicado.
 
 ## Criterios de aceptación
 ```gherkin

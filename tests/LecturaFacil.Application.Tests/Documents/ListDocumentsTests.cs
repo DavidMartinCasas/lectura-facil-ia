@@ -43,7 +43,8 @@ public sealed class ListDocumentsTests
         first.Status.ShouldBe(DocumentStatus.Received);
         first.CreatedAt.ShouldBe(Now);
         first.Provider.ShouldBeNull();
-        first.WarningCount.ShouldBeNull();
+        first.PendingKeyFactCount.ShouldBeNull();
+        first.BrokenGuidelineCount.ShouldBeNull();
         first.Readability.ShouldBeNull();
     }
 
@@ -68,7 +69,8 @@ public sealed class ListDocumentsTests
 
         var summary = DocumentSummary.From(document);
 
-        summary.WarningCount.ShouldBe(document.LatestAdaptedVersion!.ReviewWarningCount);
+        summary.PendingKeyFactCount.ShouldBe(document.LatestAdaptedVersion!.PendingKeyFactCount);
+        summary.BrokenGuidelineCount.ShouldBe(document.LatestAdaptedVersion.BrokenGuidelineCount);
         summary.ReadabilityTexts.ShouldBe(new ReadabilityTexts("Texto de prueba suficientemente largo.", document.LatestAdaptedVersion.PlainText));
     }
 

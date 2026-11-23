@@ -13,19 +13,19 @@ import { Router } from '@angular/router';
 import { PublicConfigService } from '../core/config/public-config.service';
 import { DocumentSubmissionStore } from '../core/documents/document-submission.store';
 import { SampleText, SamplesApiService } from '../core/samples/samples-api.service';
-import { APP_TEXTS, PROGRESS_TEXTS, SAMPLES_TEXTS, TURNSTILE_TEXTS } from '../core/ui-texts';
-import { ProgressStepsComponent } from '../documents/progress-steps/progress-steps';
+import { PROGRESS_TEXTS, SAMPLES_TEXTS, TURNSTILE_TEXTS } from '../core/ui-texts';
 import { TurnstileWidgetComponent } from '../documents/turnstile-widget/turnstile-widget';
 
 type LoadState = 'loading' | 'loaded' | 'failed';
 
 /**
  * Pantalla "Ejemplos" (US-16): lista los textos de ejemplo y lanza la adaptación de cualquiera con un clic. Es un envío
- * normal de texto, con el mismo progreso, los mismos límites y el mismo desafío anti-bots que "Nuevo documento".
+ * normal de texto, con los mismos límites y el mismo desafío anti-bots que "Nuevo documento". En cuanto el servidor
+ * acepta el documento se abre su página, que enseña su título y sigue el progreso.
  */
 @Component({
   selector: 'app-samples-page',
-  imports: [MatButtonModule, MatCardModule, ProgressStepsComponent, TurnstileWidgetComponent],
+  imports: [MatButtonModule, MatCardModule, TurnstileWidgetComponent],
   providers: [DocumentSubmissionStore],
   templateUrl: './samples-page.html',
   styleUrls: ['../documents/pages/page.scss', './samples-page.scss'],
@@ -38,19 +38,21 @@ export class SamplesPage {
 
   protected readonly texts = SAMPLES_TEXTS;
   protected readonly progressTexts = PROGRESS_TEXTS;
-  protected readonly draftNotice = APP_TEXTS.draftNotice;
   protected readonly turnstileSiteKey = inject(PublicConfigService).turnstileSiteKey;
   protected readonly samples = signal<readonly SampleText[]>([]);
   protected readonly state = signal<LoadState>('loading');
   protected readonly humanError = signal<string | null>(null);
+  /** El ejemplo que se está enviando: solo su botón dice "Enviando…". */
+  protected readonly submittingId = signal<string | null>(null);
   private readonly humanToken = signal<string | null>(null);
   private readonly turnstile = viewChild(TurnstileWidgetComponent);
 
   constructor() {
     this.load();
+    // No se espera al final: la página del documento sigue el progreso con el título a la vista.
     effect(() => {
       const id = this.store.documentId();
-      if (this.store.phase() === 'ready' && id !== null) {
+      if (id !== null) {
         void this.router.navigate(['/documentos', id]);
       }
     });
@@ -84,6 +86,7 @@ export class SamplesPage {
       return;
     }
     this.humanError.set(null);
+    this.submittingId.set(sample.id);
     this.store.submit({
       kind: 'text',
       text: sample.text,

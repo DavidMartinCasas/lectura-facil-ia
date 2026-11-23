@@ -21,7 +21,8 @@ const DOCUMENTS: DocumentListItem[] = Array.from({ length: 45 }, (_, index) => {
     createdAt,
     updatedAt: createdAt,
     provider: 'Servidor local',
-    warningCount: 0,
+    pendingKeyFactCount: 0,
+    brokenGuidelineCount: 0,
     readability: null,
   };
 });

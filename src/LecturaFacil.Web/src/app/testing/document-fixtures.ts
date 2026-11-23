@@ -132,6 +132,9 @@ export function documentFixture(
         }
       : null,
     editable: adapted,
+    canRetry: false,
+    canSendToValidation: false,
+    validation: null,
     ...overrides,
   };
 }

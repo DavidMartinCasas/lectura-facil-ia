@@ -284,9 +284,11 @@ public sealed class EfDocumentRepositoryTests(PostgreSqlFixture database) : ICla
         summaries.Select(summary => summary.Id).ShouldBe([adapted.Id, received.Id]);
         summaries[0].Status.ShouldBe(DocumentStatus.Draft);
         summaries[0].Provider.ShouldBe("Servidor local");
-        summaries[0].WarningCount.ShouldNotBeNull();
+        summaries[0].PendingKeyFactCount.ShouldBe(0);
+        summaries[0].BrokenGuidelineCount.ShouldNotBeNull();
         summaries[0].ReadabilityTexts.ShouldBe(new ReadabilityTexts("Texto de prueba del documento.", "Ayudas\n¿Quién?\nUna frase."));
-        summaries[1].WarningCount.ShouldBeNull();
+        summaries[1].PendingKeyFactCount.ShouldBeNull();
+        summaries[1].BrokenGuidelineCount.ShouldBeNull();
         summaries[1].ReadabilityTexts.ShouldBeNull();
         summaries[0].Title.ShouldBe(DocumentTitle.Default.Value);
         summaries[1].Provider.ShouldBeNull();

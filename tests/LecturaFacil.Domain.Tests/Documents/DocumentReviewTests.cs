@@ -86,16 +86,17 @@ public sealed class DocumentReviewTests
     }
 
     [Fact]
-    public void ReviewWarningCount_AddsThePendingKeyFactsToTheGuidelinesThatAreNotMet()
+    public void BrokenGuidelineCount_CountsTheGuidelinesThatAreNotMet_AndDoesNotChangeWhenAKeyFactIsAcknowledged()
     {
         var document = Adapted();
         var brokenGuidelines = Report.TotalCount - Report.CompliantCount;
 
-        document.LatestAdaptedVersion!.ReviewWarningCount.ShouldBe(brokenGuidelines + 1);
+        document.LatestAdaptedVersion!.BrokenGuidelineCount.ShouldBe(brokenGuidelines);
 
         document.AcknowledgeKeyFact(0, Now.AddMinutes(5));
 
-        document.LatestAdaptedVersion!.ReviewWarningCount.ShouldBe(brokenGuidelines);
+        document.LatestAdaptedVersion!.BrokenGuidelineCount.ShouldBe(brokenGuidelines);
+        document.LatestAdaptedVersion.PendingKeyFactCount.ShouldBe(0);
     }
 
     [Fact]

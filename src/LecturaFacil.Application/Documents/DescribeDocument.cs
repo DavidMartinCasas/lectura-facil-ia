@@ -32,6 +32,9 @@ public sealed class DescribeDocument(CompareReadability compareReadability)
             document.OriginalText.Value,
             document.OriginalFindings,
             readability is { IsSuccess: true } ? readability.Value : null,
-            document.IsEditable);
+            document.IsEditable,
+            document.Status == DocumentStatus.Error && AdaptationErrors.IsRetriable(document.FailureCode),
+            document.CanSendToValidation,
+            document.LatestValidation);
     }
 }

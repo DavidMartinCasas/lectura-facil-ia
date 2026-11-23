@@ -1,0 +1,131 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<section class="validation" aria-labelledby="validation-title">
+  <h2 id="validation-title">{{ texts.title }}</h2>
+
+  @switch (document().status) {
+    @case ('Draft') {
+      @if (changesRequested(); as previous) {
+        <div class="previous" role="note">
+          <p>{{ texts.changesRequested(formatDate(previous.recordedAt), previous.validatedBy) }}</p>
+          @if (previous.notes) {
+            <p class="notes">
+              <strong>{{ texts.notes }}</strong> {{ previous.notes }}
+            </p>
+          }
+        </div>
+      }
+      <div class="step">
+        <p class="hint">{{ texts.draftHint }}</p>
+        <div class="actions">
+          <button
+            mat-flat-button
+            type="button"
+            [disabled]="!document().canSendToValidation || saving()"
+            [attr.aria-describedby]="document().canSendToValidation ? null : 'send-blocked'"
+            (click)="send.emit()"
+          >
+            {{ saving() ? texts.sending : texts.send }}
+          </button>
+          @if (!document().canSendToValidation) {
+            <span id="send-blocked" class="blocked">{{ texts.sendBlocked }}</span>
+          }
+        </div>
+      </div>
+    }
+    @case ('PendingValidation') {
+      <p class="hint">{{ texts.pendingHint }}</p>
+      <form class="result" (submit)="submit($event)" novalidate>
+        <fieldset
+          [attr.aria-invalid]="outcomeMissing() ? true : null"
+          [attr.aria-describedby]="outcomeMissing() ? 'outcome-error' : null"
+        >
+          <legend>{{ texts.outcomeLegend }}</legend>
+          <mat-radio-group name="outcome" [value]="outcome()" (change)="outcome.set($event.value)">
+            @for (option of outcomes; track option) {
+              <mat-radio-button [value]="option">{{ texts.outcomes[option] }}</mat-radio-button>
+            }
+          </mat-radio-group>
+          @if (outcomeMissing()) {
+            <p id="outcome-error" class="field-error">{{ texts.outcomeRequired }}</p>
+          }
+        </fieldset>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ texts.validatedByLabel }}</mat-label>
+          <input
+            matInput
+            name="validatedBy"
+            required
+            [attr.maxlength]="validatedByMaxLength"
+            [value]="validatedBy()"
+            (input)="onValidatedByInput($event)"
+            [attr.aria-invalid]="validatedByMissing() ? true : null"
+            [attr.aria-describedby]="validatedByMissing() ? 'validated-by-error' : null"
+          />
+          @if (validatedByMissing()) {
+            <mat-hint id="validated-by-error" class="field-error">{{
+              texts.validatedByRequired
+            }}</mat-hint>
+          } @else {
+            <mat-hint>{{ texts.validatedByHint }}</mat-hint>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ texts.notesLabel }}</mat-label>
+          <textarea
+            matInput
+            name="notes"
+            rows="3"
+            [attr.maxlength]="notesMaxLength"
+            [value]="notes()"
+            (input)="onNotesInput($event)"
+          ></textarea>
+          <mat-hint>{{ texts.notesHint }}</mat-hint>
+        </mat-form-field>
+
+        <div class="actions">
+          <button mat-flat-button type="submit" [disabled]="saving()">
+            {{ saving() ? texts.recording : texts.record }}
+          </button>
+          <button mat-stroked-button type="button" [disabled]="saving()" (click)="withdraw.emit()">
+            {{ texts.withdraw }}
+          </button>
+        </div>
+      </form>
+    }
+    @case ('Validated') {
+      @if (validation(); as validation) {
+        <p class="done">
+          {{ texts.validated(formatDate(validation.recordedAt), validation.validatedBy) }}
+        </p>
+        @if (validation.notes) {
+          <p class="notes">
+            <strong>{{ texts.notes }}</strong> {{ validation.notes }}
+          </p>
+        }
+      }
+      <div class="step">
+        <p class="hint">{{ texts.publishHint }}</p>
+        <div class="actions">
+          <button mat-flat-button type="button" [disabled]="saving()" (click)="publish.emit()">
+            {{ saving() ? texts.publishing : texts.publish }}
+          </button>
+        </div>
+      </div>
+    }
+    @case ('Published') {
+      <p class="done">{{ texts.published }}</p>
+      @if (validation(); as validation) {
+        <p class="hint">
+          {{ texts.validated(formatDate(validation.recordedAt), validation.validatedBy) }}
+        </p>
+        @if (validation.notes) {
+          <p class="notes">
+            <strong>{{ texts.notes }}</strong> {{ validation.notes }}
+          </p>
+        }
+      }
+    }
+  }
+</section>

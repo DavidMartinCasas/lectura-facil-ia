@@ -12,6 +12,7 @@ public sealed class Document
 
     private readonly List<Finding> _originalFindings = [];
     private readonly List<AdaptedVersion> _adaptedVersions = [];
+    private readonly List<ValidationRecord> _validations = [];
 
     private Document(
         DocumentId id,
@@ -51,6 +52,11 @@ public sealed class Document
     public IReadOnlyList<AdaptedVersion> AdaptedVersions => _adaptedVersions.OrderBy(version => version.Number).ToList().AsReadOnly();
 
     public AdaptedVersion? LatestAdaptedVersion => _adaptedVersions.MaxBy(version => version.Number);
+
+    /// <summary>Validaciones anotadas, de la primera a la última.</summary>
+    public IReadOnlyList<ValidationRecord> Validations => _validations.OrderBy(validation => validation.Number).ToList().AsReadOnly();
+
+    public ValidationRecord? LatestValidation => _validations.MaxBy(validation => validation.Number);
 
     /// <summary>
     /// Fase de la adaptación mientras el documento está en <see cref="DocumentStatus.Processing"/>; <c>null</c> en
@@ -96,6 +102,20 @@ public sealed class Document
 
         TransitionTo(DocumentStatus.Processing, now);
         FailureCode = null;
+    }
+
+    /// <summary>
+    /// Vuelve a poner en marcha una adaptación que ha fallado: el documento pasa a <see cref="DocumentStatus.Processing"/>
+    /// sin motivo de fallo, para que el worker lo adapte de nuevo. Solo desde <see cref="DocumentStatus.Error"/>.
+    /// </summary>
+    public void RetryAdaptation(DateTimeOffset now)
+    {
+        if (Status != DocumentStatus.Error)
+        {
+            throw new InvalidOperationException($"A document in {Status} cannot retry its adaptation.");
+        }
+
+        StartProcessing(now);
     }
 
     /// <summary>
@@ -161,6 +181,60 @@ public sealed class Document
         TransitionTo(DocumentStatus.Draft, now);
     }
 
+    /// <summary>
+    /// Un borrador se envía a validación cuando una persona ya ha revisado los avisos de sus datos clave: es lo mismo que
+    /// pide la exportación, y el grupo de validación necesita el documento exportado.
+    /// </summary>
+    public bool CanSendToValidation => IsEditable && LatestAdaptedVersion!.CanExport;
+
+    /// <summary>
+    /// Envía la última versión a validación: el documento pasa a <see cref="DocumentStatus.PendingValidation"/> y deja de
+    /// poder editarse hasta que se anote el resultado o se retire.
+    /// </summary>
+    public void SendToValidation(DateTimeOffset now)
+    {
+        if (!CanSendToValidation)
+        {
+            throw new InvalidOperationException($"A document in {Status} with pending warnings cannot be sent to validation.");
+        }
+
+        TransitionTo(DocumentStatus.PendingValidation, now);
+    }
+
+    /// <summary>Retira el documento de la validación sin anotar ningún resultado: vuelve a ser un borrador editable.</summary>
+    public void WithdrawFromValidation(DateTimeOffset now)
+    {
+        EnsureStatus(DocumentStatus.PendingValidation);
+        TransitionTo(DocumentStatus.Draft, now);
+    }
+
+    /// <summary>
+    /// Anota el resultado de la validación de la última versión. Si el grupo lo entiende, el documento queda
+    /// <see cref="DocumentStatus.Validated"/>; si pide cambios, vuelve a <see cref="DocumentStatus.Draft"/>.
+    /// </summary>
+    public ValidationRecord RecordValidation(ValidationOutcome outcome, string validatedBy, string? notes, DateTimeOffset now)
+    {
+        EnsureStatus(DocumentStatus.PendingValidation);
+
+        var record = ValidationRecord.Create(
+            (LatestValidation?.Number ?? 0) + 1,
+            LatestAdaptedVersion!.Number,
+            outcome,
+            validatedBy,
+            notes,
+            now);
+        _validations.Add(record);
+        TransitionTo(outcome == ValidationOutcome.Approved ? DocumentStatus.Validated : DocumentStatus.Draft, now);
+        return record;
+    }
+
+    /// <summary>Publica la versión validada: es la versión final y ya no cambia.</summary>
+    public void Publish(DateTimeOffset now)
+    {
+        EnsureStatus(DocumentStatus.Validated);
+        TransitionTo(DocumentStatus.Published, now);
+    }
+
     /// <summary>Pasa a otra fase de la adaptación. Solo mientras el documento está en <see cref="DocumentStatus.Processing"/>.</summary>
     public void EnterStage(ProcessingStage stage, DateTimeOffset now)
     {
@@ -201,6 +275,14 @@ public sealed class Document
         if (next != DocumentStatus.Processing)
         {
             Stage = null;
+        }
+    }
+
+    private void EnsureStatus(DocumentStatus expected)
+    {
+        if (Status != expected)
+        {
+            throw new InvalidOperationException($"The document is in {Status}, not in {expected}.");
         }
     }
 

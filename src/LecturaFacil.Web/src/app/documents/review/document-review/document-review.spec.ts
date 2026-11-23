@@ -72,7 +72,7 @@ describe('DocumentReviewComponent', () => {
 
     const toggle = element.querySelector<HTMLButtonElement>('.banner .review-toggle')!;
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
-    expect(toggle.textContent).toContain('2 avisos');
+    expect(toggle.textContent).toContain('1 dato y 1 pauta');
     const panel = element.querySelector('.workarea aside#review-panel')!;
     expect(panel.getAttribute('aria-label')).toBe(REVIEW_TEXTS.reviewLabel);
 
@@ -114,6 +114,21 @@ describe('DocumentReviewComponent', () => {
 
     expect(element.querySelector('.review-toggle')?.getAttribute('aria-expanded')).toBe('false');
     expect(element.querySelector('.review-toggle')?.textContent).toContain(REVIEW_TEXTS.noWarnings);
+  });
+
+  it('says on the review button where the warnings come from, in amber only for key facts', async () => {
+    const element = await render(false, {
+      ...draft,
+      adaptation: adaptationFixture({
+        pendingKeyFactCount: 0,
+        canExport: true,
+        guidelines: { ...adaptationFixture().guidelines!, compliantCount: 10 },
+      }),
+    });
+
+    const figure = element.querySelector('.review-toggle .figure')!;
+    expect(figure.textContent?.trim()).toBe('2 pautas');
+    expect(figure.classList).not.toContain('figure--warning');
   });
 
   it('folds and unfolds each part of the review', async () => {

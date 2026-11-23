@@ -15,6 +15,9 @@ namespace LecturaFacil.Api.Documents;
 /// <param name="Original">El texto original con sus problemas de lectura fácil.</param>
 /// <param name="Readability">Índice INFLESZ del original y de la última versión; <c>null</c> si aún no hay adaptación.</param>
 /// <param name="Editable">Si la adaptación se puede editar y sus avisos marcar como revisados (un borrador ya adaptado).</param>
+/// <param name="CanRetry">Si la adaptación ha fallado y se puede reintentar con <c>POST /api/documents/{id}/retry</c>.</param>
+/// <param name="CanSendToValidation">Si es un borrador con sus avisos revisados que se puede enviar a validación.</param>
+/// <param name="Validation">La última validación anotada; <c>null</c> si aún no hay ninguna.</param>
 public sealed record DocumentResponse(
     Guid Id,
     string Title,
@@ -25,7 +28,10 @@ public sealed record DocumentResponse(
     AdaptationResponse? Adaptation,
     OriginalTextResponse Original,
     ReadabilityComparisonResponse? Readability,
-    bool Editable)
+    bool Editable,
+    bool CanRetry,
+    bool CanSendToValidation,
+    ValidationResponse? Validation)
 {
     public static DocumentResponse From(DocumentDetails details)
     {
@@ -40,7 +46,10 @@ public sealed record DocumentResponse(
             details.Adaptation is { } version ? AdaptationResponse.From(version, details.Status) : null,
             OriginalTextResponse.From(details.OriginalText, details.OriginalFindings),
             details.Readability is { } readability ? ReadabilityComparisonResponse.From(readability) : null,
-            details.Editable);
+            details.Editable,
+            details.CanRetry,
+            details.CanSendToValidation,
+            details.LatestValidation is { } validation ? ValidationResponse.From(validation) : null);
     }
 }
 
@@ -128,9 +137,10 @@ public sealed record DocumentListResponse(IReadOnlyList<DocumentListItemResponse
 /// Nombre visible del proveedor que hizo la última adaptación (el que configura quien despliega); <c>null</c> si aún no
 /// hay ninguna. El modelo no se expone.
 /// </param>
-/// <param name="WarningCount">
-/// Avisos de la última versión (datos clave sin revisar y pautas sin cumplir); <c>null</c> si aún no hay ninguna.
+/// <param name="PendingKeyFactCount">
+/// Datos clave de la última versión sin revisar, que bloquean la exportación; <c>null</c> si aún no hay ninguna.
 /// </param>
+/// <param name="BrokenGuidelineCount">Pautas que la última versión no cumple (orientativas); <c>null</c> si no hay versión.</param>
 /// <param name="Readability">Legibilidad del original y de la última versión; <c>null</c> si no hay versión.</param>
 public sealed record DocumentListItemResponse(
     Guid Id,
@@ -139,7 +149,8 @@ public sealed record DocumentListItemResponse(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     string? Provider,
-    int? WarningCount,
+    int? PendingKeyFactCount,
+    int? BrokenGuidelineCount,
     ReadabilityComparisonResponse? Readability)
 {
     public static DocumentListItemResponse From(DocumentSummary summary)
@@ -152,7 +163,8 @@ public sealed record DocumentListItemResponse(
             summary.CreatedAt,
             summary.UpdatedAt,
             summary.Provider,
-            summary.WarningCount,
+            summary.PendingKeyFactCount,
+            summary.BrokenGuidelineCount,
             summary.Readability is { } readability ? ReadabilityComparisonResponse.From(readability) : null);
     }
 }

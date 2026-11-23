@@ -22,6 +22,11 @@ public sealed class BolaMatrixTests
         { "POST", "/api/documents/{id}/key-facts/1/acknowledge" },
         { "POST", "/api/documents/{id}/key-facts/acknowledge" },
         { "POST", "/api/documents/{id}/export?format=txt" },
+        { "POST", "/api/documents/{id}/retry" },
+        { "POST", "/api/documents/{id}/validation/send" },
+        { "POST", "/api/documents/{id}/validation" },
+        { "POST", "/api/documents/{id}/validation/withdraw" },
+        { "POST", "/api/documents/{id}/publish" },
     };
 
     /// <summary>Todos los endpoints de documentos, también los que no reciben un id.</summary>
@@ -101,6 +106,11 @@ public sealed class BolaMatrixTests
     [InlineData("POST", "/api/documents/{id}/key-facts/1/acknowledge")]
     [InlineData("POST", "/api/documents/{id}/key-facts/acknowledge")]
     [InlineData("POST", "/api/documents/{id}/export?format=txt")]
+    [InlineData("POST", "/api/documents/{id}/retry")]
+    [InlineData("POST", "/api/documents/{id}/validation/send")]
+    [InlineData("POST", "/api/documents/{id}/validation")]
+    [InlineData("POST", "/api/documents/{id}/validation/withdraw")]
+    [InlineData("POST", "/api/documents/{id}/publish")]
     [InlineData("POST", "/api/documents")]
     [InlineData("POST", "/api/auth/logout")]
     public async Task StateChangingRequest_WithoutTheAntiforgeryToken_Returns400(string method, string template)
@@ -144,6 +154,9 @@ public sealed class BolaMatrixTests
             _ when method == "GET" => null,
             _ when template.EndsWith("/versions/1", StringComparison.Ordinal) => JsonContent.Create(ValidEdit),
             _ when template.EndsWith("/acknowledge", StringComparison.Ordinal) => JsonContent.Create(new { version = 1 }),
+            _ when template.EndsWith("/validation/send", StringComparison.Ordinal) => JsonContent.Create(new { version = 1 }),
+            _ when template.EndsWith("/validation", StringComparison.Ordinal) =>
+                JsonContent.Create(new { version = 1, outcome = "Approved", validatedBy = "Grupo de lectura" }),
             "/api/documents" => JsonContent.Create(new { text = new string('a', 100) }),
             _ => null,
         };

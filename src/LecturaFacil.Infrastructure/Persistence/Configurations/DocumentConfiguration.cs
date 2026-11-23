@@ -67,6 +67,36 @@ internal sealed class DocumentConfiguration : IEntityTypeConfiguration<Document>
 
         builder.OwnsMany(document => document.AdaptedVersions, AdaptedVersionConfiguration.Configure);
         builder.Navigation(document => document.AdaptedVersions).HasField("_adaptedVersions");
+
+        builder.OwnsMany(document => document.Validations, ConfigureValidations);
+        builder.Navigation(document => document.Validations).HasField("_validations");
+    }
+
+    /// <summary>Validaciones anotadas (<c>VALIDACION</c> del modelo de datos), una fila por ronda. Se borran con su documento.</summary>
+    private static void ConfigureValidations(OwnedNavigationBuilder<Document, ValidationRecord> validations)
+    {
+        validations.ToTable("validations");
+        validations.WithOwner().HasForeignKey("DocumentId");
+        validations.Property<DocumentId>("DocumentId")
+            .HasColumnName("document_id")
+            .HasConversion(id => id.Value, value => DocumentId.From(value));
+        validations.Property(validation => validation.Number).HasColumnName("number").ValueGeneratedNever();
+        validations.HasKey("DocumentId", nameof(ValidationRecord.Number));
+
+        validations.Property(validation => validation.VersionNumber).HasColumnName("version_number");
+        validations.Property(validation => validation.Outcome)
+            .HasColumnName("outcome")
+            .HasConversion<string>()
+            .HasMaxLength(StatusMaxLength)
+            .IsRequired();
+        validations.Property(validation => validation.ValidatedBy)
+            .HasColumnName("validated_by")
+            .HasMaxLength(ValidationRecord.ValidatedByMaxLength)
+            .IsRequired();
+        validations.Property(validation => validation.Notes)
+            .HasColumnName("notes")
+            .HasMaxLength(ValidationRecord.NotesMaxLength);
+        validations.Property(validation => validation.RecordedAt).HasColumnName("recorded_at");
     }
 
     /// <summary>Hallazgos del texto original (<c>HALLAZGO</c> del modelo de datos). Se borran con su documento.</summary>

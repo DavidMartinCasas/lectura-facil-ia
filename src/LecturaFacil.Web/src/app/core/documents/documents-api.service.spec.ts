@@ -141,6 +141,50 @@ describe('DocumentsApiService', () => {
     await response;
   });
 
+  it('sends, records, withdraws and publishes through the validation endpoints', async () => {
+    const calls = [
+      {
+        response: firstValueFrom(service.sendToValidation('a/b', 2)),
+        url: 'validation/send',
+        body: { version: 2 },
+      },
+      {
+        response: firstValueFrom(
+          service.recordValidation('a/b', 2, {
+            outcome: 'Approved',
+            validatedBy: 'Grupo',
+            notes: null,
+          }),
+        ),
+        url: 'validation',
+        body: { version: 2, outcome: 'Approved', validatedBy: 'Grupo', notes: null },
+      },
+      {
+        response: firstValueFrom(service.withdrawFromValidation('a/b')),
+        url: 'validation/withdraw',
+        body: {},
+      },
+      { response: firstValueFrom(service.publish('a/b')), url: 'publish', body: {} },
+    ];
+
+    for (const call of calls) {
+      const request = controller.expectOne(`/api/documents/a%2Fb/${call.url}`);
+      expect(request.request.method).toBe('POST');
+      expect(request.request.body).toEqual(call.body);
+      request.flush({ id: 'a/b' });
+      expect((await call.response).id).toBe('a/b');
+    }
+  });
+
+  it('retries the adaptation of a failed document', async () => {
+    const response = firstValueFrom(service.retryAdaptation('a/b'));
+
+    const request = controller.expectOne('/api/documents/a%2Fb/retry');
+    expect(request.request.method).toBe('POST');
+    request.flush({ id: 'a/b', status: 'Processing' });
+    expect((await response).status).toBe('Processing');
+  });
+
   it('exports with the chosen format and keeps the file name of the server', async () => {
     const response = firstValueFrom(service.exportDocument('a/b', 'docx'));
 

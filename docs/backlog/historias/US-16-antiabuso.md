@@ -18,7 +18,7 @@
 - Turnstile: el frontend obtiene un token del widget y el backend lo valida con `https://challenges.cloudflare.com/turnstile/v0/siteverify`. Comprueba la API en la documentación oficial.
 - Turnstile es **configurable** (`Turnstile.Enabled`) y viene **deshabilitado por defecto**, porque requiere una cuenta de Cloudflare. La instancia pública del TFM lo habilita.
 - El **aviso configurable** de `UiOptions` (US-02) se muestra como banner en todas las pantallas si tiene texto.
-- Para facilitar la prueba al tribunal, se siembran **3 textos de ejemplo** sin datos personales.
+- Para facilitar la prueba al tribunal, se siembran **6 textos de ejemplo** sin datos personales.
 
 ## Criterios de aceptación
 ```gherkin
@@ -44,14 +44,14 @@ Escenario: Límite de login
 Escenario: Textos de ejemplo
   Dado un usuario autenticado
   Cuando abre "Ejemplos"
-  Entonces puede lanzar la adaptación de cualquiera de los 3 textos de ejemplo con un clic
+  Entonces puede lanzar la adaptación de cualquiera de los 6 textos de ejemplo con un clic
 ```
 
 ## Alcance técnico
 - **Application:** puerto `IHumanVerification`.
 - **Infrastructure:** `TurnstileVerifier` (cliente HTTP con timeout); implementación nula cuando está deshabilitado.
 - **Api:** `RateLimiter` de ASP.NET Core por usuario (adaptaciones y exportaciones) y por IP (login); valores en `Options`.
-- Siembra de 3 textos de ejemplo (`GET /api/samples`).
+- Siembra de 6 textos de ejemplo (`GET /api/samples`).
 - **Angular:** widget de Turnstile en el formulario de envío (solo si está habilitado), página "Ejemplos" y banner con el aviso configurable (`GET /api/config/public` devuelve solo datos públicos: aviso, si Turnstile está activo y su site key).
 - `.env.example` con `TURNSTILE__ENABLED`, `TURNSTILE__SITEKEY`, `TURNSTILE__SECRETKEY` y los límites.
 

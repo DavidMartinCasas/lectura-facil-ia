@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 using FluentValidation;
 using LecturaFacil.Api.Security;
+using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
+using LecturaFacil.Domain.Documents;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Extensions.Options;
@@ -12,7 +14,8 @@ namespace LecturaFacil.Api.Documents;
 
 /// <summary>
 /// <c>POST /api/documents</c>: texto pegado (JSON) o PDF (<c>multipart/form-data</c>, campo <c>file</c>). El documento
-/// queda en la cola de adaptación. Las consultas están en <see cref="DocumentQueryEndpoints"/>.
+/// queda en la cola de adaptación. <c>POST /api/documents/{id}/retry</c> vuelve a ponerlo en la cola si su adaptación
+/// falló. Las consultas están en <see cref="DocumentQueryEndpoints"/>.
 /// Solo traduce HTTP ↔ caso de uso: las reglas viven en <see cref="SubmitDocument"/> y en Domain.
 /// </summary>
 internal static partial class DocumentEndpoints
@@ -35,6 +38,9 @@ internal static partial class DocumentEndpoints
         [DocumentErrors.UnreadablePdf.Code] = StatusCodes.Status422UnprocessableEntity,
         [DocumentErrors.PdfTooComplex.Code] = StatusCodes.Status422UnprocessableEntity,
         [DocumentErrors.Busy.Code] = StatusCodes.Status503ServiceUnavailable,
+        [DocumentErrors.NotFound.Code] = StatusCodes.Status404NotFound,
+        [AdaptationErrors.NotFailed.Code] = StatusCodes.Status409Conflict,
+        [AdaptationErrors.NotRetriable.Code] = StatusCodes.Status409Conflict,
     };
 
     public static IEndpointRouteBuilder MapDocumentEndpoints(this IEndpointRouteBuilder endpoints)
@@ -44,6 +50,7 @@ internal static partial class DocumentEndpoints
         var group = endpoints.MapGroup(Path).WithTags("Documentos").RequireAuthorization();
         group.MapDocumentQueries();
         group.MapDocumentReview();
+        group.MapDocumentValidation();
         group.MapDocumentExport();
 
         group.MapPost("/", SubmitAsync)
@@ -65,7 +72,34 @@ internal static partial class DocumentEndpoints
                 "JSON { text, title? } con el texto pegado, o multipart/form-data con el PDF en el campo 'file'. "
                 + "El PDF se procesa en memoria y solo se guarda el texto extraído.");
 
+        // Reintentar llama al modelo como un envío: comparte su límite por usuario. No pide Turnstile: hay sesión y el
+        // documento ya existe, y el límite acota el coste.
+        group.MapPost("/{id:guid}/retry", RetryAsync)
+            .RequireRateLimiting(SubmitRateLimitPolicy)
+            .Produces<DocumentResponse>(StatusCodes.Status202Accepted)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .WithName("RetryAdaptation")
+            .WithSummary("Vuelve a adaptar un documento cuya adaptación ha fallado.")
+            .WithDescription(
+                "El documento pasa a Processing y vuelve a la cola. 409 si no está con error o si el fallo no se arregla "
+                + "reintentando (por ejemplo, un texto demasiado largo). Un documento ajeno responde 404.");
+
         return endpoints;
+    }
+
+    private static async Task<IResult> RetryAsync(Guid id, RetryAdaptation retryAdaptation, CancellationToken cancellationToken)
+    {
+        if (id == Guid.Empty)
+        {
+            return ToProblem(DocumentErrors.NotFound);
+        }
+
+        var result = await retryAdaptation.ExecuteAsync(DocumentId.From(id), cancellationToken);
+        return result.IsSuccess
+            ? TypedResults.Accepted($"{Path}/{id}", DocumentResponse.From(result.Value))
+            : ToProblem(result.Error!);
     }
 
     /// <summary>En OpenAPI, el cuerpo multipart es el campo <c>file</c> con el PDF, no el JSON del texto.</summary>

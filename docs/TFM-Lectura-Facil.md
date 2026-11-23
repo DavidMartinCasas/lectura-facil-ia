@@ -216,7 +216,7 @@ journey
 | RF-09 | Etiquetar cada documento como *borrador pendiente de validación* | Must |
 | RF-10 | Proveedor principal y de respaldo opcional, elegidos por configuración (local, Azure o ambos) | Must |
 | RF-11 | Lista simple de documentos del usuario | Should |
-| RF-12 | Registrar el resultado de la validación humana | Could (v2) |
+| RF-12 | Registrar el resultado de la validación humana | Could (adelantado al MVP: US-21) |
 | RF-13 | Pictogramas de apoyo (ARASAAC) | Could (v2) |
 
 ### No funcionales
@@ -643,7 +643,10 @@ erDiagram
 | `PUT` | `/api/documents/{id}/versions/{n}` | Guarda la edición manual |
 | `POST` | `/api/documents/{id}/reprocess` | Vuelve a adaptar (otro modelo u otras opciones) |
 | `POST` | `/api/documents/{id}/export?format=docx\|pdf\|md\|txt` | Genera el fichero en el formato elegido |
-| `POST` | `/api/documents/{id}/validation` | Registra el resultado de la validación |
+| `POST` | `/api/documents/{id}/validation/send` | Envía el borrador revisado a validación |
+| `POST` | `/api/documents/{id}/validation` | Registra el resultado de la validación de la versión que leyó el grupo (409 si ya no es la pendiente) |
+| `POST` | `/api/documents/{id}/validation/withdraw` | Retira el documento de la validación (vuelve a borrador) |
+| `POST` | `/api/documents/{id}/publish` | Publica la versión validada |
 | `GET` | `/api/samples` | Textos de ejemplo |
 | `GET` | `/api/status/llm` | Disponibilidad del proveedor principal y del respaldo |
 | `GET` | `/api/guidelines` | Pautas configuradas |
@@ -926,7 +929,7 @@ Con tardes y fines de semana, el alcance se ajusta así. Lo recortado pasa a la 
 | Índice INFLESZ (Szigriszt-Pazos) | Fernández Huerta, si no da tiempo |
 | Interfaz lado a lado con edición | Historial completo (solo lista simple de documentos) |
 | Exportación en DOCX, Markdown y texto | Exportación a PDF, si no da tiempo (se puede generar desde el DOCX) |
-| Estado *pendiente de validación* | Registro de la validación humana |
+| Validación humana anotada por quien adapta (US-21) | Validadores con cuenta propia |
 | Evaluación con **10 textos y 3 modelos** | 20 textos y 5 modelos |
 | Login con usuario de prueba | Roles distintos (técnica y validador) |
 
@@ -1089,11 +1092,10 @@ mindmap
 ## 25. Evolución futura
 
 - **OCR de PDFs escaneados** con Qwen3-VL-8B (recortado del MVP por plazo).
-- **Registro completo de la validación humana** y roles diferenciados (recortado del MVP por plazo). El dominio ya
-  admite los estados *Pendiente de validación*, *Validado* y *Publicado* y sus transiciones; falta el caso de uso, el
-  endpoint `POST /api/documents/{id}/validation` y la interfaz. Hasta entonces, todo documento adaptado se queda en
-  *Borrador* con la etiqueta "Borrador · pendiente de validación", y «Mis documentos» no ofrece filtrar por esos
-  estados.
+- **Validadores con cuenta propia y roles diferenciados** (técnica y validador). Hoy la validación la anota la misma
+  persona que adaptó el documento (US-21), porque el grupo destinatario suele validar en una sesión con el texto
+  impreso. Con roles, una persona validadora podría leer y anotar el resultado desde su cuenta, lo que exige compartir
+  documentos entre usuarios y revisar la autorización por objeto.
 - **Pictogramas ARASAAC** junto a las ideas clave (respetando su licencia).
 - **Gestión de validación**: grupos de validadores, sesiones, comentarios por frase.
 - **Extensión de navegador** para adaptar páginas web.

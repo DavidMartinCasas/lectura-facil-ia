@@ -11,6 +11,7 @@ import {
   ExportFormat,
   ManualEdit,
   SubmitDocumentResponse,
+  ValidationResult,
 } from './document.models';
 
 export const DOCUMENTS_PATH = '/api/documents';
@@ -80,6 +81,38 @@ export class DocumentsApiService {
     return this.http.post<DocumentDetails>(`${documentPath(id)}/key-facts/acknowledge`, {
       version,
     });
+  }
+
+  /** Envía a validación la versión revisada, que debe ser la última. */
+  sendToValidation(id: string, version: number): Observable<DocumentDetails> {
+    return this.http.post<DocumentDetails>(`${documentPath(id)}/validation/send`, { version });
+  }
+
+  /** Anota lo que decidió el grupo que leyó la versión indicada, que debe ser la pendiente de validación. */
+  recordValidation(
+    id: string,
+    version: number,
+    result: ValidationResult,
+  ): Observable<DocumentDetails> {
+    return this.http.post<DocumentDetails>(`${documentPath(id)}/validation`, {
+      version,
+      ...result,
+    });
+  }
+
+  /** Retira el documento de la validación y lo devuelve a borrador, sin anotar nada. */
+  withdrawFromValidation(id: string): Observable<DocumentDetails> {
+    return this.http.post<DocumentDetails>(`${documentPath(id)}/validation/withdraw`, {});
+  }
+
+  /** Publica un documento validado. */
+  publish(id: string): Observable<DocumentDetails> {
+    return this.http.post<DocumentDetails>(`${documentPath(id)}/publish`, {});
+  }
+
+  /** Vuelve a adaptar un documento cuya adaptación ha fallado. Devuelve el documento, ya en "Procesando". */
+  retryAdaptation(id: string): Observable<DocumentDetails> {
+    return this.http.post<DocumentDetails>(`${documentPath(id)}/retry`, {});
   }
 
   /** Exporta la última versión en el formato elegido. El servidor genera el fichero; aquí solo se descarga. */

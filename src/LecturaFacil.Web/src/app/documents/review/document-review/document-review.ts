@@ -24,7 +24,7 @@ import {
   ManualEdit,
   ReviewableDocument,
 } from '../../../core/documents/document.models';
-import { REVIEW_TEXTS } from '../../../core/ui-texts';
+import { REVIEW_TEXTS, STATUS_LABELS } from '../../../core/ui-texts';
 import { AdaptedTextComponent } from '../adapted-text/adapted-text';
 import { ExportPanelComponent } from '../export-panel/export-panel';
 import { GuidelinesPanelComponent } from '../guidelines-panel/guidelines-panel';
@@ -88,6 +88,17 @@ export class DocumentReviewComponent {
     { initialValue: false },
   );
   protected readonly adaptation = computed(() => this.document().adaptation);
+  /** Validado o publicado: ya no es un borrador. */
+  protected readonly validated = computed(() => {
+    const status = this.document().status;
+    return status === 'Validated' || status === 'Published';
+  });
+  /** El sello de la barra: borrador pendiente de validación hasta que se valida; después, su estado. */
+  protected readonly stateLabel = computed(() =>
+    this.document().status === 'Draft'
+      ? this.texts.draftLabel
+      : STATUS_LABELS[this.document().status],
+  );
   protected readonly editable = computed(() => this.document().editable);
   protected readonly exportMessage = computed(() => {
     const pending = this.adaptation().pendingKeyFactCount;
@@ -130,13 +141,19 @@ export class DocumentReviewComponent {
    */
   protected readonly overlayOpen = computed(() => this.panelOpen() && this.smallScreen());
 
-  /** Avisos de toda la revisión (datos clave sin revisar y pautas sin cumplir), para el botón que abre el panel. */
-  protected readonly warningCount = computed(() => {
-    const adaptation = this.adaptation();
-    const guidelines = adaptation.guidelines;
-    const broken = guidelines ? guidelines.totalCount - guidelines.compliantCount : 0;
-    return adaptation.pendingKeyFactCount + broken;
+  /** Datos clave sin revisar: lo que hay que mirar antes de exportar. */
+  protected readonly pendingKeyFacts = computed(() => this.adaptation().pendingKeyFactCount);
+
+  /** Pautas sin cumplir: orientativas, no se marcan como revisadas. */
+  protected readonly brokenGuidelines = computed(() => {
+    const guidelines = this.adaptation().guidelines;
+    return guidelines ? guidelines.totalCount - guidelines.compliantCount : 0;
   });
+
+  /** Avisos de toda la revisión, para abrir el panel al entrar. */
+  protected readonly warningCount = computed(
+    () => this.pendingKeyFacts() + this.brokenGuidelines(),
+  );
 
   /**
    * Panel de la revisión abierto. Al entrar en un documento con avisos se abre solo en pantallas anchas (en las

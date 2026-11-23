@@ -60,6 +60,20 @@ public sealed class ExportDocumentTests
     }
 
     [Fact]
+    public async Task Export_OfAValidatedDocument_SaysItIsTheValidatedVersion()
+    {
+        var document = Adapted(Owner, pendingWarning: false);
+        document.SendToValidation(Now);
+        document.RecordValidation(ValidationOutcome.Approved, "Grupo de lectura", null, Now);
+
+        await CreateUseCase().ExecuteAsync(document.Id, "txt", Token);
+
+        var exported = _exporter.Exported.ShouldHaveSingleItem();
+        exported.Cover.DraftNotice.ShouldBe("Versión validada");
+        exported.Footer.ShouldBe("Versión validada · 16 de noviembre de 2026");
+    }
+
+    [Fact]
     public async Task Export_PreparesACoverWithWhatItIsTheDraftNoticeAndTheDate()
     {
         var document = Adapted(Owner, pendingWarning: false);
