@@ -131,6 +131,16 @@ describe('DocumentsApiService', () => {
     await response;
   });
 
+  it('acknowledges every key fact of a version in a single request', async () => {
+    const response = firstValueFrom(service.acknowledgeAllKeyFacts('doc-1', 2));
+
+    const request = controller.expectOne('/api/documents/doc-1/key-facts/acknowledge');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ version: 2 });
+    request.flush({ id: 'doc-1' });
+    await response;
+  });
+
   it('exports with the chosen format and keeps the file name of the server', async () => {
     const response = firstValueFrom(service.exportDocument('a/b', 'docx'));
 

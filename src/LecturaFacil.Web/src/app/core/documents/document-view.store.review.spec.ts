@@ -22,9 +22,19 @@ describe('DocumentViewStore (revisión)', () => {
   let acknowledgeKeyFact: ReturnType<
     typeof vi.fn<(id: string, version: number, factId: number) => Observable<DocumentDetails>>
   >;
+  let acknowledgeAllKeyFacts: ReturnType<
+    typeof vi.fn<(id: string, version: number) => Observable<DocumentDetails>>
+  >;
   let store: DocumentViewStore;
 
   beforeEach(() => {
+    acknowledgeAllKeyFacts = vi.fn(() =>
+      of(
+        documentFixture('Draft', {
+          adaptation: adaptationFixture({ pendingKeyFactCount: 0, canExport: true }),
+        }),
+      ),
+    );
     saveEdit = vi.fn(() =>
       of(documentFixture('Draft', { adaptation: adaptationFixture({ version: 2 }) })),
     );
@@ -40,7 +50,12 @@ describe('DocumentViewStore (revisión)', () => {
         DocumentViewStore,
         {
           provide: DocumentsApiService,
-          useValue: { get: () => of(documentFixture('Draft')), saveEdit, acknowledgeKeyFact },
+          useValue: {
+            get: () => of(documentFixture('Draft')),
+            saveEdit,
+            acknowledgeKeyFact,
+            acknowledgeAllKeyFacts,
+          },
         },
         { provide: DocumentEventsService, useValue: { watch: () => NEVER } },
       ],
@@ -64,6 +79,14 @@ describe('DocumentViewStore (revisión)', () => {
     expect(acknowledgeKeyFact).toHaveBeenCalledWith('doc-1', 1, 0);
     expect(store.document()?.adaptation?.canExport).toBe(true);
     expect(store.lastAction()).toBe('acknowledged');
+  });
+
+  it('acknowledges every key fact of the version on screen at once', () => {
+    store.acknowledgeAllKeyFacts();
+
+    expect(acknowledgeAllKeyFacts).toHaveBeenCalledWith('doc-1', 1);
+    expect(store.document()?.adaptation?.canExport).toBe(true);
+    expect(store.lastAction()).toBe('acknowledgedAll');
   });
 
   it('ignores a second action while one is in progress', () => {

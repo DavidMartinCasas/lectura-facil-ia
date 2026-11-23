@@ -1,24 +1,38 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <section class="page" aria-labelledby="page-title">
-  <a class="back" routerLink="/documentos">
-    <span aria-hidden="true">←</span> {{ texts.backToList }}
-  </a>
+  <!-- Arriba: la vuelta a la lista y el título y, a su derecha, la legibilidad del borrador. -->
+  <div class="doc-top">
+    <div class="doc-heading">
+      <a class="back" routerLink="/documentos">
+        <span aria-hidden="true">←</span> {{ texts.backToList }}
+      </a>
+
+      @if (store.document(); as document) {
+        <header class="doc-header">
+          <div class="page-header">
+            <div class="title-row">
+              <h1 id="page-title">{{ document.title }}</h1>
+              @if (store.status(); as status) {
+                <p class="status-line">
+                  <span class="visually-hidden">{{ texts.statusLabel }}</span>
+                  <span [class]="'chip chip--' + tone(status)">{{ statusLabels[status] }}</span>
+                </p>
+              }
+            </div>
+          </div>
+        </header>
+      }
+    </div>
+    @if (reviewable(); as reviewable) {
+      <app-readability-panel
+        class="doc-readability"
+        compact
+        [readability]="reviewable.readability"
+      />
+    }
+  </div>
 
   @if (store.document(); as document) {
-    <header class="doc-header">
-      <div class="page-header">
-        <div class="title-row">
-          <h1 id="page-title">{{ document.title }}</h1>
-          @if (store.status(); as status) {
-            <p class="status-line">
-              <span class="visually-hidden">{{ texts.statusLabel }}</span>
-              <span [class]="'chip chip--' + tone(status)">{{ statusLabels[status] }}</span>
-            </p>
-          }
-        </div>
-      </div>
-    </header>
-
     @if (store.status(); as status) {
       @if (isAwaitingAdaptation(status) || status === 'Error') {
         @if (store.steps(); as steps) {
@@ -46,6 +60,7 @@
         (save)="store.saveEdit($event)"
         [exporting]="store.exporting()"
         (acknowledge)="store.acknowledgeKeyFact($event)"
+        (acknowledgeAll)="store.acknowledgeAllKeyFacts()"
         (exportAdaptation)="store.exportAdaptation($event)"
       />
     }

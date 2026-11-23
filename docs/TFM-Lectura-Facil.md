@@ -1089,7 +1089,11 @@ mindmap
 ## 25. Evolución futura
 
 - **OCR de PDFs escaneados** con Qwen3-VL-8B (recortado del MVP por plazo).
-- **Registro completo de la validación humana** y roles diferenciados (recortado del MVP por plazo).
+- **Registro completo de la validación humana** y roles diferenciados (recortado del MVP por plazo). El dominio ya
+  admite los estados *Pendiente de validación*, *Validado* y *Publicado* y sus transiciones; falta el caso de uso, el
+  endpoint `POST /api/documents/{id}/validation` y la interfaz. Hasta entonces, todo documento adaptado se queda en
+  *Borrador* con la etiqueta "Borrador · pendiente de validación", y «Mis documentos» no ofrece filtrar por esos
+  estados.
 - **Pictogramas ARASAAC** junto a las ideas clave (respetando su licencia).
 - **Gestión de validación**: grupos de validadores, sesiones, comentarios por frase.
 - **Extensión de navegador** para adaptar páginas web.

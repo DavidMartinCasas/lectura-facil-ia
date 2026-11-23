@@ -19,11 +19,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import {
-  DOCUMENT_STATUSES,
+  REACHABLE_STATUSES,
   DocumentListFilter,
   DocumentListItem,
   DocumentStatus,
-  isDocumentStatus,
+  isReachableStatus,
 } from '../../core/documents/document.models';
 import { DocumentsApiService } from '../../core/documents/documents-api.service';
 import { ApiError } from '../../core/errors/api-error';
@@ -61,7 +61,8 @@ export class DocumentsPage {
   private readonly injector = inject(Injector);
 
   protected readonly texts = LIST_TEXTS;
-  protected readonly statusOptions = DOCUMENT_STATUSES;
+  // Solo los estados a los que hoy llega un documento: filtrar por uno de la versión 2 nunca devolvería nada.
+  protected readonly statusOptions = REACHABLE_STATUSES;
   protected readonly statusLabels = STATUS_LABELS;
 
   protected readonly search = signal('');
@@ -213,7 +214,7 @@ export class DocumentsPage {
 
   private syncWithUrl(params: ParamMap): void {
     const title = params.get(SEARCH_PARAM) ?? '';
-    const statuses = params.getAll(STATUS_PARAM).filter(isDocumentStatus);
+    const statuses = params.getAll(STATUS_PARAM).filter(isReachableStatus);
     if (keyOf({ title: title.trim(), statuses }) === this.loadedKey) {
       return;
     }
@@ -240,7 +241,7 @@ export class DocumentsPage {
 
 /** Mismos filtros, misma clave, sin importar el orden en que se marcaron los estados. */
 function keyOf(filter: DocumentListFilter): string {
-  const statuses = DOCUMENT_STATUSES.filter((status) => filter.statuses.includes(status));
+  const statuses = REACHABLE_STATUSES.filter((status) => filter.statuses.includes(status));
   return JSON.stringify([filter.title, statuses]);
 }
 

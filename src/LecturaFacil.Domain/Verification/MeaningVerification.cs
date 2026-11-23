@@ -116,6 +116,16 @@ public sealed class MeaningVerification
     }
 
     /// <summary>
+    /// La misma verificación con todos los avisos marcados como revisados por una persona. Los datos conservados no
+    /// cambian y los avisos se siguen mostrando.
+    /// </summary>
+    public MeaningVerification AcknowledgeAllKeyFacts()
+    {
+        var facts = KeyFacts.Select(fact => fact.AsAcknowledged()).ToList();
+        return new MeaningVerification(Status, facts.AsReadOnly(), Metadata);
+    }
+
+    /// <summary>
     /// Vuelve a comprobar con código los datos clave después de una edición manual, sin llamar al verificador (US-13).
     /// Igual que en <see cref="Combine"/>, el código solo puede añadir avisos: cada dato queda con el más grave entre su
     /// estado anterior y la comprobación de su cita en el texto editado, y cada cifra del original que ya no está en la

@@ -20,6 +20,7 @@ public sealed class BolaMatrixTests
         { "GET", "/api/documents/{id}/events" },
         { "PUT", "/api/documents/{id}/versions/1" },
         { "POST", "/api/documents/{id}/key-facts/1/acknowledge" },
+        { "POST", "/api/documents/{id}/key-facts/acknowledge" },
         { "POST", "/api/documents/{id}/export?format=txt" },
     };
 
@@ -98,6 +99,7 @@ public sealed class BolaMatrixTests
     [Theory]
     [InlineData("PUT", "/api/documents/{id}/versions/1")]
     [InlineData("POST", "/api/documents/{id}/key-facts/1/acknowledge")]
+    [InlineData("POST", "/api/documents/{id}/key-facts/acknowledge")]
     [InlineData("POST", "/api/documents/{id}/export?format=txt")]
     [InlineData("POST", "/api/documents")]
     [InlineData("POST", "/api/auth/logout")]

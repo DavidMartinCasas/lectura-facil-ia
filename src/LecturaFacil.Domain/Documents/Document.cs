@@ -154,6 +154,13 @@ public sealed class Document
         TransitionTo(DocumentStatus.Draft, now);
     }
 
+    /// <summary>Marca como revisados todos los avisos de los datos clave de la última versión.</summary>
+    public void AcknowledgeAllKeyFacts(DateTimeOffset now)
+    {
+        EnsureEditable().AcknowledgeAllKeyFacts();
+        TransitionTo(DocumentStatus.Draft, now);
+    }
+
     /// <summary>Pasa a otra fase de la adaptación. Solo mientras el documento está en <see cref="DocumentStatus.Processing"/>.</summary>
     public void EnterStage(ProcessingStage stage, DateTimeOffset now)
     {

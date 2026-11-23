@@ -13,6 +13,21 @@ export const DOCUMENT_STATUSES = [
 
 export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
 
+/**
+ * Estados a los que hoy puede llegar un documento, en este orden. Pendiente de validación, Validado y Publicado existen
+ * en la API, pero ningún paso del MVP lleva a ellos: el flujo de validación humana es de la versión 2.
+ */
+export const REACHABLE_STATUSES = [
+  'Received',
+  'Processing',
+  'Error',
+  'Draft',
+] as const satisfies readonly DocumentStatus[];
+
+export function isReachableStatus(value: unknown): value is DocumentStatus {
+  return typeof value === 'string' && (REACHABLE_STATUSES as readonly string[]).includes(value);
+}
+
 export function isDocumentStatus(value: unknown): value is DocumentStatus {
   return typeof value === 'string' && (DOCUMENT_STATUSES as readonly string[]).includes(value);
 }
@@ -61,6 +76,10 @@ export interface DocumentListItem {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly provider: string | null;
+  /** Avisos de la última versión (datos clave sin revisar y pautas sin cumplir); `null` si aún no hay ninguna. */
+  readonly warningCount: number | null;
+  /** Legibilidad del original y de la última versión; `null` si aún no hay ninguna. */
+  readonly readability: ReadabilityComparison | null;
 }
 
 /** GET /api/documents/{id}. Todo el texto es texto plano: nunca se interpreta como HTML. */

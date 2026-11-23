@@ -83,4 +83,85 @@ describe('KeyFactsPanelComponent', () => {
     expect(locate[0].getAttribute('aria-pressed')).toBe('true');
     expect(locate[0].textContent?.trim()).toBe(REVIEW_TEXTS.locateOff);
   });
+
+  describe('acknowledging every warning at once', () => {
+    // Los dos datos con aviso: así se ofrece marcarlos todos.
+    const twoWarnings: MeaningVerification = {
+      ...verification,
+      keyFacts: verification.keyFacts.map((fact) => ({
+        ...fact,
+        status: 'Review',
+        acknowledged: false,
+        requiresAcknowledgement: true,
+      })),
+    };
+
+    async function renderAll(value: MeaningVerification, editable = true) {
+      const fixture = TestBed.createComponent(KeyFactsPanelComponent);
+      fixture.componentRef.setInput('verification', value);
+      fixture.componentRef.setInput('editable', editable);
+      let requested = 0;
+      fixture.componentInstance.acknowledgeAll.subscribe(() => requested++);
+      await fixture.whenStable();
+      const element = fixture.nativeElement as HTMLElement;
+      document.body.appendChild(element);
+      return { fixture, element, requested: () => requested };
+    }
+
+    afterEach(() => document.body.replaceChildren());
+
+    it('is offered only with two warnings or more, and only while editable', async () => {
+      expect((await render(verification)).element.querySelector('.acknowledge-all')).toBeNull();
+      expect(
+        (await renderAll(twoWarnings, false)).element.querySelector('.acknowledge-all'),
+      ).toBeNull();
+
+      const { element } = await renderAll(twoWarnings);
+      expect(element.querySelector('.acknowledge-all')?.textContent?.trim()).toBe(
+        REVIEW_TEXTS.acknowledgeAll(2),
+      );
+    });
+
+    it('asks for confirmation first, with the focus on cancel', async () => {
+      const { fixture, element, requested } = await renderAll(twoWarnings);
+
+      element.querySelector<HTMLButtonElement>('.acknowledge-all')!.click();
+      await fixture.whenStable();
+
+      const confirm = element.querySelector('.confirm')!;
+      expect(confirm.textContent).toContain(REVIEW_TEXTS.acknowledgeAllConfirm(2));
+      expect(document.activeElement?.textContent?.trim()).toBe(REVIEW_TEXTS.cancel);
+      expect(requested()).toBe(0);
+    });
+
+    it('marks them all once confirmed', async () => {
+      const { fixture, element, requested } = await renderAll(twoWarnings);
+      element.querySelector<HTMLButtonElement>('.acknowledge-all')!.click();
+      await fixture.whenStable();
+
+      const confirmButton = [
+        ...element.querySelectorAll<HTMLButtonElement>('.confirm button'),
+      ].find(
+        (button) => button.textContent?.trim() === REVIEW_TEXTS.acknowledgeAllConfirmButton(2),
+      )!;
+      confirmButton.click();
+      await fixture.whenStable();
+
+      expect(requested()).toBe(1);
+      expect(element.querySelector('.confirm')).toBeNull();
+    });
+
+    it('marks nothing when cancelled, and gives the focus back', async () => {
+      const { fixture, element, requested } = await renderAll(twoWarnings);
+      element.querySelector<HTMLButtonElement>('.acknowledge-all')!.click();
+      await fixture.whenStable();
+
+      (document.activeElement as HTMLButtonElement).click();
+      await fixture.whenStable();
+
+      expect(requested()).toBe(0);
+      expect(element.querySelector('.confirm')).toBeNull();
+      expect(document.activeElement).toBe(element.querySelector('.acknowledge-all'));
+    });
+  });
 });

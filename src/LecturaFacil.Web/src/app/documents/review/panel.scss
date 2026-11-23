@@ -122,6 +122,30 @@ ul {
 }
 
 // "Ver en el original" va antes que "Marcar como revisado", en la misma fila.
+// Marcar todos los avisos como revisados, y su confirmación.
+.acknowledge-all {
+  margin-block: 0.25rem 0.75rem;
+}
+
+.confirm {
+  margin-block: 0.25rem 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--lf-amber);
+  border-radius: var(--lf-radius-s);
+  background: var(--lf-amber-soft);
+
+  p {
+    margin: 0 0 0.75rem;
+    color: var(--lf-ink);
+  }
+}
+
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .item .locate {
   margin-inline-end: 0.5rem;
 }

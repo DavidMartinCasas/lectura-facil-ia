@@ -75,6 +75,13 @@ export class DocumentsApiService {
     });
   }
 
+  /** Marca como revisados todos los avisos de los datos clave de la versión indicada, en un solo guardado. */
+  acknowledgeAllKeyFacts(id: string, version: number): Observable<DocumentDetails> {
+    return this.http.post<DocumentDetails>(`${documentPath(id)}/key-facts/acknowledge`, {
+      version,
+    });
+  }
+
   /** Exporta la última versión en el formato elegido. El servidor genera el fichero; aquí solo se descarga. */
   exportDocument(id: string, format: ExportFormat): Observable<DownloadedFile> {
     return this.http
