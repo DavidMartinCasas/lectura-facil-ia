@@ -25,7 +25,8 @@ const documents: readonly DocumentListItem[] = [
     createdAt: '2026-11-16T10:00:00Z',
     updatedAt: '2026-11-16T10:05:00Z',
     provider: 'Servidor local',
-    warningCount: 0,
+    pendingKeyFactCount: 0,
+    brokenGuidelineCount: 0,
     readability: null,
   },
 ];

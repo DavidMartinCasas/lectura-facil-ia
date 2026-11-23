@@ -16,7 +16,8 @@ describe('DocumentListComponent', () => {
       createdAt: '2026-11-16T10:00:00Z',
       updatedAt: '2026-11-16T10:05:00Z',
       provider: 'Servidor local',
-      warningCount: 3,
+      pendingKeyFactCount: 3,
+      brokenGuidelineCount: 2,
       readability: {
         original: { value: 41.6, grade: 'SomewhatDifficult', gradeLabel: 'Algo difícil' },
         adapted: { value: 72.4, grade: 'QuiteEasy', gradeLabel: 'Bastante fácil' },
@@ -30,7 +31,8 @@ describe('DocumentListComponent', () => {
       createdAt: '2026-11-15T09:30:00Z',
       updatedAt: '2026-11-15T09:30:00Z',
       provider: null,
-      warningCount: null,
+      pendingKeyFactCount: null,
+      brokenGuidelineCount: null,
       readability: null,
     },
   ];
@@ -105,7 +107,7 @@ describe('DocumentListComponent', () => {
     );
     // En la celda del estado va también, oculta salvo en pantallas estrechas, la etiqueta de avisos.
     expect(rows[0][1]).toMatch(/^Borrador/);
-    expect(rows[0][2]).toBe('3 por revisar');
+    expect(rows[0][2]).toBe('3 datos por revisar 2 pautas sin cumplir');
     expect(rows[0][3]).toContain('42 → 72');
     expect(rows[0][3]).toContain('Bastante fácil');
     expect(rows[0][4]).toContain('2026');
@@ -117,12 +119,19 @@ describe('DocumentListComponent', () => {
     expect(element.querySelector('td a')?.getAttribute('href')).toBe('/documentos/doc-2');
   });
 
-  it('says "Sin avisos" when the latest version has nothing to review', async () => {
-    const element = await render({ documents: [{ ...items[0], warningCount: 0 }] });
+  it('says "Revisado" when no key fact is pending, and the broken guidelines apart', async () => {
+    const element = await render({
+      documents: [
+        { ...items[0], pendingKeyFactCount: 0 },
+        { ...items[0], id: 'doc-3', pendingKeyFactCount: 0, brokenGuidelineCount: 0 },
+      ],
+    });
 
-    expect(element.querySelector('td.col-warnings')?.textContent?.trim()).toBe(
-      LIST_TEXTS.noWarnings,
-    );
+    const cells = [...element.querySelectorAll('td.col-warnings')];
+    expect(cells[0].querySelector('.chip')?.textContent?.trim()).toBe(LIST_TEXTS.keyFactsReviewed);
+    expect(cells[0].querySelector('.chip--ok')).not.toBeNull();
+    expect(cells[0].querySelector('.guidelines')?.textContent?.trim()).toBe('2 pautas sin cumplir');
+    expect(cells[1].textContent?.trim()).toBe(LIST_TEXTS.keyFactsReviewed);
   });
 
   it('tells screen readers the readability in words, not with the arrow', async () => {

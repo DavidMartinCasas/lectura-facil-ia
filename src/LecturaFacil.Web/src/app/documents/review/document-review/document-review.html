@@ -25,8 +25,11 @@
         <path d="M4 5h16v14H4zM14 5v14" fill="none" stroke="currentColor" stroke-width="2" />
       </svg>
       {{ texts.reviewLabel }}
-      <span class="figure" [class.figure--warning]="warningCount() > 0">{{
-        warningCount() > 0 ? texts.warnings(warningCount()) : texts.noWarnings
+      <!-- Dice de dónde vienen los avisos; solo los datos clave piden actuar y van en ámbar. -->
+      <span class="figure" [class.figure--warning]="pendingKeyFacts() > 0">{{
+        warningCount() > 0
+          ? texts.reviewSummary(pendingKeyFacts(), brokenGuidelines())
+          : texts.noWarnings
       }}</span>
     </button>
     <div class="banner-actions">

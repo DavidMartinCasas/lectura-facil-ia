@@ -80,11 +80,10 @@ public sealed class AdaptedVersion
     public int PendingKeyFactCount => MeaningVerification?.PendingAcknowledgementCount ?? 0;
 
     /// <summary>
-    /// Avisos de la revisión: datos clave sin marcar como revisados y pautas que no se cumplen. Es el número que muestran
-    /// la lista de documentos y el botón que abre el panel de revisión.
+    /// Pautas que no se cumplen. Son orientativas: no se marcan como revisadas ni bloquean la exportación; dejan de
+    /// contar cuando una edición las cumple.
     /// </summary>
-    public int ReviewWarningCount =>
-        PendingKeyFactCount + (GuidelineReport is { } report ? report.TotalCount - report.CompliantCount : 0);
+    public int BrokenGuidelineCount => GuidelineReport is { } report ? report.TotalCount - report.CompliantCount : 0;
 
     /// <summary>Se puede exportar cuando una persona ha marcado como revisados todos los avisos de datos clave.</summary>
     public bool CanExport => PendingKeyFactCount == 0;

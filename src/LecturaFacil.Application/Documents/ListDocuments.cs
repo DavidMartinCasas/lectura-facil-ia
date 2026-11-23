@@ -145,8 +145,12 @@ public static class DocumentListErrors
 
 /// <summary>Un documento en la lista "Mis documentos".</summary>
 /// <param name="Provider">Nombre visible del proveedor que generó la última adaptación; <c>null</c> si aún no hay ninguna.</param>
-/// <param name="WarningCount">
-/// Avisos de la última versión: datos clave sin revisar y pautas sin cumplir. <c>null</c> si aún no hay ninguna versión.
+/// <param name="PendingKeyFactCount">
+/// Datos clave de la última versión sin marcar como revisados: lo que bloquea la exportación. <c>null</c> si aún no hay
+/// ninguna versión.
+/// </param>
+/// <param name="BrokenGuidelineCount">
+/// Pautas que la última versión no cumple. Son orientativas. <c>null</c> si aún no hay ninguna versión.
 /// </param>
 /// <param name="ReadabilityTexts">
 /// El original y la última versión, para calcular la legibilidad. <see cref="ListDocuments"/> la calcula y los quita.
@@ -162,7 +166,8 @@ public sealed record DocumentSummary(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     string? Provider,
-    int? WarningCount = null,
+    int? PendingKeyFactCount = null,
+    int? BrokenGuidelineCount = null,
     ReadabilityTexts? ReadabilityTexts = null,
     ReadabilityComparison? Readability = null)
 {
@@ -195,7 +200,8 @@ public sealed record DocumentSummary(
             createdAt,
             updatedAt,
             latest?.Metadata.Provider,
-            latest?.ReviewWarningCount,
+            latest?.PendingKeyFactCount,
+            latest?.BrokenGuidelineCount,
             latest is null ? null : new ReadabilityTexts(originalText, latest.PlainText));
 }
 

@@ -37,7 +37,8 @@ const listItem = (id: string, title = `Documento ${id}`): DocumentListItem => ({
   createdAt: '2026-11-16T10:00:00Z',
   updatedAt: '2026-11-16T10:00:00Z',
   provider: 'Servidor local',
-  warningCount: 0,
+  pendingKeyFactCount: 0,
+  brokenGuidelineCount: 0,
   readability: null,
 });
 

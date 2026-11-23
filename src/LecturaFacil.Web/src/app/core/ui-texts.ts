@@ -131,8 +131,11 @@ export const LIST_TEXTS = {
   columnProvider: 'Proveedor',
   noProvider: 'Sin adaptar todavía',
   notAdapted: 'Sin adaptar todavía',
-  pendingWarnings: (count: number): string => `${count} por revisar`,
-  noWarnings: 'Sin avisos',
+  pendingKeyFacts: (count: number): string =>
+    count === 1 ? '1 dato por revisar' : `${count} datos por revisar`,
+  keyFactsReviewed: 'Revisado',
+  brokenGuidelines: (count: number): string =>
+    count === 1 ? '1 pauta sin cumplir' : `${count} pautas sin cumplir`,
   readabilityChange: (original: number, adapted: number, grade: string): string =>
     `De ${original} a ${adapted} puntos: ${grade}`,
   justNow: 'Hace un momento',
@@ -227,6 +230,14 @@ export const REVIEW_TEXTS = {
   closeReview: 'Cerrar la revisión',
   noWarnings: 'Sin avisos',
   warnings: (count: number) => (count === 1 ? '1 aviso' : `${count} avisos`),
+  /** Qué queda por mirar, para el botón de la revisión: "1 dato", "2 pautas" o "1 dato y 2 pautas". */
+  reviewSummary: (keyFacts: number, guidelines: number): string =>
+    [
+      keyFacts === 0 ? '' : keyFacts === 1 ? '1 dato' : `${keyFacts} datos`,
+      guidelines === 0 ? '' : guidelines === 1 ? '1 pauta' : `${guidelines} pautas`,
+    ]
+      .filter(Boolean)
+      .join(' y '),
   notChecked: 'Sin comprobar',
   guidelinesOf: (compliant: number, total: number) => `${compliant} de ${total}`,
   noReport: 'Sin informe',

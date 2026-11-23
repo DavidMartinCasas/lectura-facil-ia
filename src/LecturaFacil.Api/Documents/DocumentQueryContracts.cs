@@ -128,9 +128,10 @@ public sealed record DocumentListResponse(IReadOnlyList<DocumentListItemResponse
 /// Nombre visible del proveedor que hizo la última adaptación (el que configura quien despliega); <c>null</c> si aún no
 /// hay ninguna. El modelo no se expone.
 /// </param>
-/// <param name="WarningCount">
-/// Avisos de la última versión (datos clave sin revisar y pautas sin cumplir); <c>null</c> si aún no hay ninguna.
+/// <param name="PendingKeyFactCount">
+/// Datos clave de la última versión sin revisar, que bloquean la exportación; <c>null</c> si aún no hay ninguna.
 /// </param>
+/// <param name="BrokenGuidelineCount">Pautas que la última versión no cumple (orientativas); <c>null</c> si no hay versión.</param>
 /// <param name="Readability">Legibilidad del original y de la última versión; <c>null</c> si no hay versión.</param>
 public sealed record DocumentListItemResponse(
     Guid Id,
@@ -139,7 +140,8 @@ public sealed record DocumentListItemResponse(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     string? Provider,
-    int? WarningCount,
+    int? PendingKeyFactCount,
+    int? BrokenGuidelineCount,
     ReadabilityComparisonResponse? Readability)
 {
     public static DocumentListItemResponse From(DocumentSummary summary)
@@ -152,7 +154,8 @@ public sealed record DocumentListItemResponse(
             summary.CreatedAt,
             summary.UpdatedAt,
             summary.Provider,
-            summary.WarningCount,
+            summary.PendingKeyFactCount,
+            summary.BrokenGuidelineCount,
             summary.Readability is { } readability ? ReadabilityComparisonResponse.From(readability) : null);
     }
 }

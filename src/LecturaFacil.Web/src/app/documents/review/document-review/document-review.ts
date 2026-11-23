@@ -130,13 +130,19 @@ export class DocumentReviewComponent {
    */
   protected readonly overlayOpen = computed(() => this.panelOpen() && this.smallScreen());
 
-  /** Avisos de toda la revisión (datos clave sin revisar y pautas sin cumplir), para el botón que abre el panel. */
-  protected readonly warningCount = computed(() => {
-    const adaptation = this.adaptation();
-    const guidelines = adaptation.guidelines;
-    const broken = guidelines ? guidelines.totalCount - guidelines.compliantCount : 0;
-    return adaptation.pendingKeyFactCount + broken;
+  /** Datos clave sin revisar: lo que hay que mirar antes de exportar. */
+  protected readonly pendingKeyFacts = computed(() => this.adaptation().pendingKeyFactCount);
+
+  /** Pautas sin cumplir: orientativas, no se marcan como revisadas. */
+  protected readonly brokenGuidelines = computed(() => {
+    const guidelines = this.adaptation().guidelines;
+    return guidelines ? guidelines.totalCount - guidelines.compliantCount : 0;
   });
+
+  /** Avisos de toda la revisión, para abrir el panel al entrar. */
+  protected readonly warningCount = computed(
+    () => this.pendingKeyFacts() + this.brokenGuidelines(),
+  );
 
   /**
    * Panel de la revisión abierto. Al entrar en un documento con avisos se abre solo en pantallas anchas (en las

@@ -76,8 +76,10 @@ export interface DocumentListItem {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly provider: string | null;
-  /** Avisos de la última versión (datos clave sin revisar y pautas sin cumplir); `null` si aún no hay ninguna. */
-  readonly warningCount: number | null;
+  /** Datos clave de la última versión sin revisar, que bloquean la exportación; `null` si aún no hay ninguna. */
+  readonly pendingKeyFactCount: number | null;
+  /** Pautas que la última versión no cumple. Son orientativas; `null` si aún no hay ninguna versión. */
+  readonly brokenGuidelineCount: number | null;
   /** Legibilidad del original y de la última versión; `null` si aún no hay ninguna. */
   readonly readability: ReadabilityComparison | null;
 }
