@@ -52,19 +52,50 @@ td time {
   white-space: nowrap;
 }
 
-.title-date {
+.title-date,
+.status-warnings {
   display: none;
 }
 
-// Pantallas estrechas: título (con la fecha debajo) y estado; el proveedor se ve en el documento.
+.none {
+  color: var(--lf-muted);
+}
+
+.readability {
+  display: grid;
+  white-space: nowrap;
+}
+
+.scores {
+  font-variant-numeric: tabular-nums;
+  color: var(--lf-muted);
+
+  strong {
+    color: var(--lf-ink);
+  }
+}
+
+.grade {
+  font-size: 0.8125rem;
+  color: var(--lf-muted);
+}
+
+// Pantallas estrechas: título (con la fecha debajo), estado y avisos; lo demás se ve en el documento.
 @media (max-width: 40rem) {
   .col-date,
+  .col-warnings,
+  .col-readability,
   .col-provider {
     display: none;
   }
 
   .title-link {
     display: block;
+  }
+
+  .status-warnings {
+    display: block;
+    margin-block-start: 0.375rem;
   }
 
   .title-date {

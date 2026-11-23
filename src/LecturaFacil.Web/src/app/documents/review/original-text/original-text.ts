@@ -97,6 +97,12 @@ export class OriginalTextComponent {
     this.selected.set(this.selected() === segment ? null : segment);
   }
 
+  /** La barra espaciadora activa el fragmento como un botón, sin desplazar la página. */
+  protected selectWithSpace(event: Event, segment: TextSegment): void {
+    event.preventDefault();
+    this.select(segment);
+  }
+
   protected clear(): void {
     this.selected.set(null);
   }

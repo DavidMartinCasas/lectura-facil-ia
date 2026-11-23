@@ -16,3 +16,9 @@ public sealed record SaveManualEditCommand(
 /// <paramref name="Version"/>, que debe ser la última.
 /// </summary>
 public sealed record AcknowledgeKeyFactCommand(DocumentId DocumentId, int Version, int KeyFactIndex);
+
+/// <summary>
+/// Marca como revisados todos los avisos de los datos clave de la versión <paramref name="Version"/>, que debe ser la
+/// última.
+/// </summary>
+public sealed record AcknowledgeAllKeyFactsCommand(DocumentId DocumentId, int Version);

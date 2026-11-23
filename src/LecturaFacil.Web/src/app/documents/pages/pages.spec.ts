@@ -10,12 +10,19 @@ import {
   DocumentListItem,
   DocumentListPage,
   DocumentStatus,
+  REACHABLE_STATUSES,
   SubmitDocumentResponse,
 } from '../../core/documents/document.models';
 import { DocumentsApiService } from '../../core/documents/documents-api.service';
 import { PROGRESS_STEP_MS } from '../../core/documents/document-submission.store';
 import { ApiError } from '../../core/errors/api-error';
-import { ERROR_TEXTS, LIST_TEXTS, PROGRESS_TEXTS, REVIEW_TEXTS } from '../../core/ui-texts';
+import {
+  ERROR_TEXTS,
+  LIST_TEXTS,
+  PROGRESS_TEXTS,
+  REVIEW_TEXTS,
+  STATUS_LABELS,
+} from '../../core/ui-texts';
 import { documentFixture } from '../../testing/document-fixtures';
 import { DocumentPage } from './document-page';
 import { DocumentsPage, SEARCH_DEBOUNCE_MS } from './documents-page';
@@ -30,6 +37,8 @@ const listItem = (id: string, title = `Documento ${id}`): DocumentListItem => ({
   createdAt: '2026-11-16T10:00:00Z',
   updatedAt: '2026-11-16T10:00:00Z',
   provider: 'Servidor local',
+  warningCount: 0,
+  readability: null,
 });
 
 const page = (
@@ -186,6 +195,20 @@ describe('pages', () => {
       expect(element.querySelector('td')?.textContent).toContain('Bases');
       expect(api.list).toHaveBeenCalledWith({ title: '', statuses: [] });
       expect(element.querySelector('[role="search"]')).not.toBeNull();
+    });
+
+    it('only offers to filter by the statuses a document can reach today', async () => {
+      api.list.mockReturnValue(of(page([listItem('doc-1', 'Bases')])));
+
+      const { fixture, element } = await render(DocumentsPage);
+      element.querySelector<HTMLElement>('.filter-status .mat-mdc-select-trigger')!.click();
+      await fixture.whenStable();
+
+      const options = [...document.querySelectorAll('mat-option')].map((option) =>
+        option.textContent?.trim(),
+      );
+      expect(options).toEqual(REACHABLE_STATUSES.map((status) => STATUS_LABELS[status]));
+      expect(options).not.toContain(STATUS_LABELS.Validated);
     });
 
     it('offers to create a new document from the header', async () => {
@@ -363,12 +386,22 @@ describe('pages', () => {
       expect(element.querySelector('app-progress-steps')).toBeNull();
     });
 
+    it('shows the readability next to the title, in its compact form', async () => {
+      const { element } = await render(DocumentPage, { id: 'doc-1' });
+
+      const readability = element.querySelector('.doc-top app-readability-panel.compact');
+      expect(readability?.textContent).toContain('Muy difícil');
+      expect(readability?.textContent).toContain('Bastante fácil');
+      expect(element.querySelector('app-document-review app-readability-panel')).toBeNull();
+    });
+
     it('does not show the review while the document has no adaptation', async () => {
       api.get.mockReturnValueOnce(of(details('Processing')));
 
       const { element } = await render(DocumentPage, { id: 'doc-1' });
 
       expect(element.querySelector('app-document-review')).toBeNull();
+      expect(element.querySelector('app-readability-panel')).toBeNull();
     });
 
     it('shows the progress while the document is being adapted', async () => {

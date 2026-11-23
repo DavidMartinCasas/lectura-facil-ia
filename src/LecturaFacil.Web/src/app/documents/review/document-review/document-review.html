@@ -90,7 +90,7 @@
       @if (smallScreen()) {
         <div class="backdrop" (click)="closePanel()" aria-hidden="true"></div>
       }
-      <!-- Revisión: la legibilidad fija arriba y, debajo, un apartado plegable por parte con su recuento. -->
+      <!-- Revisión: un apartado plegable por parte, con su recuento a la vista. -->
       <aside
         id="review-panel"
         class="review-panel"
@@ -100,7 +100,7 @@
         [cdkTrapFocus]="smallScreen()"
         [attr.aria-label]="texts.reviewLabel"
       >
-        <!-- Arriba y fija: la cabecera y la legibilidad se ven siempre, aunque se desplacen los apartados. -->
+        <!-- Arriba y fija: la cabecera se ve siempre, aunque se desplacen los apartados. -->
         <div class="panel-top">
           <header class="panel-head">
             <h2>{{ texts.reviewLabel }}</h2>
@@ -116,7 +116,6 @@
               </svg>
             </button>
           </header>
-          <app-readability-panel class="pinned" [readability]="document().readability" />
         </div>
         @for (part of reviewParts(); track part.id) {
           <section class="part" [class.part--open]="expanded().has(part.id)">
@@ -146,6 +145,7 @@
                       [originalText]="document().original.text"
                       [located]="located()"
                       (acknowledge)="acknowledge.emit($event)"
+                      (acknowledgeAll)="acknowledgeAll.emit()"
                       (locate)="locate($event)"
                     />
                   }

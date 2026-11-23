@@ -56,6 +56,53 @@ public sealed class DocumentReviewTests
     }
 
     [Fact]
+    public void AcknowledgeAllKeyFacts_MarksEveryWarningOfTheLatestVersion_AndLeavesTheConservedOnesAsTheyWere()
+    {
+        var document = Submit();
+        document.StartProcessing(Now);
+        document.CompleteAdaptation(
+            Content("Es una ayuda."),
+            Metadata,
+            Report,
+            MeaningVerification.Restore(
+                VerificationStatus.Verified,
+                [
+                    KeyFact.Create(KeyFactType.Amount, "250 €", null, new KeyFactVerdict(KeyFactStatus.Omitted, KeyFactReason.NotInAdaptation)),
+                    KeyFact.Create(KeyFactType.Other, "ayuda", "Es una ayuda", KeyFactVerdict.Conserved),
+                    KeyFact.Create(KeyFactType.Date, "1 de marzo", null, new KeyFactVerdict(KeyFactStatus.Omitted, KeyFactReason.NotInAdaptation)),
+                ],
+                null),
+            Now);
+        document.LatestAdaptedVersion!.PendingKeyFactCount.ShouldBe(2);
+
+        document.AcknowledgeAllKeyFacts(Now.AddMinutes(5));
+
+        var facts = document.LatestAdaptedVersion!.MeaningVerification!.KeyFacts;
+        facts.Select(fact => fact.Acknowledged).ShouldBe([true, false, true]);
+        facts.Select(fact => fact.Status).ShouldBe([KeyFactStatus.Omitted, KeyFactStatus.Conserved, KeyFactStatus.Omitted]);
+        document.LatestAdaptedVersion.PendingKeyFactCount.ShouldBe(0);
+        document.LatestAdaptedVersion.CanExport.ShouldBeTrue();
+        document.UpdatedAt.ShouldBe(Now.AddMinutes(5));
+    }
+
+    [Fact]
+    public void ReviewWarningCount_AddsThePendingKeyFactsToTheGuidelinesThatAreNotMet()
+    {
+        var document = Adapted();
+        var brokenGuidelines = Report.TotalCount - Report.CompliantCount;
+
+        document.LatestAdaptedVersion!.ReviewWarningCount.ShouldBe(brokenGuidelines + 1);
+
+        document.AcknowledgeKeyFact(0, Now.AddMinutes(5));
+
+        document.LatestAdaptedVersion!.ReviewWarningCount.ShouldBe(brokenGuidelines);
+    }
+
+    [Fact]
+    public void AcknowledgeAllKeyFacts_WhenTheDocumentIsNotADraft_Throws() =>
+        Should.Throw<InvalidOperationException>(() => Submit().AcknowledgeAllKeyFacts(Now));
+
+    [Fact]
     public void AcknowledgeKeyFact_WhenTheFactDoesNotExist_Throws() =>
         Should.Throw<ArgumentOutOfRangeException>(() => Adapted().AcknowledgeKeyFact(3, Now));
 

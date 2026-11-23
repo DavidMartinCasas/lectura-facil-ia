@@ -205,7 +205,31 @@
   }
 }
 
-// Ficha de un documento: título, estado y vuelta a la lista.
+// Ficha de un documento: a la izquierda, la vuelta a la lista, el título y el estado; a la derecha, la legibilidad.
+.doc-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+}
+
+.doc-heading {
+  display: grid;
+  gap: 1.5rem;
+  min-inline-size: 0;
+}
+
+.doc-readability {
+  flex: 0 1 30rem;
+}
+
+@media (max-width: 48rem) {
+  .doc-readability {
+    flex-basis: 100%;
+  }
+}
+
 .doc-header {
   h1 {
     font-size: clamp(1.5rem, 1.3rem + 0.6vw, 1.875rem);

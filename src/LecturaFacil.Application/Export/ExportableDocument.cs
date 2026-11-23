@@ -14,10 +14,21 @@ namespace LecturaFacil.Application.Export;
 /// <param name="Glossary">Palabras difíciles y su explicación. Puede estar vacío.</param>
 /// <param name="Footer">Aviso de borrador con la fecha. En DOCX y PDF va en el pie de cada página; en Markdown y texto, al final.</param>
 /// <param name="Language">Idioma del documento (BCP 47), que declaran los formatos que lo admiten.</param>
+/// <param name="Cover">Portada de los formatos con páginas (DOCX y PDF). Markdown y texto no la usan.</param>
 public sealed record ExportableDocument(
     string Title,
     IReadOnlyList<AdaptedSection> Sections,
     string GlossaryTitle,
     IReadOnlyList<GlossaryTerm> Glossary,
     string Footer,
-    string Language);
+    string Language,
+    ExportCover Cover);
+
+/// <summary>
+/// Portada: debajo del título del documento, qué es, el sello de borrador y la fecha. No lleva el logo europeo de lectura
+/// fácil, que solo pueden usar los textos validados por personas del grupo destinatario, ni metadatos internos.
+/// </summary>
+/// <param name="Subtitle">Qué es el documento ("Adaptación a lectura fácil").</param>
+/// <param name="DraftNotice">Sello de borrador, el mismo texto que la etiqueta de la aplicación.</param>
+/// <param name="Date">Fecha de la exportación, escrita con letras.</param>
+public sealed record ExportCover(string Subtitle, string DraftNotice, string Date);

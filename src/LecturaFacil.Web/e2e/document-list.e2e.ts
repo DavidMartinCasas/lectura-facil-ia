@@ -9,7 +9,7 @@ import { mockSignedIn } from './session';
 const PAGE_SIZE = 20;
 
 const TITLES = ['Bases de la convocatoria', 'Constitución Española', 'Ayudas al alquiler'];
-const STATUSES: DocumentStatus[] = ['Draft', 'Validated', 'Error'];
+const STATUSES: DocumentStatus[] = ['Draft', 'Processing', 'Error'];
 
 /** 45 documentos: tres páginas sin filtros. */
 const DOCUMENTS: DocumentListItem[] = Array.from({ length: 45 }, (_, index) => {
@@ -21,6 +21,8 @@ const DOCUMENTS: DocumentListItem[] = Array.from({ length: 45 }, (_, index) => {
     createdAt,
     updatedAt: createdAt,
     provider: 'Servidor local',
+    warningCount: 0,
+    readability: null,
   };
 });
 
@@ -89,14 +91,14 @@ test('busca por título sin tildes, filtra por estado y guarda la búsqueda en l
   await expect(page).toHaveURL(/buscar=constitucion/);
 
   await page.getByRole('combobox', { name: 'Estado' }).click();
-  await page.getByRole('option', { name: 'Validado' }).click();
+  await page.getByRole('option', { name: 'Con error' }).click();
   await page.keyboard.press('Escape');
 
   await expect(titleLinks(page)).toHaveCount(5);
-  await expect(page).toHaveURL(/estado=Validated/);
+  await expect(page).toHaveURL(/estado=Error/);
   const last = new URL(requests.at(-1)!.url());
   expect(last.searchParams.get('title')).toBe('constitucion');
-  expect(last.searchParams.getAll('status')).toEqual(['Validated']);
+  expect(last.searchParams.getAll('status')).toEqual(['Error']);
 
   // Al volver a la página con la URL, la búsqueda sigue ahí.
   await page.reload();

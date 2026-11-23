@@ -34,7 +34,9 @@ export class DocumentViewStore {
   private readonly _saving = signal(false);
   private readonly _actionError = signal<string | null>(null);
   private readonly _exporting = signal(false);
-  private readonly _lastAction = signal<'saved' | 'acknowledged' | 'exported' | null>(null);
+  private readonly _lastAction = signal<
+    'saved' | 'acknowledged' | 'acknowledgedAll' | 'exported' | null
+  >(null);
   /** Peticiones en curso (envío o carga y SSE). Se cancelan todas juntas. */
   private active = new Subscription();
 
@@ -95,6 +97,18 @@ export class DocumentViewStore {
     );
   }
 
+  /** Marca como revisados todos los avisos de los datos clave de la versión en pantalla, de una vez. */
+  acknowledgeAllKeyFacts(): void {
+    const document = this._document();
+    if (!document?.adaptation || this._saving()) {
+      return;
+    }
+    this.run(
+      this.api.acknowledgeAllKeyFacts(document.id, document.adaptation.version),
+      'acknowledgedAll',
+    );
+  }
+
   /** Descarga la última versión en el formato elegido. Solo se ofrece cuando la adaptación se puede exportar. */
   exportAdaptation(format: ExportFormat): void {
     const document = this._document();
@@ -120,7 +134,10 @@ export class DocumentViewStore {
     );
   }
 
-  private run(request: Observable<DocumentDetails>, action: 'saved' | 'acknowledged'): void {
+  private run(
+    request: Observable<DocumentDetails>,
+    action: 'saved' | 'acknowledged' | 'acknowledgedAll',
+  ): void {
     this._saving.set(true);
     this._actionError.set(null);
     this._lastAction.set(null);

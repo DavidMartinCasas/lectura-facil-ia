@@ -164,6 +164,63 @@ public sealed class DocumentReviewEndpointTests
     }
 
     [Fact]
+    public async Task AcknowledgeAll_MarksEveryWarningAsReviewed_AndAllowsExport()
+    {
+        await using var factory = new DocumentsApiFactory();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, GetDocumentEndpointTests.Adapt);
+        using var client = await factory.CreateApiClientAsync();
+
+        using var response = await client.PostAsJsonAsync(AcknowledgeAllUri(document.Id.Value), new { version = 1 }, Token);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var json = await ReadJsonAsync(response);
+        var adaptation = json.RootElement.GetProperty("adaptation");
+        adaptation.GetProperty("canExport").GetBoolean().ShouldBeTrue();
+        adaptation.GetProperty("pendingKeyFactCount").GetInt32().ShouldBe(0);
+        adaptation.GetProperty("version").GetInt32().ShouldBe(1);
+        document.LatestAdaptedVersion!.PendingKeyFactCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task AcknowledgeAll_WhenTheDocumentBelongsToAnotherUser_Returns404()
+    {
+        await using var factory = new DocumentsApiFactory();
+        var foreign = GetDocumentEndpointTests.Seed(factory, OwnerId.From(Guid.NewGuid()), GetDocumentEndpointTests.Adapt);
+        using var client = await factory.CreateApiClientAsync();
+
+        using var response = await client.PostAsJsonAsync(AcknowledgeAllUri(foreign.Id.Value), new { version = 1 }, Token);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        foreign.LatestAdaptedVersion!.PendingKeyFactCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task AcknowledgeAll_WhenTheVersionIsNotTheLatest_Returns409()
+    {
+        await using var factory = new DocumentsApiFactory();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, GetDocumentEndpointTests.Adapt);
+        using var client = await factory.CreateApiClientAsync();
+
+        using var response = await client.PostAsJsonAsync(AcknowledgeAllUri(document.Id.Value), new { version = 2 }, Token);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        document.LatestAdaptedVersion!.PendingKeyFactCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task AcknowledgeAll_WhenTheVersionIsMissing_Returns400()
+    {
+        await using var factory = new DocumentsApiFactory();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, GetDocumentEndpointTests.Adapt);
+        using var client = await factory.CreateApiClientAsync();
+
+        using var response = await client.PostAsJsonAsync(AcknowledgeAllUri(document.Id.Value), new { }, Token);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        document.LatestAdaptedVersion!.PendingKeyFactCount.ShouldBe(2);
+    }
+
+    [Fact]
     public async Task Acknowledge_WhenTheDocumentBelongsToAnotherUser_Returns404()
     {
         await using var factory = new DocumentsApiFactory();
@@ -211,6 +268,8 @@ public sealed class DocumentReviewEndpointTests
     };
 
     private static Uri VersionUri(Guid id, int version) => new($"/api/documents/{id}/versions/{version}", UriKind.Relative);
+
+    private static Uri AcknowledgeAllUri(Guid id) => new($"/api/documents/{id}/key-facts/acknowledge", UriKind.Relative);
 
     private static Uri AcknowledgeUri(Guid id, int factId) => new($"/api/documents/{id}/key-facts/{factId}/acknowledge", UriKind.Relative);
 

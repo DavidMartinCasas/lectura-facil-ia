@@ -79,6 +79,13 @@ public sealed class AdaptedVersion
     /// <summary>Avisos de datos clave sin marcar como revisados. Mientras haya alguno, la versión no se puede exportar.</summary>
     public int PendingKeyFactCount => MeaningVerification?.PendingAcknowledgementCount ?? 0;
 
+    /// <summary>
+    /// Avisos de la revisión: datos clave sin marcar como revisados y pautas que no se cumplen. Es el número que muestran
+    /// la lista de documentos y el botón que abre el panel de revisión.
+    /// </summary>
+    public int ReviewWarningCount =>
+        PendingKeyFactCount + (GuidelineReport is { } report ? report.TotalCount - report.CompliantCount : 0);
+
     /// <summary>Se puede exportar cuando una persona ha marcado como revisados todos los avisos de datos clave.</summary>
     public bool CanExport => PendingKeyFactCount == 0;
 
@@ -106,6 +113,9 @@ public sealed class AdaptedVersion
             ?? throw new InvalidOperationException("This version has no key facts to acknowledge.");
         MeaningVerification = verification.AcknowledgeKeyFact(keyFactIndex);
     }
+
+    /// <summary>Marca como revisados todos los avisos de los datos clave. Sin verificación, no hay nada que marcar.</summary>
+    internal void AcknowledgeAllKeyFacts() => MeaningVerification = MeaningVerification?.AcknowledgeAllKeyFacts();
 
     internal static AdaptedVersion Create(
         int number,

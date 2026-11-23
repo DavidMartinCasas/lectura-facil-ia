@@ -60,7 +60,8 @@
 }
 
 .export-status {
-  max-inline-size: 17rem;
+  // En una sola línea; en pantallas pequeñas sí puede partirse.
+  white-space: nowrap;
   font-size: var(--lf-fs-label);
   line-height: 1.35;
   color: var(--lf-muted);
@@ -185,7 +186,7 @@ mat-tab-group app-original-text {
   background: var(--lf-surface);
 }
 
-// La cabecera y la legibilidad se quedan arriba al desplazar los apartados.
+// La cabecera se queda arriba al desplazar los apartados.
 .panel-top {
   position: sticky;
   inset-block-start: 0;
@@ -285,14 +286,6 @@ mat-tab-group app-original-text {
   transform: rotate(90deg);
 }
 
-// La legibilidad, fija arriba: sin recuadro y compacta.
-.pinned {
-  padding: 0.25rem 1.25rem 0.75rem;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
 // Los paneles, sin su recuadro ni su título: el apartado ya los pone.
 .part-body app-key-facts-panel,
 .part-body app-guidelines-panel {
@@ -348,6 +341,7 @@ mat-tab-group app-original-text {
   }
 
   .export-status {
+    white-space: normal;
     text-align: start;
   }
 }

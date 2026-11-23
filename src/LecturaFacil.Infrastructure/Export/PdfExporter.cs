@@ -10,12 +10,22 @@ namespace LecturaFacil.Infrastructure.Export;
 /// <summary>
 /// PDF (PDFsharp + MigraDoc, MIT) para enviar a validación o publicar tal cual. Misma maquetación que el DOCX, con la
 /// fuente Atkinson Hyperlegible incrustada. Los encabezados tienen nivel de esquema (marcadores del PDF), el documento
-/// declara su título y el idioma español, y el aviso de borrador va en el pie de cada página. El texto se añade como
+/// declara su título y el idioma español, y el aviso de borrador va en el pie de cada página. La primera página es una
+/// portada (título, qué es, sello de borrador y fecha) y el contenido empieza en la segunda. El texto se añade como
 /// texto: nunca como campos ni enlaces.
 /// </summary>
 public sealed class PdfExporter : IDocumentExporter
 {
     public const string PdfLanguage = "es-ES";
+
+    private const string CoverTitleStyle = "CoverTitle";
+    private const string CoverSubtitleStyle = "CoverSubtitle";
+    private const string DraftStampStyle = "DraftStamp";
+
+    // Los mismos valores que en el DOCX: el título baja hasta un tercio de la página y es más grande que el del contenido.
+    private const double CoverTopCentimeters = 6;
+    private const double CoverTitleScale = 1.5;
+    private const double StampBorderPoints = 1.5;
 
     private static readonly Lock FontSetupLock = new();
 
@@ -81,7 +91,18 @@ public sealed class PdfExporter : IDocumentExporter
         section.PageSetup.FooterDistance = Unit.FromCentimeter(_options.MarginCentimeters / 2);
         section.Footers.Primary.AddParagraph().AddText(exportable.Footer);
 
-        section.AddParagraph(exportable.Title, StyleNames.Heading1);
+        // MigraDoc no aplica el espacio anterior al primer párrafo de una página: el hueco sobre el título es un párrafo
+        // vacío de altura fija.
+        var spacer = section.AddParagraph();
+        spacer.Format.LineSpacingRule = LineSpacingRule.Exactly;
+        spacer.Format.LineSpacing = Unit.FromCentimeter(CoverTopCentimeters);
+        section.AddParagraph(exportable.Title, CoverTitleStyle);
+        section.AddParagraph(exportable.Cover.Subtitle, CoverSubtitleStyle);
+        section.AddParagraph(exportable.Cover.DraftNotice, DraftStampStyle);
+        section.AddParagraph().AddText(exportable.Cover.Date);
+
+        // El contenido empieza en una página nueva, con su título como encabezado de nivel 1.
+        section.AddParagraph(exportable.Title, StyleNames.Heading1).Format.PageBreakBefore = true;
         foreach (var adapted in exportable.Sections)
         {
             section.AddParagraph(adapted.Question, StyleNames.Heading2);
@@ -118,6 +139,35 @@ public sealed class PdfExporter : IDocumentExporter
         DefineHeading(document.Styles[StyleNames.Heading1]!, _options.TitleFontSizePoints, OutlineLevel.Level1);
         DefineHeading(document.Styles[StyleNames.Heading2]!, _options.HeadingFontSizePoints, OutlineLevel.Level2);
         document.Styles[StyleNames.Footer]!.Font.Size = Unit.FromPoint(_options.FontSizePoints);
+        DefineCoverStyles(document);
+    }
+
+    /// <summary>Estilos de la portada. Se basan en el normal y no son encabezados: no salen en los marcadores del PDF.</summary>
+    private void DefineCoverStyles(Document document)
+    {
+        var titleSize = _options.TitleFontSizePoints * CoverTitleScale;
+        var title = document.Styles.AddStyle(CoverTitleStyle, StyleNames.Normal);
+        title.Font.Size = Unit.FromPoint(titleSize);
+        title.Font.Bold = true;
+        title.ParagraphFormat.LineSpacingRule = LineSpacingRule.Single;
+        title.ParagraphFormat.SpaceAfter = Unit.FromPoint(titleSize / 2);
+        title.ParagraphFormat.KeepWithNext = true;
+
+        var subtitle = document.Styles.AddStyle(CoverSubtitleStyle, StyleNames.Normal);
+        subtitle.Font.Size = Unit.FromPoint(_options.HeadingFontSizePoints);
+        subtitle.ParagraphFormat.SpaceAfter = Unit.FromPoint(_options.HeadingFontSizePoints);
+        subtitle.ParagraphFormat.KeepWithNext = true;
+
+        var stamp = document.Styles.AddStyle(DraftStampStyle, StyleNames.Normal);
+        stamp.Font.Size = Unit.FromPoint(_options.HeadingFontSizePoints);
+        stamp.Font.Bold = true;
+        stamp.ParagraphFormat.SpaceBefore = Unit.FromPoint(_options.HeadingFontSizePoints);
+        stamp.ParagraphFormat.SpaceAfter = Unit.FromPoint(_options.HeadingFontSizePoints * 1.5);
+        stamp.ParagraphFormat.KeepWithNext = true;
+        var borders = stamp.ParagraphFormat.Borders;
+        borders.Width = Unit.FromPoint(StampBorderPoints);
+        borders.Color = Colors.Black;
+        borders.Distance = Unit.FromPoint(6);
     }
 
     private static void DefineHeading(Style style, double sizePoints, OutlineLevel level)

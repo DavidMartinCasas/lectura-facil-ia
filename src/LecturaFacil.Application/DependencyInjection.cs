@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<RequeuePendingAdaptations>();
         services.AddScoped<SaveManualEdit>();
         services.AddScoped<AcknowledgeKeyFact>();
+        services.AddScoped<AcknowledgeAllKeyFacts>();
         services.AddScoped<ExportDocument>();
         services.AddScoped<SeedTestUser>();
         return services;

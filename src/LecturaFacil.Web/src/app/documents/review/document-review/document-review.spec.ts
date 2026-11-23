@@ -86,10 +86,8 @@ describe('DocumentReviewComponent', () => {
       '1 conservado',
     );
     expect(panel.querySelector('app-guidelines-panel')).not.toBeNull();
-    // La legibilidad, fija arriba y sin plegar.
-    expect(panel.querySelector('.panel-top app-readability-panel')?.textContent).toContain(
-      'Bastante fácil',
-    );
+    // La legibilidad no va en el panel: la enseña la página, junto al título.
+    expect(panel.querySelector('app-readability-panel')).toBeNull();
   });
 
   it('leaves the texts the whole width when the panel is closed', async () => {

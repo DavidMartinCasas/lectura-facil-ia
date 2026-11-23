@@ -12,11 +12,12 @@ const EDITED_SENTENCE = 'Le damos dinero para pagar el alquiler.';
 
 interface ApiCalls {
   acknowledged: { factId: string; body: unknown }[];
+  acknowledgedAll: unknown[];
   edits: { version: string; body: ManualEdit }[];
 }
 
 async function mockReviewApi(page: Page, initial: DocumentDetails): Promise<ApiCalls> {
-  const calls: ApiCalls = { acknowledged: [], edits: [] };
+  const calls: ApiCalls = { acknowledged: [], acknowledgedAll: [], edits: [] };
   let current = initial;
   await mockSignedIn(page);
 
@@ -36,6 +37,28 @@ async function mockReviewApi(page: Page, initial: DocumentDetails): Promise<ApiC
           ...adaptation.verification!,
           keyFacts: adaptation.verification!.keyFacts.map((fact) =>
             String(fact.id) === factId
+              ? { ...fact, acknowledged: true, requiresAcknowledgement: false }
+              : fact,
+          ),
+        },
+      },
+    };
+    return route.fulfill({ json: current });
+  });
+
+  await page.route(`**/api/documents/${DOCUMENT_ID}/key-facts/acknowledge`, (route) => {
+    calls.acknowledgedAll.push(route.request().postDataJSON());
+    const adaptation = current.adaptation!;
+    current = {
+      ...current,
+      adaptation: {
+        ...adaptation,
+        pendingKeyFactCount: 0,
+        canExport: true,
+        verification: {
+          ...adaptation.verification!,
+          keyFacts: adaptation.verification!.keyFacts.map((fact) =>
+            fact.requiresAcknowledgement
               ? { ...fact, acknowledged: true, requiresAcknowledgement: false }
               : fact,
           ),
@@ -118,10 +141,7 @@ test('revisa un borrador: aviso, marcar revisado, editar y legibilidad recalcula
 
   await expect(banner).toContainText('Versión 2');
   await expect(page.getByText(EDITED_SENTENCE)).toBeVisible();
-  if (isMobile) {
-    await toggle.click();
-  }
-  // La legibilidad está fija arriba del panel: se ve sin desplegar nada.
+  // La legibilidad va junto al título de la página: se ve sin abrir el panel.
   const readability = page.locator('app-readability-panel');
   await expect(readability).toContainText('85');
   await expect(readability).toContainText('Muy fácil');
@@ -189,6 +209,47 @@ test('en móvil, el foco no sale del panel de la revisión hasta cerrarlo', asyn
   await page.keyboard.press('Escape');
   await expect(panel).toBeHidden();
   await expect(toggle).toBeFocused();
+});
+
+test('marca como revisados todos los avisos de una vez, después de confirmarlo', async ({
+  page,
+  isMobile,
+}) => {
+  const draft = documentFixture('Draft', { id: DOCUMENT_ID });
+  const verification = draft.adaptation!.verification!;
+  const calls = await mockReviewApi(page, {
+    ...draft,
+    adaptation: {
+      ...draft.adaptation!,
+      pendingKeyFactCount: 2,
+      verification: {
+        ...verification,
+        keyFacts: verification.keyFacts.map((fact) => ({
+          ...fact,
+          status: 'Review' as const,
+          requiresAcknowledgement: true,
+        })),
+      },
+    },
+  });
+  await page.goto(`/documentos/${DOCUMENT_ID}`);
+  if (isMobile) {
+    await page.getByRole('button', { name: /^Revisión/ }).click();
+  }
+
+  await page.getByRole('button', { name: 'Marcar los 2 como revisados' }).click();
+  // Antes de marcar nada, se pide confirmación; el foco va a "Cancelar".
+  await expect(page.getByText(/Vas a marcar como revisados 2 datos clave/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Cancelar' })).toBeFocused();
+  expect(calls.acknowledgedAll).toEqual([]);
+
+  await page.getByRole('button', { name: 'Marcar los 2', exact: true }).click();
+
+  await expect(page.getByRole('region', { name: /Borrador/ })).toContainText(
+    'Todos los avisos de datos clave están revisados.',
+  );
+  expect(calls.acknowledgedAll).toEqual([{ version: 1 }]);
+  await expect(page.getByRole('button', { name: /Marcar los 2/ })).toHaveCount(0);
 });
 
 test('muestra como texto literal lo que parece HTML', async ({ page }) => {

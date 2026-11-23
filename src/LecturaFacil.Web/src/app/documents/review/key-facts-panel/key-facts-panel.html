@@ -7,6 +7,33 @@
       <p class="hint">{{ texts.notVerified }}</p>
     }
     <p class="hint">{{ texts.keyFactsHint }}</p>
+    <!-- Marcar todos de una vez: solo con 2 avisos o más, y con una confirmación antes. -->
+    @if (editable() && pendingCount() > 1) {
+      @if (confirming()) {
+        <div class="confirm" role="group" aria-labelledby="acknowledge-all-question">
+          <p id="acknowledge-all-question">{{ texts.acknowledgeAllConfirm(pendingCount()) }}</p>
+          <div class="confirm-actions">
+            <button mat-flat-button type="button" [disabled]="saving()" (click)="confirmAll()">
+              {{ texts.acknowledgeAllConfirmButton(pendingCount()) }}
+            </button>
+            <button #cancelButton mat-stroked-button type="button" (click)="cancelAll()">
+              {{ texts.cancel }}
+            </button>
+          </div>
+        </div>
+      } @else {
+        <button
+          #askAllButton
+          mat-stroked-button
+          type="button"
+          class="acknowledge-all"
+          [disabled]="saving()"
+          (click)="askAll()"
+        >
+          {{ texts.acknowledgeAll(pendingCount()) }}
+        </button>
+      }
+    }
     <ul class="facts">
       @for (fact of verification.keyFacts; track fact.id) {
         <li

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
+using LecturaFacil.Application.Readability;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
 using LecturaFacil.Domain.Verification;
@@ -42,6 +43,8 @@ public sealed class ListDocumentsTests
         first.Status.ShouldBe(DocumentStatus.Received);
         first.CreatedAt.ShouldBe(Now);
         first.Provider.ShouldBeNull();
+        first.WarningCount.ShouldBeNull();
+        first.Readability.ShouldBeNull();
     }
 
     [Fact]
@@ -55,6 +58,33 @@ public sealed class ListDocumentsTests
         var summary = page.Items.ShouldHaveSingleItem();
         summary.Status.ShouldBe(DocumentStatus.Draft);
         summary.Provider.ShouldBe("Servidor local");
+    }
+
+    [Fact]
+    public void Summary_OfAnAdaptedDocument_CarriesTheWarningsAndTheTextsOfItsLatestVersion()
+    {
+        var document = Add(Owner, "Bases", Now);
+        Adapt(document);
+
+        var summary = DocumentSummary.From(document);
+
+        summary.WarningCount.ShouldBe(document.LatestAdaptedVersion!.ReviewWarningCount);
+        summary.ReadabilityTexts.ShouldBe(new ReadabilityTexts("Texto de prueba suficientemente largo.", document.LatestAdaptedVersion.PlainText));
+    }
+
+    [Fact]
+    public async Task List_WhenTheDocumentIsAdapted_ComparesTheReadabilityAndDropsTheTexts()
+    {
+        var document = Add(Owner, "Bases", Now);
+        Adapt(document);
+        var expected = new CompareReadability(new DomainReadabilityCalculator())
+            .Compare(document.OriginalText.Value, document.LatestAdaptedVersion!.PlainText).Value;
+
+        var page = await ListAsync(new DocumentListRequest());
+
+        var summary = page.Items.ShouldHaveSingleItem();
+        summary.Readability.ShouldBe(expected);
+        summary.ReadabilityTexts.ShouldBeNull();
     }
 
     [Fact]
@@ -240,5 +270,6 @@ public sealed class ListDocumentsTests
         return document;
     }
 
-    private ListDocuments CreateUseCase() => new(_repository, new FixedCurrentUser(Owner), Options.Create(_limits));
+    private ListDocuments CreateUseCase() =>
+        new(_repository, new FixedCurrentUser(Owner), Options.Create(_limits), new CompareReadability(new DomainReadabilityCalculator()));
 }

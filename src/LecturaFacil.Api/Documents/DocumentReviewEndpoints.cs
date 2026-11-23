@@ -9,10 +9,10 @@ namespace LecturaFacil.Api.Documents;
 
 /// <summary>
 /// Revisión de un borrador (US-13): <c>PUT /api/documents/{id}/versions/{n}</c> guarda una edición manual como versión
-/// nueva y <c>POST /api/documents/{id}/key-facts/{factId}/acknowledge</c> marca un aviso de datos clave como revisado.
-/// Ninguno llama a un modelo. Un documento ajeno responde 404, igual que uno que no existe (OWASP API1 · BOLA).
-/// Solo traducen HTTP ↔ caso de uso: las reglas viven en <see cref="SaveManualEdit"/>, <see cref="AcknowledgeKeyFact"/>
-/// y en Domain.
+/// nueva, <c>POST /api/documents/{id}/key-facts/{factId}/acknowledge</c> marca un aviso de datos clave como revisado y
+/// <c>POST /api/documents/{id}/key-facts/acknowledge</c> los marca todos de una vez. Ninguno llama a un modelo. Un documento ajeno responde 404, igual que uno que no existe (OWASP API1 · BOLA).
+/// Solo traducen HTTP ↔ caso de uso: las reglas viven en <see cref="SaveManualEdit"/>, <see cref="AcknowledgeKeyFact"/>,
+/// <see cref="AcknowledgeAllKeyFacts"/> y en Domain.
 /// </summary>
 internal static class DocumentReviewEndpoints
 {
@@ -48,6 +48,16 @@ internal static class DocumentReviewEndpoints
             .WithName("AcknowledgeKeyFact")
             .WithSummary("Marca como revisado un aviso de los datos clave de la última versión.")
             .WithDescription("factId es el id del dato en la respuesta del documento. El aviso se sigue mostrando.");
+
+        group.MapPost("/{id:guid}/key-facts/acknowledge", AcknowledgeAllAsync)
+            .Accepts<AcknowledgeKeyFactRequest>("application/json")
+            .Produces<DocumentResponse>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .WithName("AcknowledgeAllKeyFacts")
+            .WithSummary("Marca como revisados todos los avisos de los datos clave de la última versión.")
+            .WithDescription("Se marcan todos o ninguno, en un solo guardado. Los avisos se siguen mostrando.");
 
         return group;
     }
@@ -101,6 +111,28 @@ internal static class DocumentReviewEndpoints
 
         var command = new AcknowledgeKeyFactCommand(DocumentId.From(id), request.Version!.Value, factId);
         return ToResponse(await acknowledgeKeyFact.ExecuteAsync(command, cancellationToken));
+    }
+
+    private static async Task<IResult> AcknowledgeAllAsync(
+        Guid id,
+        AcknowledgeKeyFactRequest request,
+        IValidator<AcknowledgeKeyFactRequest> validator,
+        AcknowledgeAllKeyFacts acknowledgeAllKeyFacts,
+        CancellationToken cancellationToken)
+    {
+        if (id == Guid.Empty)
+        {
+            return ToProblem(DocumentErrors.NotFound);
+        }
+
+        var validation = await validator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+        {
+            return TypedResults.ValidationProblem(validation.ToDictionary());
+        }
+
+        var command = new AcknowledgeAllKeyFactsCommand(DocumentId.From(id), request.Version!.Value);
+        return ToResponse(await acknowledgeAllKeyFacts.ExecuteAsync(command, cancellationToken));
     }
 
     private static IResult ToResponse(Result<DocumentDetails> result) =>

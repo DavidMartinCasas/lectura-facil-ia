@@ -14,5 +14,5 @@ public sealed record ManualEditSectionRequest(string? Question, IReadOnlyList<st
 
 public sealed record ManualEditGlossaryTermRequest(string? Term, string? Definition);
 
-/// <summary>Versión que se está revisando; debe ser la última del documento.</summary>
+/// <summary>Versión que se está revisando; debe ser la última del documento. Sirve para marcar un aviso o todos.</summary>
 public sealed record AcknowledgeKeyFactRequest(int? Version);

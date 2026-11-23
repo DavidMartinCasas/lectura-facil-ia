@@ -16,11 +16,18 @@ import { statusTone } from '../../core/documents/status-tone';
 import { APP_TEXTS, DOCUMENT_TEXTS, REVIEW_TEXTS, STATUS_LABELS } from '../../core/ui-texts';
 import { ProgressStepsComponent } from '../progress-steps/progress-steps';
 import { DocumentReviewComponent } from '../review/document-review/document-review';
+import { ReadabilityPanelComponent } from '../review/readability-panel/readability-panel';
 
 /** Vista de un documento: su estado, su progreso y, cuando ya está adaptado, la revisión lado a lado (US-13). */
 @Component({
   selector: 'app-document-page',
-  imports: [DocumentReviewComponent, MatButtonModule, ProgressStepsComponent, RouterLink],
+  imports: [
+    DocumentReviewComponent,
+    MatButtonModule,
+    ProgressStepsComponent,
+    ReadabilityPanelComponent,
+    RouterLink,
+  ],
   providers: [DocumentViewStore],
   templateUrl: './document-page.html',
   styleUrl: './page.scss',
@@ -46,6 +53,8 @@ export class DocumentPage {
         return REVIEW_TEXTS.saved;
       case 'acknowledged':
         return REVIEW_TEXTS.acknowledgedAnnouncement;
+      case 'acknowledgedAll':
+        return REVIEW_TEXTS.acknowledgedAllAnnouncement;
       case 'exported':
         return REVIEW_TEXTS.exported;
       default:

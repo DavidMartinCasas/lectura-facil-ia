@@ -30,12 +30,11 @@ import { ExportPanelComponent } from '../export-panel/export-panel';
 import { GuidelinesPanelComponent } from '../guidelines-panel/guidelines-panel';
 import { KeyFactsPanelComponent } from '../key-facts-panel/key-facts-panel';
 import { OriginalTextComponent } from '../original-text/original-text';
-import { ReadabilityPanelComponent } from '../readability-panel/readability-panel';
 
 /** Por debajo de este ancho, original y adaptación van en pestañas en lugar de en columnas. */
 export const SMALL_SCREEN_QUERY = '(max-width: 47.99rem)';
 
-/** Apartados plegables del panel de la revisión, en este orden. La legibilidad va fija encima. */
+/** Apartados plegables del panel de la revisión, en este orden. La legibilidad va en la cabecera de la página. */
 export type ReviewSection = 'facts' | 'guidelines';
 
 /** Un apartado de la revisión: su nombre, lo que se ve de un vistazo y si tiene avisos. */
@@ -48,9 +47,9 @@ interface ReviewPart {
 
 /**
  * Revisión de un borrador. Original y adaptación ocupan todo el ancho (o van en pestañas en pantallas pequeñas). La
- * revisión va en un panel lateral que se abre y se cierra desde la barra del documento: arriba y siempre a la vista, la
- * legibilidad; debajo, datos clave y pautas, plegables y con su recuento a la vista; al entrar se despliegan los que
- * tienen avisos. En
+ * revisión va en un panel lateral que se abre y se cierra desde la barra del documento: datos clave y pautas,
+ * plegables y con su recuento a la vista; al entrar se despliegan los que tienen avisos (la legibilidad la enseña la
+ * página, junto al título). En
  * pantallas pequeñas el panel se abre por encima de los textos. Desde un dato clave se puede señalar su valor en el
  * original. Solo coordina: cada parte es un componente, y las acciones (guardar una edición, marcar un dato revisado,
  * exportar) las hace la página a través de su store.
@@ -65,7 +64,6 @@ interface ReviewPart {
     KeyFactsPanelComponent,
     MatTabsModule,
     OriginalTextComponent,
-    ReadabilityPanelComponent,
   ],
   templateUrl: './document-review.html',
   styleUrl: './document-review.scss',
@@ -79,6 +77,7 @@ export class DocumentReviewComponent {
   readonly exporting = input(false);
   readonly save = output<ManualEdit>();
   readonly acknowledge = output<number>();
+  readonly acknowledgeAll = output<void>();
   readonly exportAdaptation = output<ExportFormat>();
 
   protected readonly texts = REVIEW_TEXTS;
