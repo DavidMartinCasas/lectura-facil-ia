@@ -644,7 +644,7 @@ erDiagram
 | `POST` | `/api/documents/{id}/reprocess` | Vuelve a adaptar (otro modelo u otras opciones) |
 | `POST` | `/api/documents/{id}/export?format=docx\|pdf\|md\|txt` | Genera el fichero en el formato elegido |
 | `POST` | `/api/documents/{id}/validation/send` | Envía el borrador revisado a validación |
-| `POST` | `/api/documents/{id}/validation` | Registra el resultado de la validación |
+| `POST` | `/api/documents/{id}/validation` | Registra el resultado de la validación de la versión que leyó el grupo (409 si ya no es la pendiente) |
 | `POST` | `/api/documents/{id}/validation/withdraw` | Retira el documento de la validación (vuelve a borrador) |
 | `POST` | `/api/documents/{id}/publish` | Publica la versión validada |
 | `GET` | `/api/samples` | Textos de ejemplo |

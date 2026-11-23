@@ -116,6 +116,7 @@ internal static class DocumentValidationEndpoints
 
         var command = new RecordValidationCommand(
             DocumentId.From(id),
+            request.Version!.Value,
             Enum.Parse<ValidationOutcome>(request.Outcome!),
             request.ValidatedBy!,
             request.Notes);

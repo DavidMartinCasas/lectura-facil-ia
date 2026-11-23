@@ -130,14 +130,14 @@ export class DocumentViewStore {
     this.run(this.api.sendToValidation(document.id, document.adaptation.version), 'sent');
   }
 
-  /** Anota lo que decidió el grupo de validación. */
+  /** Anota lo que decidió el grupo de validación sobre la versión en pantalla, que es la que leyó. */
   recordValidation(result: ValidationResult): void {
     const document = this._document();
-    if (document?.status !== 'PendingValidation' || this._saving()) {
+    if (document?.status !== 'PendingValidation' || !document.adaptation || this._saving()) {
       return;
     }
     this.run(
-      this.api.recordValidation(document.id, result),
+      this.api.recordValidation(document.id, document.adaptation.version, result),
       result.outcome === 'Approved' ? 'approved' : 'changesRequested',
     );
   }

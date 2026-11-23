@@ -46,6 +46,12 @@ Escenario: El grupo pide cambios
   Entonces el documento vuelve a "Borrador", se puede editar
   Y se ve lo que pidió el grupo hasta que se vuelva a enviar
 
+Escenario: El resultado es de la versión que leyó el grupo
+  Dado un documento pendiente de validación abierto en dos pestañas
+  Y que desde una lo retiro, lo cambio y lo vuelvo a enviar
+  Cuando anoto el resultado desde la otra
+  Entonces me avisa de que el documento ha cambiado y no se guarda la validación
+
 Escenario: Retirar de la validación
   Cuando pulso "Volver a borrador" sin anotar nada
   Entonces el documento vuelve a "Borrador" y no se guarda ninguna validación
@@ -67,7 +73,8 @@ Escenario: Exportar una versión validada
 - **Application:** `SendToValidation`, `RecordValidation`, `WithdrawFromValidation`, `PublishDocument` sobre
   `ValidationStep` (buscar del usuario, comprobar, aplicar y guardar con concurrencia optimista).
 - **Api:** `POST /api/documents/{id}/validation/send`, `POST /api/documents/{id}/validation`,
-  `POST /api/documents/{id}/validation/withdraw` y `POST /api/documents/{id}/publish`. `GET /api/documents/{id}` devuelve
+  `POST /api/documents/{id}/validation/withdraw` y `POST /api/documents/{id}/publish`. Enviar y anotar llevan la
+  versión que se ve en pantalla: si ya no es la última, devuelven 409. `GET /api/documents/{id}` devuelve
   `canSendToValidation` y la última `validation`.
 - **Angular:** `ValidationPanelComponent` en la página del documento: enseña solo el paso que toca según el estado.
   «Mis documentos» filtra por todos los estados.

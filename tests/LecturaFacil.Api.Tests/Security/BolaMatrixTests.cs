@@ -156,7 +156,7 @@ public sealed class BolaMatrixTests
             _ when template.EndsWith("/acknowledge", StringComparison.Ordinal) => JsonContent.Create(new { version = 1 }),
             _ when template.EndsWith("/validation/send", StringComparison.Ordinal) => JsonContent.Create(new { version = 1 }),
             _ when template.EndsWith("/validation", StringComparison.Ordinal) =>
-                JsonContent.Create(new { outcome = "Approved", validatedBy = "Grupo de lectura" }),
+                JsonContent.Create(new { version = 1, outcome = "Approved", validatedBy = "Grupo de lectura" }),
             "/api/documents" => JsonContent.Create(new { text = new string('a', 100) }),
             _ => null,
         };

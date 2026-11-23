@@ -69,7 +69,7 @@ public sealed class ValidationUseCasesTests
         var document = Pending(Owner);
 
         var result = await new RecordValidation(Step()).ExecuteAsync(
-            new RecordValidationCommand(document.Id, ValidationOutcome.Approved, "Grupo de lectura", "Se entiende."),
+            new RecordValidationCommand(document.Id, 1, ValidationOutcome.Approved, "Grupo de lectura", "Se entiende."),
             Token);
 
         result.Value.Status.ShouldBe(DocumentStatus.Validated);
@@ -85,7 +85,7 @@ public sealed class ValidationUseCasesTests
         var document = Pending(Owner);
 
         var result = await new RecordValidation(Step()).ExecuteAsync(
-            new RecordValidationCommand(document.Id, ValidationOutcome.ChangesRequested, "Grupo", "Falta explicar el plazo."),
+            new RecordValidationCommand(document.Id, 1, ValidationOutcome.ChangesRequested, "Grupo", "Falta explicar el plazo."),
             Token);
 
         result.Value.Status.ShouldBe(DocumentStatus.Draft);
@@ -100,11 +100,26 @@ public sealed class ValidationUseCasesTests
         var document = Reviewed(Owner);
 
         var result = await new RecordValidation(Step()).ExecuteAsync(
-            new RecordValidationCommand(document.Id, ValidationOutcome.Approved, "Grupo", null),
+            new RecordValidationCommand(document.Id, 1, ValidationOutcome.Approved, "Grupo", null),
             Token);
 
         result.Error.ShouldBe(ValidationErrors.NotPending);
         document.Validations.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Record_ForAVersionThatIsNoLongerTheOnePending_ReturnsAConflictAndChangesNothing()
+    {
+        var document = Pending(Owner);
+
+        var result = await new RecordValidation(Step()).ExecuteAsync(
+            new RecordValidationCommand(document.Id, 2, ValidationOutcome.Approved, "Grupo", null),
+            Token);
+
+        result.Error.ShouldBe(ReviewErrors.VersionConflict);
+        document.Status.ShouldBe(DocumentStatus.PendingValidation);
+        document.Validations.ShouldBeEmpty();
+        _repository.SavedStatuses.ShouldBeEmpty();
     }
 
     [Fact]
@@ -136,7 +151,7 @@ public sealed class ValidationUseCasesTests
 
         (await new SendToValidation(Step()).ExecuteAsync(new SendToValidationCommand(foreign.Id, 1), Token)).Error.ShouldBe(DocumentErrors.NotFound);
         (await new RecordValidation(Step()).ExecuteAsync(
-            new RecordValidationCommand(foreign.Id, ValidationOutcome.Approved, "Grupo", null), Token)).Error.ShouldBe(DocumentErrors.NotFound);
+            new RecordValidationCommand(foreign.Id, 1, ValidationOutcome.Approved, "Grupo", null), Token)).Error.ShouldBe(DocumentErrors.NotFound);
         (await new WithdrawFromValidation(Step()).ExecuteAsync(foreign.Id, Token)).Error.ShouldBe(DocumentErrors.NotFound);
         (await new PublishDocument(Step()).ExecuteAsync(foreign.Id, Token)).Error.ShouldBe(DocumentErrors.NotFound);
         foreign.Status.ShouldBe(DocumentStatus.PendingValidation);

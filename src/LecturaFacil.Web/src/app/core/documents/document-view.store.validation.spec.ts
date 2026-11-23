@@ -55,7 +55,7 @@ describe('DocumentViewStore (validación)', () => {
     const { api, store } = setUp(withAdaptation('PendingValidation'));
 
     store.recordValidation({ outcome: 'Approved', validatedBy: 'Grupo', notes: null });
-    expect(api.recordValidation).toHaveBeenCalledWith('doc-1', {
+    expect(api.recordValidation).toHaveBeenCalledWith('doc-1', 1, {
       outcome: 'Approved',
       validatedBy: 'Grupo',
       notes: null,

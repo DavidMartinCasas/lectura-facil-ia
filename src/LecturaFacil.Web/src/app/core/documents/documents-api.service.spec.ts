@@ -150,14 +150,14 @@ describe('DocumentsApiService', () => {
       },
       {
         response: firstValueFrom(
-          service.recordValidation('a/b', {
+          service.recordValidation('a/b', 2, {
             outcome: 'Approved',
             validatedBy: 'Grupo',
             notes: null,
           }),
         ),
         url: 'validation',
-        body: { outcome: 'Approved', validatedBy: 'Grupo', notes: null },
+        body: { version: 2, outcome: 'Approved', validatedBy: 'Grupo', notes: null },
       },
       {
         response: firstValueFrom(service.withdrawFromValidation('a/b')),

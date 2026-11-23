@@ -8,6 +8,9 @@ internal sealed class RecordValidationRequestValidator : AbstractValidator<Recor
 {
     public RecordValidationRequestValidator()
     {
+        RuleFor(request => request.Version)
+            .NotNull().WithMessage("Indica la versión que ha leído el grupo.")
+            .GreaterThan(0).WithMessage("La versión no es válida.");
         RuleFor(request => request.Outcome)
             .Must(outcome => Enum.TryParse<ValidationOutcome>(outcome, ignoreCase: false, out var parsed) && Enum.IsDefined(parsed)
                 && !int.TryParse(outcome, out _))

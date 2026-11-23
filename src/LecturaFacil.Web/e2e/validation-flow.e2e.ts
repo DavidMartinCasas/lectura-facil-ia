@@ -16,7 +16,7 @@ const DOCUMENT_ID = '7f1c2a9e-0000-4000-8000-000000000021';
 
 interface ApiCalls {
   sent: unknown[];
-  recorded: ValidationResult[];
+  recorded: (ValidationResult & { version: number })[];
   published: number;
 }
 
@@ -41,13 +41,9 @@ async function mockValidationApi(page: Page): Promise<ApiCalls> {
     });
   });
   await page.route(`**/api/documents/${DOCUMENT_ID}/validation`, (route) => {
-    const result = route.request().postDataJSON() as ValidationResult;
+    const result = route.request().postDataJSON() as ValidationResult & { version: number };
     calls.recorded.push(result);
-    const validation: ValidationRecord = {
-      version: 1,
-      ...result,
-      recordedAt: '2026-11-23T10:00:00Z',
-    };
+    const validation: ValidationRecord = { ...result, recordedAt: '2026-11-23T10:00:00Z' };
     return route.fulfill({ json: move({ status: 'Validated', validation }) });
   });
   await page.route(`**/api/documents/${DOCUMENT_ID}/publish`, (route) => {
@@ -93,7 +89,12 @@ for (const colorScheme of ['light', 'dark'] as const) {
       panel.getByText(VALIDATION_TEXTS.validated('23 de noviembre de 2026', 'Grupo de lectura')),
     ).toBeVisible();
     expect(calls.recorded).toEqual([
-      { outcome: 'Approved', validatedBy: 'Grupo de lectura', notes: 'Se entiende bien.' },
+      {
+        version: 1,
+        outcome: 'Approved',
+        validatedBy: 'Grupo de lectura',
+        notes: 'Se entiende bien.',
+      },
     ]);
     await expectNoAxeViolations(page);
 

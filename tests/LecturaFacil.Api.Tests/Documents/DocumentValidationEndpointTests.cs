@@ -36,7 +36,7 @@ public sealed class DocumentValidationEndpointTests
 
         using (var recorded = await client.PostAsJsonAsync(
             Uri(id, "validation"),
-            new { outcome = "Approved", validatedBy = "Grupo de lectura", notes = "Se entiende bien." },
+            new { version = 1, outcome = "Approved", validatedBy = "Grupo de lectura", notes = "Se entiende bien." },
             Token))
         {
             recorded.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -85,7 +85,7 @@ public sealed class DocumentValidationEndpointTests
 
         using var response = await client.PostAsJsonAsync(
             Uri(document.Id.Value, "validation"),
-            new { outcome = "ChangesRequested", validatedBy = "Grupo" },
+            new { version = 1, outcome = "ChangesRequested", validatedBy = "Grupo" },
             Token);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -96,21 +96,43 @@ public sealed class DocumentValidationEndpointTests
     }
 
     [Theory]
-    [InlineData(null, "Grupo")]
-    [InlineData("Maybe", "Grupo")]
-    [InlineData("0", "Grupo")]
-    [InlineData("Approved", "   ")]
-    [InlineData("Approved", null)]
-    public async Task Record_WithAnInvalidRequest_Returns400AndChangesNothing(string? outcome, string? validatedBy)
+    [InlineData(1, null, "Grupo")]
+    [InlineData(1, "Maybe", "Grupo")]
+    [InlineData(1, "0", "Grupo")]
+    [InlineData(1, "Approved", "   ")]
+    [InlineData(1, "Approved", null)]
+    [InlineData(null, "Approved", "Grupo")]
+    [InlineData(0, "Approved", "Grupo")]
+    public async Task Record_WithAnInvalidRequest_Returns400AndChangesNothing(int? version, string? outcome, string? validatedBy)
     {
         await using var factory = new DocumentsApiFactory();
         var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, Pending);
         using var client = await factory.CreateApiClientAsync();
 
-        using var response = await client.PostAsJsonAsync(Uri(document.Id.Value, "validation"), new { outcome, validatedBy }, Token);
+        using var response = await client.PostAsJsonAsync(
+            Uri(document.Id.Value, "validation"),
+            new { version, outcome, validatedBy },
+            Token);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         document.Status.ShouldBe(DocumentStatus.PendingValidation);
+    }
+
+    [Fact]
+    public async Task Record_ForAnotherVersionThanThePendingOne_Returns409AndChangesNothing()
+    {
+        await using var factory = new DocumentsApiFactory();
+        var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, Pending);
+        using var client = await factory.CreateApiClientAsync();
+
+        using var response = await client.PostAsJsonAsync(
+            Uri(document.Id.Value, "validation"),
+            new { version = 2, outcome = "Approved", validatedBy = "Grupo" },
+            Token);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        document.Status.ShouldBe(DocumentStatus.PendingValidation);
+        document.Validations.ShouldBeEmpty();
     }
 
     [Fact]
@@ -122,7 +144,7 @@ public sealed class DocumentValidationEndpointTests
 
         using var response = await client.PostAsJsonAsync(
             Uri(document.Id.Value, "validation"),
-            new { outcome = "Approved", validatedBy = "Grupo", notes = new string('a', ValidationRecord.NotesMaxLength + 1) },
+            new { version = 1, outcome = "Approved", validatedBy = "Grupo", notes = new string('a', ValidationRecord.NotesMaxLength + 1) },
             Token);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
