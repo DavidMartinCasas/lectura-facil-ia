@@ -71,15 +71,17 @@ public sealed class ExportDocument
 
         // Los exportadores solo usan CPU y no reciben el token: si la petición ya se ha cancelado, no se genera nada.
         cancellationToken.ThrowIfCancellationRequested();
-        var content = exporter.Export(ToExportable(latest, document.Status));
+        var content = exporter.Export(ToExportable(latest, document));
         return Result<ExportedFile>.Success(
             new ExportedFile(ExportFileName.Create(latest.Title, exporter.FileExtension), exporter.ContentType, content));
     }
 
-    private ExportableDocument ToExportable(AdaptedVersion version, DocumentStatus status)
+    private ExportableDocument ToExportable(AdaptedVersion version, Document document)
     {
-        var today = _timeProvider.GetLocalNow().ToString("d 'de' MMMM 'de' yyyy", Spanish);
-        var notice = status is DocumentStatus.Validated or DocumentStatus.Published ? ValidatedNotice : DraftNotice;
+        var today = WithLetters(_timeProvider.GetLocalNow());
+        var validated = document.Status is DocumentStatus.Validated or DocumentStatus.Published;
+        var notice = validated ? ValidatedNotice : DraftNotice;
+        var validation = validated ? document.LatestValidation : null;
         return new ExportableDocument(
             version.Title,
             version.Sections,
@@ -87,6 +89,21 @@ public sealed class ExportDocument
             version.Glossary,
             $"{notice} · {today}",
             Language,
-            new ExportCover(CoverSubtitle, notice, today));
+            new ExportCover(CoverSubtitle, notice, today, validation is null ? null : ValidatedByLine(validation)));
     }
+
+    /// <summary>"Validado por Grupo de lectura (5 personas) el 26 de noviembre de 2026".</summary>
+    private string ValidatedByLine(ValidationRecord validation)
+    {
+        var people = validation.Participants switch
+        {
+            null => string.Empty,
+            1 => " (1 persona)",
+            var count => $" ({count} personas)",
+        };
+        var date = WithLetters(TimeZoneInfo.ConvertTime(validation.RecordedAt, _timeProvider.LocalTimeZone));
+        return $"Validado por {validation.ValidatedBy}{people} el {date}";
+    }
+
+    private static string WithLetters(DateTimeOffset date) => date.ToString("d 'de' MMMM 'de' yyyy", Spanish);
 }

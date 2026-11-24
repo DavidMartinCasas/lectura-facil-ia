@@ -45,6 +45,15 @@ p {
   background: var(--lf-amber-soft);
 }
 
+.hard-title {
+  font-weight: 700;
+}
+
+.hard-list {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}
+
 .step {
   display: grid;
   gap: 0.75rem;
@@ -79,6 +88,69 @@ legend {
   padding: 0;
   margin-block-end: 0.25rem;
   font-weight: 700;
+}
+
+.hard-parts {
+  display: grid;
+  justify-items: start;
+  gap: 0.125rem;
+
+  .hint {
+    margin-block-end: 0.25rem;
+  }
+}
+
+// Quién lo ha validado y cuántas personas eran, juntos; en pantallas estrechas, uno debajo de otro.
+.who {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(8rem, 1fr);
+  gap: 0 0.75rem;
+
+  @media (max-width: 36rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.rounds {
+  display: grid;
+  gap: 0.5rem;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid var(--lf-rule);
+
+  h3 {
+    margin: 0;
+    font-size: var(--lf-fs-body);
+  }
+
+  ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.625rem;
+  }
+}
+
+// El resultado de cada ronda: ámbar si pidió cambios, el color principal si lo entiende.
+.round-outcome {
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--lf-radius-s);
+  font-size: var(--lf-fs-label);
+  font-weight: 700;
+  color: var(--lf-amber);
+  background: var(--lf-amber-soft);
+}
+
+.round-outcome--approved {
+  color: var(--lf-primary);
+  background: var(--lf-primary-soft);
 }
 
 mat-radio-group {

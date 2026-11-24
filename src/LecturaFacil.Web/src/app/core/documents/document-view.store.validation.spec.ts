@@ -54,19 +54,30 @@ describe('DocumentViewStore (validación)', () => {
   it('records the result and announces whether it was validated or needs changes', () => {
     const { api, store } = setUp(withAdaptation('PendingValidation'));
 
-    store.recordValidation({ outcome: 'Approved', validatedBy: 'Grupo', notes: null });
-    expect(api.recordValidation).toHaveBeenCalledWith('doc-1', 1, {
+    const result = {
       outcome: 'Approved',
       validatedBy: 'Grupo',
+      participants: 4,
+      hardSections: [],
+      hardGlossary: false,
       notes: null,
-    });
+    } as const;
+    store.recordValidation(result);
+    expect(api.recordValidation).toHaveBeenCalledWith('doc-1', 1, result);
     expect(store.lastAction()).toBe('approved');
   });
 
   it('announces that a document needs changes', () => {
     const { store } = setUp(withAdaptation('PendingValidation'));
 
-    store.recordValidation({ outcome: 'ChangesRequested', validatedBy: 'Grupo', notes: 'Plazo' });
+    store.recordValidation({
+      outcome: 'ChangesRequested',
+      validatedBy: 'Grupo',
+      participants: 4,
+      hardSections: [0],
+      hardGlossary: false,
+      notes: 'Plazo',
+    });
 
     expect(store.lastAction()).toBe('changesRequested');
   });

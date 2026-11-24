@@ -25,7 +25,8 @@ public sealed record ExportableDocument(
     ExportCover Cover);
 
 /// <summary>
-/// Portada: debajo del título del documento, qué es, el sello de borrador y la fecha. No lleva el logo europeo de lectura
+/// Portada: debajo del título del documento, qué es, el sello de borrador o de versión validada (con quién la validó) y la
+/// fecha. No lleva el logo europeo de lectura
 /// fácil, que solo pueden usar los textos validados por personas del grupo destinatario, ni metadatos internos.
 /// </summary>
 /// <param name="Subtitle">Qué es el documento ("Adaptación a lectura fácil").</param>
@@ -33,4 +34,7 @@ public sealed record ExportableDocument(
 /// Sello del estado: de borrador (el mismo texto que la etiqueta de la aplicación) o de versión validada.
 /// </param>
 /// <param name="Date">Fecha de la exportación, escrita con letras.</param>
-public sealed record ExportCover(string Subtitle, string DraftNotice, string Date);
+/// <param name="ValidatedBy">
+/// En una versión validada, quién la validó, cuántas personas y cuándo; <c>null</c> en un borrador.
+/// </param>
+public sealed record ExportCover(string Subtitle, string DraftNotice, string Date, string? ValidatedBy = null);

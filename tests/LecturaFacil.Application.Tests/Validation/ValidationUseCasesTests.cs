@@ -69,7 +69,7 @@ public sealed class ValidationUseCasesTests
         var document = Pending(Owner);
 
         var result = await new RecordValidation(Step()).ExecuteAsync(
-            new RecordValidationCommand(document.Id, 1, ValidationOutcome.Approved, "Grupo de lectura", "Se entiende."),
+            new RecordValidationCommand(document.Id, 1, new GroupDecision(ValidationOutcome.Approved, "Grupo de lectura", 4, [], false, "Se entiende.")),
             Token);
 
         result.Value.Status.ShouldBe(DocumentStatus.Validated);
@@ -80,17 +80,17 @@ public sealed class ValidationUseCasesTests
     }
 
     [Fact]
-    public async Task Record_ChangesRequested_ReturnsItToAnEditableDraftThatCanBeSentAgain()
+    public async Task Record_ChangesRequested_ReturnsItToAnEditableDraftThatWaitsForChanges()
     {
         var document = Pending(Owner);
 
         var result = await new RecordValidation(Step()).ExecuteAsync(
-            new RecordValidationCommand(document.Id, 1, ValidationOutcome.ChangesRequested, "Grupo", "Falta explicar el plazo."),
+            new RecordValidationCommand(document.Id, 1, new GroupDecision(ValidationOutcome.ChangesRequested, "Grupo", 4, [], false, "Falta explicar el plazo.")),
             Token);
 
         result.Value.Status.ShouldBe(DocumentStatus.Draft);
         result.Value.Editable.ShouldBeTrue();
-        result.Value.CanSendToValidation.ShouldBeTrue();
+        result.Value.CanSendToValidation.ShouldBeFalse();
         result.Value.LatestValidation!.Outcome.ShouldBe(ValidationOutcome.ChangesRequested);
     }
 
@@ -100,7 +100,7 @@ public sealed class ValidationUseCasesTests
         var document = Reviewed(Owner);
 
         var result = await new RecordValidation(Step()).ExecuteAsync(
-            new RecordValidationCommand(document.Id, 1, ValidationOutcome.Approved, "Grupo", null),
+            new RecordValidationCommand(document.Id, 1, new GroupDecision(ValidationOutcome.Approved, "Grupo", 4, [], false, null)),
             Token);
 
         result.Error.ShouldBe(ValidationErrors.NotPending);
@@ -113,13 +113,66 @@ public sealed class ValidationUseCasesTests
         var document = Pending(Owner);
 
         var result = await new RecordValidation(Step()).ExecuteAsync(
-            new RecordValidationCommand(document.Id, 2, ValidationOutcome.Approved, "Grupo", null),
+            new RecordValidationCommand(document.Id, 2, new GroupDecision(ValidationOutcome.Approved, "Grupo", 4, [], false, null)),
             Token);
 
         result.Error.ShouldBe(ReviewErrors.VersionConflict);
         document.Status.ShouldBe(DocumentStatus.PendingValidation);
         document.Validations.ShouldBeEmpty();
         _repository.SavedStatuses.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Record_ChangesRequested_KeepsTheHardSectionsAndEveryRound()
+    {
+        var document = Pending(Owner);
+
+        var result = await new RecordValidation(Step()).ExecuteAsync(
+            new RecordValidationCommand(
+                document.Id,
+                1,
+                new GroupDecision(ValidationOutcome.ChangesRequested, "Grupo", 3, [0], false, null)),
+            Token);
+
+        var validation = result.Value.Validations.ShouldHaveSingleItem();
+        validation.Participants.ShouldBe(3);
+        validation.HardSections.ShouldBe(["¿Qué es?"]);
+        result.Value.LatestValidation.ShouldBe(validation);
+    }
+
+    [Theory]
+    [InlineData(ValidationOutcome.ChangesRequested, 1, false)]
+    [InlineData(ValidationOutcome.ChangesRequested, -1, true)]
+    [InlineData(ValidationOutcome.Approved, 0, false)]
+    public async Task Record_WithHardPartsThatAreNotInTheVersionOrNotAllowed_ReturnsUnknownPart(
+        ValidationOutcome outcome,
+        int section,
+        bool glossary)
+    {
+        var document = Pending(Owner);
+        int[] sections = section < 0 ? [] : [section];
+
+        var result = await new RecordValidation(Step()).ExecuteAsync(
+            new RecordValidationCommand(document.Id, 1, new GroupDecision(outcome, "Grupo", 3, sections, glossary, null)),
+            Token);
+
+        result.Error.ShouldBe(ValidationErrors.UnknownPart);
+        document.Validations.ShouldBeEmpty();
+        _repository.SavedStatuses.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Send_AfterTheGroupAskedForChangesWithoutEditingIt_SaysToChangeItFirst()
+    {
+        var document = Pending(Owner);
+        document.RecordValidation(
+            new GroupDecision(ValidationOutcome.ChangesRequested, "Grupo", 3, [], false, null),
+            Now);
+
+        var result = await new SendToValidation(Step()).ExecuteAsync(new SendToValidationCommand(document.Id, 1), Token);
+
+        result.Error.ShouldBe(ValidationErrors.Unchanged);
+        document.Status.ShouldBe(DocumentStatus.Draft);
     }
 
     [Fact]
@@ -137,7 +190,7 @@ public sealed class ValidationUseCasesTests
         var document = Pending(Owner);
         (await new PublishDocument(Step()).ExecuteAsync(document.Id, Token)).Error.ShouldBe(ValidationErrors.NotValidated);
 
-        document.RecordValidation(ValidationOutcome.Approved, "Grupo", null, Now);
+        document.RecordValidation(GroupDecision.Approved("Grupo", 4, null), Now);
         var result = await new PublishDocument(Step()).ExecuteAsync(document.Id, Token);
 
         result.Value.Status.ShouldBe(DocumentStatus.Published);
@@ -151,7 +204,7 @@ public sealed class ValidationUseCasesTests
 
         (await new SendToValidation(Step()).ExecuteAsync(new SendToValidationCommand(foreign.Id, 1), Token)).Error.ShouldBe(DocumentErrors.NotFound);
         (await new RecordValidation(Step()).ExecuteAsync(
-            new RecordValidationCommand(foreign.Id, 1, ValidationOutcome.Approved, "Grupo", null), Token)).Error.ShouldBe(DocumentErrors.NotFound);
+            new RecordValidationCommand(foreign.Id, 1, new GroupDecision(ValidationOutcome.Approved, "Grupo", 4, [], false, null)), Token)).Error.ShouldBe(DocumentErrors.NotFound);
         (await new WithdrawFromValidation(Step()).ExecuteAsync(foreign.Id, Token)).Error.ShouldBe(DocumentErrors.NotFound);
         (await new PublishDocument(Step()).ExecuteAsync(foreign.Id, Token)).Error.ShouldBe(DocumentErrors.NotFound);
         foreign.Status.ShouldBe(DocumentStatus.PendingValidation);

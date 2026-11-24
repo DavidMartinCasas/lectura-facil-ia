@@ -99,7 +99,7 @@ public sealed class PdfExporter : IDocumentExporter
         section.AddParagraph(exportable.Title, CoverTitleStyle);
         section.AddParagraph(exportable.Cover.Subtitle, CoverSubtitleStyle);
         section.AddParagraph(exportable.Cover.DraftNotice, DraftStampStyle);
-        section.AddParagraph().AddText(exportable.Cover.Date);
+        section.AddParagraph().AddText(exportable.Cover.ValidatedBy ?? exportable.Cover.Date);
 
         // El contenido empieza en una página nueva, con su título como encabezado de nivel 1.
         section.AddParagraph(exportable.Title, StyleNames.Heading1).Format.PageBreakBefore = true;

@@ -18,6 +18,7 @@ namespace LecturaFacil.Api.Documents;
 /// <param name="CanRetry">Si la adaptación ha fallado y se puede reintentar con <c>POST /api/documents/{id}/retry</c>.</param>
 /// <param name="CanSendToValidation">Si es un borrador con sus avisos revisados que se puede enviar a validación.</param>
 /// <param name="Validation">La última validación anotada; <c>null</c> si aún no hay ninguna.</param>
+/// <param name="Validations">Todas las rondas de validación, de la primera a la última.</param>
 public sealed record DocumentResponse(
     Guid Id,
     string Title,
@@ -31,7 +32,8 @@ public sealed record DocumentResponse(
     bool Editable,
     bool CanRetry,
     bool CanSendToValidation,
-    ValidationResponse? Validation)
+    ValidationResponse? Validation,
+    IReadOnlyList<ValidationResponse> Validations)
 {
     public static DocumentResponse From(DocumentDetails details)
     {
@@ -49,7 +51,8 @@ public sealed record DocumentResponse(
             details.Editable,
             details.CanRetry,
             details.CanSendToValidation,
-            details.LatestValidation is { } validation ? ValidationResponse.From(validation) : null);
+            details.LatestValidation is { } validation ? ValidationResponse.From(validation) : null,
+            details.Validations.Select(ValidationResponse.From).ToList());
     }
 }
 

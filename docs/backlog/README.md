@@ -92,8 +92,9 @@ Las historias que se lanzan el mismo día no dependen entre sí y pueden hacerse
 | [US-19](historias/US-19-cicd-y-despliegue-final.md) | CI/CD y despliegue final | EP-08 | Must | 3 | Lun 23 | US-10 | Sí: secretos de GitHub | ⬜ |
 | [US-20](historias/US-20-readme-y-adrs.md) | README, licencia y documentación open source | EP-09 | Must | 3 | Jue 26 | Todas | Sí: URLs de slides y vídeo | ⬜ |
 | [US-21](historias/US-21-validacion-humana.md) | Registrar la validación humana y publicar | EP-05 | Could | 3 | Lun 23 | US-13, US-14 | No | 🔍 |
+| [US-22](historias/US-22-validacion-por-secciones.md) | Validación por secciones, rondas y portada validada | EP-05 | Could | 3 | Mar 24 | US-21 | No | 🔍 |
 
-**Total:** 73 puntos. El **Día** es cuándo trabaja el agente (en la nube durante la jornada, o en local esa tarde). **Cierre de funcionalidades:** viernes 27. **Entrega:** domingo 29. **Plazo oficial:** lunes 30.
+**Total:** 76 puntos. El **Día** es cuándo trabaja el agente (en la nube durante la jornada, o en local esa tarde). **Cierre de funcionalidades:** viernes 27. **Entrega:** domingo 29. **Plazo oficial:** lunes 30.
 
 > Slides, vídeo y formulario de entrega (28–29 nov) son tareas **humanas** y no están en este backlog. El plan completo día a día está en la sección 21 de `TFM-Lectura-Facil.md`.
 

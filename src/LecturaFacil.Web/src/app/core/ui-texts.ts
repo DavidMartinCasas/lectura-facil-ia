@@ -293,6 +293,7 @@ export const VALIDATION_TEXTS = {
   send: 'Enviar a validación',
   sending: 'Enviando…',
   sendBlocked: 'Antes de enviarlo, marca como revisados los avisos de los datos clave.',
+  sendUnchanged: 'Cambia el texto antes de volver a enviarlo.',
   changesRequested: (date: string, by: string) => `El ${date}, ${by} pidió cambios.`,
   pendingHint:
     'Exporta el documento y llévalo al grupo de validación. Cuando lo hayan leído, anota aquí lo que han decidido. Mientras tanto no se puede editar.',
@@ -304,6 +305,28 @@ export const VALIDATION_TEXTS = {
   validatedByLabel: 'Quién lo ha validado',
   validatedByHint:
     'Por ejemplo, «Grupo de lectura de la asociación». No escribas nombres de personas.',
+  participantsLabel: 'Personas',
+  participantsHint: 'Cuántas personas del grupo lo han leído.',
+  participantsRequired: 'Escribe cuántas personas lo han leído, de 1 a 99.',
+  hardPartsLegend: '¿Qué partes costó entender? (opcional)',
+  hardPartsHint: 'Las verás marcadas en la adaptación para saber dónde cambiarla.',
+  glossaryPart: 'Glosario',
+  hardPartsTitle: 'Costó entender (lo verás marcado en la adaptación):',
+  hardMark: 'Costó entender',
+  people: (count: number | null) =>
+    count === null ? '' : count === 1 ? ' (1 persona)' : ` (${count} personas)`,
+  roundsTitle: 'Rondas de validación',
+  roundOutcomes: {
+    Approved: 'Lo entiende',
+    ChangesRequested: 'Pidió cambios',
+  },
+  roundLine: (round: number, version: number, date: string, by: string, hardParts: number) =>
+    `Ronda ${round}: versión ${version}, ${date}, ${by}` +
+    (hardParts === 0
+      ? '.'
+      : hardParts === 1
+        ? ', 1 parte difícil.'
+        : `, ${hardParts} partes difíciles.`),
   notesLabel: 'Observaciones (opcional)',
   notesHint: 'Qué ha costado entender o qué hay que cambiar.',
   outcomeRequired: 'Elige si el grupo lo entiende o pide cambios.',

@@ -9,8 +9,8 @@ import {
   signal,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { Adaptation, ManualEdit } from '../../../core/documents/document.models';
-import { REVIEW_TEXTS } from '../../../core/ui-texts';
+import { Adaptation, HardParts, ManualEdit } from '../../../core/documents/document.models';
+import { REVIEW_TEXTS, VALIDATION_TEXTS } from '../../../core/ui-texts';
 
 /**
  * La adaptación (título, secciones con pregunta y frases, y glosario) como texto plano. Cada sección se edita por
@@ -29,9 +29,15 @@ export class AdaptedTextComponent {
   readonly editable = input(false);
   readonly saving = input(false);
   readonly headingId = input('adapted-title');
+  /** Lo que costó entender al grupo de validación, que se marca mientras se corrige el borrador. */
+  readonly hardParts = input<HardParts | null>(null);
   readonly save = output<ManualEdit>();
 
   protected readonly texts = REVIEW_TEXTS;
+  protected readonly hardMark = VALIDATION_TEXTS.hardMark;
+  /** Las secciones se reconocen por su pregunta: siguen marcadas en una versión nueva si no se ha cambiado. */
+  private readonly hardQuestions = computed(() => new Set(this.hardParts()?.sections ?? []));
+  protected readonly hardGlossary = computed(() => this.hardParts()?.glossary ?? false);
   /** Sección que se está editando; se cierra cuando llega una versión nueva. */
   protected readonly editing = linkedSignal<number, number | null>({
     source: () => this.adaptation().version,
@@ -42,6 +48,10 @@ export class AdaptedTextComponent {
   protected readonly draftValid = computed(
     () => this.draftQuestion().trim().length > 0 && splitLines(this.draftSentences()).length > 0,
   );
+
+  protected isHard(question: string): boolean {
+    return this.hardQuestions().has(question);
+  }
 
   protected edit(index: number): void {
     const section = this.adaptation().sections[index];

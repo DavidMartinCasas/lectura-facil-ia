@@ -4,7 +4,7 @@
   <article lang="es">
     <h3 class="title">{{ adaptation().title }}</h3>
     @for (section of adaptation().sections; track $index; let index = $index) {
-      <section class="section">
+      <section class="section" [class.section--hard]="isHard(section.question)">
         @if (editing() === index) {
           <form class="editor" (submit)="$event.preventDefault(); submit(index)">
             <label [for]="headingId() + '-question-' + index">{{ texts.questionLabel }}</label>
@@ -36,6 +36,9 @@
             </div>
           </form>
         } @else {
+          @if (isHard(section.question)) {
+            <p class="hard-mark">{{ hardMark }}</p>
+          }
           <h4>{{ section.question }}</h4>
           <ul>
             @for (sentence of section.sentences; track $index) {
@@ -58,15 +61,20 @@
     }
 
     @if (adaptation().glossary.length > 0) {
-      <h4>{{ texts.glossaryTitle }}</h4>
-      <dl class="glossary">
-        @for (term of adaptation().glossary; track $index) {
-          <div>
-            <dt>{{ term.term }}</dt>
-            <dd>{{ term.definition }}</dd>
-          </div>
+      <div class="glossary-part" [class.section--hard]="hardGlossary()">
+        @if (hardGlossary()) {
+          <p class="hard-mark">{{ hardMark }}</p>
         }
-      </dl>
+        <h4>{{ texts.glossaryTitle }}</h4>
+        <dl class="glossary">
+          @for (term of adaptation().glossary; track $index) {
+            <div>
+              <dt>{{ term.term }}</dt>
+              <dd>{{ term.definition }}</dd>
+            </div>
+          }
+        </dl>
+      </div>
     }
   </article>
 </section>

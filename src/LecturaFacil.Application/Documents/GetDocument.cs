@@ -44,4 +44,8 @@ public sealed record DocumentDetails(
     bool Editable,
     bool CanRetry,
     bool CanSendToValidation,
-    ValidationRecord? LatestValidation);
+    IReadOnlyList<ValidationRecord> Validations)
+{
+    /// <summary>La última validación anotada; <c>null</c> si aún no hay ninguna.</summary>
+    public ValidationRecord? LatestValidation => Validations.Count == 0 ? null : Validations[^1];
+}

@@ -20,6 +20,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { MatTabsModule } from '@angular/material/tabs';
 import { map } from 'rxjs';
 import {
+  HardParts,
   ExportFormat,
   ManualEdit,
   ReviewableDocument,
@@ -100,6 +101,13 @@ export class DocumentReviewComponent {
       : STATUS_LABELS[this.document().status],
   );
   protected readonly editable = computed(() => this.document().editable);
+  /** En un borrador al que el grupo pidió cambios, lo que le costó entender. */
+  protected readonly hardParts = computed<HardParts | null>(() => {
+    const validation = this.document().validation;
+    return this.document().status === 'Draft' && validation?.outcome === 'ChangesRequested'
+      ? { sections: validation.hardSections, glossary: validation.hardGlossary }
+      : null;
+  });
   protected readonly exportMessage = computed(() => {
     const pending = this.adaptation().pendingKeyFactCount;
     return pending > 0 ? REVIEW_TEXTS.exportBlocked(pending) : REVIEW_TEXTS.exportReady;
