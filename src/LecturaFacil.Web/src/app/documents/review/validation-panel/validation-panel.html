@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <section class="validation" aria-labelledby="validation-title">
   <div class="bar">
-    <h2 id="validation-title">{{ texts.title }}</h2>
+    <h2 id="validation-title" class="visually-hidden">{{ texts.title }}</h2>
     <ol class="steps" [attr.aria-label]="texts.stepsLabel">
       @for (step of steps; track step; let index = $index) {
         <li
