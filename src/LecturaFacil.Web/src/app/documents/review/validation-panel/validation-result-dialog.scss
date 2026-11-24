@@ -53,6 +53,7 @@ mat-radio-group {
 .who {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(8rem, 1fr);
+  align-items: start;
   gap: 0.75rem;
 
   @media (max-width: 36rem) {
