@@ -320,7 +320,7 @@ export const VALIDATION_TEXTS = {
   validatedByHint:
     'Por ejemplo, «Grupo de lectura de la asociación». No escribas nombres de personas.',
   participantsLabel: 'Personas',
-  participantsHint: 'Cuántas personas del grupo lo han leído.',
+  participantsHint: 'Del grupo que lo ha leído.',
   participantsRequired: 'Escribe cuántas personas lo han leído, de 1 a 99.',
   hardPartsLegend: '¿Qué partes costó entender? (opcional)',
   hardPartsHint: 'Las verás marcadas en la adaptación para saber dónde cambiarla.',
