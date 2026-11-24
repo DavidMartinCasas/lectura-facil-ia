@@ -39,6 +39,18 @@
       "temperature": 0,
       "inputPricePerMillion": 0.44,
       "outputPricePerMillion": 1.76
+    },
+    "ovh": {
+      "type": "OpenAICompatible",
+      "displayName": "OVHcloud AI Endpoints (UE)",
+      "endpointVariable": "EVALS_OVH_ENDPOINT",
+      "apiKeyVariable": "EVALS_OVH_API_KEY",
+      "adapterModel": "gemma-4-26b-a4b",
+      "verifierModel": "Qwen3.5-9B",
+      "temperature": 0,
+      "currency": "EUR",
+      "inputPricePerMillion": 0.1,
+      "outputPricePerMillion": 0.35
     }
   }
 }
