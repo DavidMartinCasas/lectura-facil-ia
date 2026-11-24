@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
+using System.Text.Json;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace LecturaFacil.Infrastructure.Persistence.Configurations;
 
@@ -96,6 +99,21 @@ internal sealed class DocumentConfiguration : IEntityTypeConfiguration<Document>
         validations.Property(validation => validation.Notes)
             .HasColumnName("notes")
             .HasMaxLength(ValidationRecord.NotesMaxLength);
+        validations.Property(validation => validation.Participants).HasColumnName("participants");
+        validations.Property(validation => validation.HardSections)
+            .HasColumnName("hard_sections")
+            .HasColumnType("jsonb")
+            .HasConversion(
+                new ValueConverter<IReadOnlyList<string>, string>(
+                    questions => JsonSerializer.Serialize(questions, JsonSerializerOptions.Default),
+                    json => (JsonSerializer.Deserialize<List<string>>(json, JsonSerializerOptions.Default) ?? new List<string>()).AsReadOnly()),
+                new ValueComparer<IReadOnlyList<string>>(
+                    (left, right) => left!.SequenceEqual(right!),
+                    questions => questions.Aggregate(0, (hash, question) => HashCode.Combine(hash, question.GetHashCode(StringComparison.Ordinal))),
+                    questions => questions.ToList().AsReadOnly()))
+            .HasDefaultValueSql("'[]'::jsonb")
+            .IsRequired();
+        validations.Property(validation => validation.HardGlossary).HasColumnName("hard_glossary");
         validations.Property(validation => validation.RecordedAt).HasColumnName("recorded_at");
     }
 

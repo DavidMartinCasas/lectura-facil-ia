@@ -95,6 +95,8 @@ export interface DocumentDetails {
   readonly canSendToValidation: boolean;
   /** La última validación anotada; `null` si aún no hay ninguna. */
   readonly validation: ValidationRecord | null;
+  /** Todas las rondas de validación, de la primera a la última. */
+  readonly validations: readonly ValidationRecord[];
 }
 
 /** Lo que decidió el grupo de validación: lo entiende o pide cambios. */
@@ -102,11 +104,19 @@ export type ValidationOutcome = 'Approved' | 'ChangesRequested';
 
 /** Una validación con personas del grupo destinatario, anotada por quien adaptó el documento. */
 export interface ValidationRecord {
+  /** Número de la ronda, desde 1. */
+  readonly round: number;
   /** Versión adaptada que leyó el grupo. */
   readonly version: number;
   readonly outcome: ValidationOutcome;
   /** Quién lo validó, por ejemplo "Grupo de lectura de la asociación". */
   readonly validatedBy: string;
+  /** Cuántas personas lo leyeron; `null` en las anotadas antes de pedirlo. */
+  readonly participants: number | null;
+  /** Preguntas de las secciones que costó entender, como estaban en la versión que leyó el grupo. */
+  readonly hardSections: readonly string[];
+  /** Si costó entender el glosario. */
+  readonly hardGlossary: boolean;
   readonly notes: string | null;
   readonly recordedAt: string;
 }
@@ -115,7 +125,18 @@ export interface ValidationRecord {
 export interface ValidationResult {
   readonly outcome: ValidationOutcome;
   readonly validatedBy: string;
+  /** Cuántas personas del grupo lo leyeron, de 1 a 99. */
+  readonly participants: number;
+  /** Posiciones (desde 0) de las secciones que costó entender. Solo si pide cambios. */
+  readonly hardSections: readonly number[];
+  readonly hardGlossary: boolean;
   readonly notes: string | null;
+}
+
+/** Partes de la adaptación que costó entender al grupo, para marcarlas mientras se corrige el borrador. */
+export interface HardParts {
+  readonly sections: readonly string[];
+  readonly glossary: boolean;
 }
 
 /** Documento con una adaptación que revisar. */

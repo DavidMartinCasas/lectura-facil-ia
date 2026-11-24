@@ -27,6 +27,7 @@ internal static class DocumentValidationEndpoints
         [ReviewErrors.NotEditable.Code] = StatusCodes.Status409Conflict,
         [ReviewErrors.VersionConflict.Code] = StatusCodes.Status409Conflict,
         [ValidationErrors.PendingWarnings.Code] = StatusCodes.Status409Conflict,
+        [ValidationErrors.Unchanged.Code] = StatusCodes.Status409Conflict,
         [ValidationErrors.NotPending.Code] = StatusCodes.Status409Conflict,
         [ValidationErrors.NotValidated.Code] = StatusCodes.Status409Conflict,
     };
@@ -114,12 +115,14 @@ internal static class DocumentValidationEndpoints
             return TypedResults.ValidationProblem(validation.ToDictionary());
         }
 
-        var command = new RecordValidationCommand(
-            DocumentId.From(id),
-            request.Version!.Value,
+        var decision = new GroupDecision(
             Enum.Parse<ValidationOutcome>(request.Outcome!),
             request.ValidatedBy!,
+            request.Participants!.Value,
+            request.HardSections ?? [],
+            request.HardGlossary ?? false,
             request.Notes);
+        var command = new RecordValidationCommand(DocumentId.From(id), request.Version!.Value, decision);
         return ToResponse(await recordValidation.ExecuteAsync(command, cancellationToken));
     }
 

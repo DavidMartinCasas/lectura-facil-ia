@@ -35,6 +35,6 @@ public sealed class DescribeDocument(CompareReadability compareReadability)
             document.IsEditable,
             document.Status == DocumentStatus.Error && AdaptationErrors.IsRetriable(document.FailureCode),
             document.CanSendToValidation,
-            document.LatestValidation);
+            document.Validations);
     }
 }

@@ -1,0 +1,106 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<h2 mat-dialog-title>{{ texts.recordTitle }}</h2>
+<form class="result" (submit)="submit($event)" novalidate>
+  <mat-dialog-content>
+    <p class="hint">{{ texts.recordHint }}</p>
+
+    <fieldset
+      [attr.aria-invalid]="outcomeMissing() ? true : null"
+      [attr.aria-describedby]="outcomeMissing() ? 'outcome-error' : null"
+    >
+      <legend>{{ texts.outcomeLegend }}</legend>
+      <mat-radio-group name="outcome" [value]="outcome()" (change)="outcome.set($event.value)">
+        @for (option of outcomes; track option) {
+          <mat-radio-button [value]="option">{{ texts.outcomes[option] }}</mat-radio-button>
+        }
+      </mat-radio-group>
+      @if (outcomeMissing()) {
+        <p id="outcome-error" class="field-error">{{ texts.outcomeRequired }}</p>
+      }
+    </fieldset>
+
+    @if (asksForChanges()) {
+      <fieldset class="hard-parts" aria-describedby="hard-parts-hint">
+        <legend>{{ texts.hardPartsLegend }}</legend>
+        <p id="hard-parts-hint" class="hint">{{ texts.hardPartsHint }}</p>
+        @for (question of data.sections; track $index; let index = $index) {
+          <mat-checkbox
+            [checked]="hardSections().has(index)"
+            (change)="toggleSection(index, $event.checked)"
+            >{{ question }}</mat-checkbox
+          >
+        }
+        @if (data.hasGlossary) {
+          <mat-checkbox [checked]="hardGlossary()" (change)="hardGlossary.set($event.checked)">{{
+            texts.glossaryPart
+          }}</mat-checkbox>
+        }
+      </fieldset>
+    }
+
+    <div class="who">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ texts.validatedByLabel }}</mat-label>
+        <input
+          matInput
+          name="validatedBy"
+          required
+          [attr.maxlength]="validatedByMaxLength"
+          [value]="validatedBy()"
+          (input)="onValidatedByInput($event)"
+          [attr.aria-invalid]="validatedByMissing() ? true : null"
+          [attr.aria-describedby]="validatedByMissing() ? 'validated-by-error' : null"
+        />
+        @if (validatedByMissing()) {
+          <mat-hint id="validated-by-error" class="field-error">{{
+            texts.validatedByRequired
+          }}</mat-hint>
+        } @else {
+          <mat-hint>{{ texts.validatedByHint }}</mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ texts.participantsLabel }}</mat-label>
+        <input
+          matInput
+          name="participants"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          required
+          [attr.max]="maxParticipants"
+          [value]="participants()"
+          (input)="onParticipantsInput($event)"
+          [attr.aria-invalid]="participantsInvalid() ? true : null"
+          [attr.aria-describedby]="participantsInvalid() ? 'participants-error' : null"
+        />
+        @if (participantsInvalid()) {
+          <mat-hint id="participants-error" class="field-error">{{
+            texts.participantsRequired
+          }}</mat-hint>
+        } @else {
+          <mat-hint>{{ texts.participantsHint }}</mat-hint>
+        }
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>{{ texts.notesLabel }}</mat-label>
+      <textarea
+        matInput
+        name="notes"
+        rows="3"
+        [attr.maxlength]="notesMaxLength"
+        [value]="notes()"
+        (input)="onNotesInput($event)"
+      ></textarea>
+      <mat-hint>{{ texts.notesHint }}</mat-hint>
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-stroked-button type="button" mat-dialog-close>{{ texts.cancel }}</button>
+    <button mat-flat-button type="submit">{{ texts.record }}</button>
+  </mat-dialog-actions>
+</form>

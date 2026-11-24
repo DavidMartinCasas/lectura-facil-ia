@@ -64,12 +64,13 @@ public sealed class ExportDocumentTests
     {
         var document = Adapted(Owner, pendingWarning: false);
         document.SendToValidation(Now);
-        document.RecordValidation(ValidationOutcome.Approved, "Grupo de lectura", null, Now);
+        document.RecordValidation(GroupDecision.Approved("Grupo de lectura", 5, null), Now);
 
         await CreateUseCase().ExecuteAsync(document.Id, "txt", Token);
 
         var exported = _exporter.Exported.ShouldHaveSingleItem();
         exported.Cover.DraftNotice.ShouldBe("Versión validada");
+        exported.Cover.ValidatedBy.ShouldBe("Validado por Grupo de lectura (5 personas) el 16 de noviembre de 2026");
         exported.Footer.ShouldBe("Versión validada · 16 de noviembre de 2026");
     }
 

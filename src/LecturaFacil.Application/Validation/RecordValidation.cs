@@ -8,7 +8,7 @@ namespace LecturaFacil.Application.Validation;
 
 /// <summary>
 /// Anota lo que decidió el grupo de validación: si lo entiende, el documento queda validado; si pide cambios, vuelve a
-/// borrador. La validación se hace fuera de la aplicación; la anota la misma persona que adaptó el documento.
+/// borrador con las secciones que costó entender marcadas. La validación se hace fuera de la aplicación; la anota la misma persona que adaptó el documento.
 /// </summary>
 public sealed class RecordValidation(ValidationStep step)
 {
@@ -17,8 +17,8 @@ public sealed class RecordValidation(ValidationStep step)
         ArgumentNullException.ThrowIfNull(command);
         return step.ExecuteAsync(
             command.DocumentId,
-            document => Check(document, command.Version),
-            (document, now) => document.RecordValidation(command.Outcome, command.ValidatedBy, command.Notes, now),
+            document => Check(document, command.Version, command.Decision),
+            (document, now) => document.RecordValidation(command.Decision, now),
             cancellationToken);
     }
 
@@ -26,13 +26,21 @@ public sealed class RecordValidation(ValidationStep step)
     /// El resultado es de la versión que leyó el grupo. Si mientras tanto el documento se ha retirado, cambiado y vuelto
     /// a enviar desde otra pestaña, la versión pendiente es otra y no se le puede asignar ese resultado.
     /// </summary>
-    private static Error? Check(Document document, int expectedVersion)
+    private static Error? Check(Document document, int expectedVersion, GroupDecision decision)
     {
         if (document.Status != DocumentStatus.PendingValidation)
         {
             return ValidationErrors.NotPending;
         }
 
-        return document.LatestAdaptedVersion!.Number == expectedVersion ? null : ReviewErrors.VersionConflict;
+        var version = document.LatestAdaptedVersion!;
+        if (version.Number != expectedVersion)
+        {
+            return ReviewErrors.VersionConflict;
+        }
+
+        return ValidationRecord.AreValidHardParts(version, decision.Outcome, decision.HardSections, decision.HardGlossary)
+            ? null
+            : ValidationErrors.UnknownPart;
     }
 }

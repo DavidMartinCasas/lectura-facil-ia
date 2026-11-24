@@ -34,6 +34,11 @@ public sealed class SendToValidation(ValidationStep step)
             return ReviewErrors.VersionConflict;
         }
 
+        if (document.AwaitsChanges)
+        {
+            return ValidationErrors.Unchanged;
+        }
+
         return document.CanSendToValidation ? null : ValidationErrors.PendingWarnings;
     }
 }

@@ -77,7 +77,7 @@ public sealed class DocxExporter(IOptions<ExportOptions> options) : IDocumentExp
             TextParagraph(CoverTitleStyleId, document.Title),
             TextParagraph(CoverSubtitleStyleId, document.Cover.Subtitle),
             TextParagraph(DraftStampStyleId, document.Cover.DraftNotice),
-            TextParagraph(null, document.Cover.Date));
+            TextParagraph(null, document.Cover.ValidatedBy ?? document.Cover.Date));
 
         // El contenido empieza en una página nueva, con su título como encabezado de nivel 1.
         var title = TextParagraph(Heading1StyleId, document.Title);

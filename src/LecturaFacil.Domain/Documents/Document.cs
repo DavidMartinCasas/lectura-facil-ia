@@ -185,7 +185,15 @@ public sealed class Document
     /// Un borrador se envía a validación cuando una persona ya ha revisado los avisos de sus datos clave: es lo mismo que
     /// pide la exportación, y el grupo de validación necesita el documento exportado.
     /// </summary>
-    public bool CanSendToValidation => IsEditable && LatestAdaptedVersion!.CanExport;
+    public bool CanSendToValidation => IsEditable && LatestAdaptedVersion!.CanExport && !AwaitsChanges;
+
+    /// <summary>
+    /// El grupo pidió cambios en la última versión y aún no se ha guardado otra: volver a enviarla sería pedirle que lea
+    /// lo mismo que ya no entendió.
+    /// </summary>
+    public bool AwaitsChanges =>
+        LatestValidation is { Outcome: ValidationOutcome.ChangesRequested } validation
+        && validation.VersionNumber == LatestAdaptedVersion?.Number;
 
     /// <summary>
     /// Envía la última versión a validación: el documento pasa a <see cref="DocumentStatus.PendingValidation"/> y deja de
@@ -195,7 +203,8 @@ public sealed class Document
     {
         if (!CanSendToValidation)
         {
-            throw new InvalidOperationException($"A document in {Status} with pending warnings cannot be sent to validation.");
+            throw new InvalidOperationException(
+                $"A document in {Status} with pending warnings or without changes since the group asked for them cannot be sent to validation.");
         }
 
         TransitionTo(DocumentStatus.PendingValidation, now);
@@ -210,21 +219,26 @@ public sealed class Document
 
     /// <summary>
     /// Anota el resultado de la validación de la última versión. Si el grupo lo entiende, el documento queda
-    /// <see cref="DocumentStatus.Validated"/>; si pide cambios, vuelve a <see cref="DocumentStatus.Draft"/>.
+    /// <see cref="DocumentStatus.Validated"/>; si pide cambios, vuelve a <see cref="DocumentStatus.Draft"/> y no se puede
+    /// volver a enviar hasta que se guarde una versión nueva.
     /// </summary>
-    public ValidationRecord RecordValidation(ValidationOutcome outcome, string validatedBy, string? notes, DateTimeOffset now)
+    public ValidationRecord RecordValidation(GroupDecision decision, DateTimeOffset now)
     {
+        ArgumentNullException.ThrowIfNull(decision);
         EnsureStatus(DocumentStatus.PendingValidation);
 
         var record = ValidationRecord.Create(
             (LatestValidation?.Number ?? 0) + 1,
-            LatestAdaptedVersion!.Number,
-            outcome,
-            validatedBy,
-            notes,
+            LatestAdaptedVersion!,
+            decision.Outcome,
+            decision.ValidatedBy,
+            decision.Participants,
+            decision.HardSections,
+            decision.HardGlossary,
+            decision.Notes,
             now);
         _validations.Add(record);
-        TransitionTo(outcome == ValidationOutcome.Approved ? DocumentStatus.Validated : DocumentStatus.Draft, now);
+        TransitionTo(decision.Outcome == ValidationOutcome.Approved ? DocumentStatus.Validated : DocumentStatus.Draft, now);
         return record;
     }
 

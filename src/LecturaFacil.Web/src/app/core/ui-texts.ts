@@ -288,14 +288,29 @@ export const KEY_FACT_TYPE_LABELS: Readonly<Record<KeyFactType, string>> = {
 /** Validación humana: la hacen personas del grupo destinatario fuera de la aplicación; aquí se anota. */
 export const VALIDATION_TEXTS = {
   title: 'Validación',
-  draftHint:
-    'Cuando hayas revisado el borrador, envíalo a validación. Personas del grupo destinatario tienen que leerlo y entenderlo.',
+  stepsLabel: 'Pasos de la validación',
+  stepDone: 'hecho:',
+  steps: {
+    Draft: 'Borrador',
+    PendingValidation: 'En validación',
+    Validated: 'Validado',
+    Published: 'Publicado',
+  } as Record<string, string>,
+  openRecord: 'Anotar el resultado',
+  recordTitle: 'Anotar el resultado de la validación',
+  recordHint: 'Lo que ha decidido el grupo después de leer el documento.',
+  cancel: 'Cancelar',
+  changesMarked: 'Lo que costó entender está marcado en la adaptación.',
+  showDetails: 'Ver rondas',
+  hideDetails: 'Ocultar rondas',
+  draftHint: 'Cuando lo hayas revisado, envíalo para que lo lea el grupo destinatario.',
   send: 'Enviar a validación',
   sending: 'Enviando…',
   sendBlocked: 'Antes de enviarlo, marca como revisados los avisos de los datos clave.',
+  sendUnchanged: 'Cambia el texto antes de volver a enviarlo.',
   changesRequested: (date: string, by: string) => `El ${date}, ${by} pidió cambios.`,
   pendingHint:
-    'Exporta el documento y llévalo al grupo de validación. Cuando lo hayan leído, anota aquí lo que han decidido. Mientras tanto no se puede editar.',
+    'Exporta el documento y llévalo al grupo. Cuando lo hayan leído, anota el resultado. Mientras tanto no se puede editar.',
   outcomeLegend: '¿El grupo lo entiende?',
   outcomes: {
     Approved: 'Sí, lo entiende',
@@ -304,6 +319,27 @@ export const VALIDATION_TEXTS = {
   validatedByLabel: 'Quién lo ha validado',
   validatedByHint:
     'Por ejemplo, «Grupo de lectura de la asociación». No escribas nombres de personas.',
+  participantsLabel: 'Personas',
+  participantsHint: 'Del grupo que lo ha leído.',
+  participantsRequired: 'Escribe cuántas personas lo han leído, de 1 a 99.',
+  hardPartsLegend: '¿Qué partes costó entender? (opcional)',
+  hardPartsHint: 'Las verás marcadas en la adaptación para saber dónde cambiarla.',
+  glossaryPart: 'Glosario',
+  hardPartsTitle: 'Costó entender:',
+  hardMark: 'Costó entender',
+  people: (count: number | null) =>
+    count === null ? '' : count === 1 ? ' (1 persona)' : ` (${count} personas)`,
+  roundsTitle: 'Rondas de validación',
+  roundOutcomes: {
+    Approved: 'Lo entiende',
+    ChangesRequested: 'Pidió cambios',
+  },
+  roundLine: (round: number, version: number, date: string, by: string) =>
+    `Ronda ${round}: versión ${version}, ${date}, ${by}`,
+  hasNotes: 'Tiene observaciones',
+  hardPartsCount: (count: number) =>
+    count === 1 ? '1 parte difícil' : `${count} partes difíciles`,
+  roundEmpty: 'El grupo no marcó partes difíciles ni dejó observaciones.',
   notesLabel: 'Observaciones (opcional)',
   notesHint: 'Qué ha costado entender o qué hay que cambiar.',
   outcomeRequired: 'Elige si el grupo lo entiende o pide cambios.',

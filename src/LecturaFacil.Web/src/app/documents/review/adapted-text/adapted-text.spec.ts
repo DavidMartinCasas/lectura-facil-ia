@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { TestBed } from '@angular/core/testing';
 import { Adaptation, ManualEdit } from '../../../core/documents/document.models';
-import { REVIEW_TEXTS } from '../../../core/ui-texts';
+import { REVIEW_TEXTS, VALIDATION_TEXTS } from '../../../core/ui-texts';
 import { adaptationFixture } from '../../../testing/document-fixtures';
 import { AdaptedTextComponent } from './adapted-text';
 
@@ -32,6 +32,32 @@ describe('AdaptedTextComponent', () => {
       'Como mucho, 250 euros al mes.',
     ]);
     expect(element.querySelector('dt')?.textContent).toBe('BOP');
+    expect(element.querySelector('.section--hard')).toBeNull();
+  });
+
+  it('marks the sections and the glossary that the validation group found hard', async () => {
+    const fixture = TestBed.createComponent(AdaptedTextComponent);
+    fixture.componentRef.setInput(
+      'adaptation',
+      adaptationFixture({
+        sections: [
+          { question: '¿Qué es?', sentences: ['Una ayuda.'] },
+          { question: '¿Cuánto dinero dan?', sentences: ['250 euros.'] },
+        ],
+      }),
+    );
+    fixture.componentRef.setInput('hardParts', {
+      sections: ['¿Cuánto dinero dan?', 'Una pregunta que ya no está'],
+      glossary: true,
+    });
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+
+    const hard = [...element.querySelectorAll('.section--hard')];
+    expect(hard).toHaveLength(2);
+    expect(hard[0].querySelector('h4')?.textContent).toBe('¿Cuánto dinero dan?');
+    expect(hard[0].querySelector('.hard-mark')?.textContent).toBe(VALIDATION_TEXTS.hardMark);
+    expect(hard[1].classList).toContain('glossary-part');
   });
 
   it('edits a section and sends the whole adaptation with that section changed', async () => {

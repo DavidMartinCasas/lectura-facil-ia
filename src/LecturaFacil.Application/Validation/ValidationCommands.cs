@@ -7,12 +7,8 @@ namespace LecturaFacil.Application.Validation;
 public sealed record SendToValidationCommand(DocumentId DocumentId, int Version);
 
 /// <summary>
-/// Lo que decidió el grupo que leyó la versión <paramref name="Version"/>, quién era y sus observaciones. La versión debe
+/// Lo que decidió el grupo que leyó la versión <paramref name="Version"/>, quién era, cuántas personas, qué partes le
+/// costó entender y sus observaciones. La versión debe
 /// seguir siendo la última: si el documento se ha retirado, cambiado y vuelto a enviar, el resultado no es de esta.
 /// </summary>
-public sealed record RecordValidationCommand(
-    DocumentId DocumentId,
-    int Version,
-    ValidationOutcome Outcome,
-    string ValidatedBy,
-    string? Notes);
+public sealed record RecordValidationCommand(DocumentId DocumentId, int Version, GroupDecision Decision);

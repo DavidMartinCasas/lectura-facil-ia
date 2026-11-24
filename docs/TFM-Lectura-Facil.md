@@ -216,7 +216,7 @@ journey
 | RF-09 | Etiquetar cada documento como *borrador pendiente de validación* | Must |
 | RF-10 | Proveedor principal y de respaldo opcional, elegidos por configuración (local, Azure o ambos) | Must |
 | RF-11 | Lista simple de documentos del usuario | Should |
-| RF-12 | Registrar el resultado de la validación humana | Could (adelantado al MVP: US-21) |
+| RF-12 | Registrar el resultado de la validación humana | Could (adelantado al MVP: US-21 y US-22) |
 | RF-13 | Pictogramas de apoyo (ARASAAC) | Could (v2) |
 
 ### No funcionales
@@ -644,7 +644,7 @@ erDiagram
 | `POST` | `/api/documents/{id}/reprocess` | Vuelve a adaptar (otro modelo u otras opciones) |
 | `POST` | `/api/documents/{id}/export?format=docx\|pdf\|md\|txt` | Genera el fichero en el formato elegido |
 | `POST` | `/api/documents/{id}/validation/send` | Envía el borrador revisado a validación |
-| `POST` | `/api/documents/{id}/validation` | Registra el resultado de la validación de la versión que leyó el grupo (409 si ya no es la pendiente) |
+| `POST` | `/api/documents/{id}/validation` | Registra el resultado de la validación de la versión que leyó el grupo: personas y partes difíciles (409 si ya no es la pendiente) |
 | `POST` | `/api/documents/{id}/validation/withdraw` | Retira el documento de la validación (vuelve a borrador) |
 | `POST` | `/api/documents/{id}/publish` | Publica la versión validada |
 | `GET` | `/api/samples` | Textos de ejemplo |

@@ -135,6 +135,7 @@ export function documentFixture(
     canRetry: false,
     canSendToValidation: false,
     validation: null,
+    validations: [],
     ...overrides,
   };
 }
