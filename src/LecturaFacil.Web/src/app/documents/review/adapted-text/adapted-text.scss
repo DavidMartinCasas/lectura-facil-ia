@@ -113,11 +113,11 @@ textarea {
   border-block-start: 2px solid var(--lf-ink);
 }
 
-// Lo que costó entender al grupo de validación: en ámbar, con su etiqueta, hasta que se vuelve a enviar.
+// Lo que costó entender al grupo de validación: en violeta, con su etiqueta, hasta que se vuelve a enviar.
 .section--hard {
   padding-inline: 1rem;
-  border-inline-start: 4px solid var(--lf-amber);
-  background: var(--lf-amber-soft);
+  border-inline-start: 4px solid var(--lf-violet);
+  background: var(--lf-violet-soft);
 }
 
 .glossary-part.section--hard {
@@ -127,11 +127,11 @@ textarea {
 .hard-mark {
   margin: 0;
   padding: 0.125rem 0.5rem;
-  border: 1px solid var(--lf-amber);
+  border: 1px solid var(--lf-violet);
   border-radius: var(--lf-radius-s);
   font-size: var(--lf-fs-label);
   font-weight: 700;
-  color: var(--lf-amber);
+  color: var(--lf-violet);
 }
 
 .glossary {

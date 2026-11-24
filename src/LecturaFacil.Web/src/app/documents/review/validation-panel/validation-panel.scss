@@ -45,13 +45,19 @@ p {
   background: var(--lf-amber-soft);
 }
 
+// Lo que dijo el grupo, en violeta como sus marcas en la adaptación.
 .hard-title {
   font-weight: 700;
+  color: var(--lf-violet);
 }
 
 .hard-list {
   margin: 0;
-  padding-inline-start: 1.25rem;
+  padding-block: 0.25rem;
+  padding-inline-start: 1.75rem;
+  border-inline-start: 4px solid var(--lf-violet);
+  border-radius: var(--lf-radius-s);
+  background: var(--lf-violet-soft);
 }
 
 .step {
