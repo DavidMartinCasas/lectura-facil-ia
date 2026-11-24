@@ -251,6 +251,30 @@ public sealed class GetDocumentEndpointTests
     }
 
     [Fact]
+    public async Task Events_WhileALongDocumentIsBeingAdapted_SendsWhichPartItIsIn()
+    {
+        await using var factory = new DocumentsApiFactory();
+        var document = Seed(factory, TestUsers.DefaultOwner, processing =>
+        {
+            processing.StartProcessing(Now);
+            processing.EnterStage(ProcessingStage.Adapting, Now, part: 3, parts: 10);
+        });
+        using var client = await factory.CreateApiClientAsync();
+
+        using var response = await client.GetAsync(EventsUri(document.Id.Value), HttpCompletionOption.ResponseHeadersRead, Token);
+        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(Token));
+        var data = string.Empty;
+        while (!data.StartsWith("data:", StringComparison.Ordinal))
+        {
+            data = await reader.ReadLineAsync(Token) ?? throw new InvalidOperationException("El flujo se ha cerrado sin datos.");
+        }
+
+        data.ShouldContain("\"stage\":\"Adapting\"");
+        data.ShouldContain("\"part\":3");
+        data.ShouldContain("\"parts\":10");
+    }
+
+    [Fact]
     public async Task Events_WhenTheDocumentBelongsToAnotherUser_Returns404()
     {
         await using var factory = new DocumentsApiFactory();

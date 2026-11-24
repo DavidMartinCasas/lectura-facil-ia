@@ -76,6 +76,71 @@ public sealed class MeaningVerification
         return new MeaningVerification(VerificationStatus.Verified, Bounded(missing.Concat(checkedFacts), maxKeyFacts), metadata);
     }
 
+    /// <summary>
+    /// Une la verificación de un documento largo hecha por partes (US-23). Cada dato del verificador se comprueba con
+    /// código contra su parte del original y contra la adaptación completa, y una cifra del original solo da aviso si no
+    /// está en ninguna parte adaptada. Una parte que falla no oculta las demás: queda un aviso "Parte N" y sus cifras
+    /// para revisar. Un dato que aparece en varias partes se queda una vez, con el veredicto más grave.
+    /// Con una sola parte es lo mismo que <see cref="Combine"/> o <see cref="NotVerified"/>.
+    /// </summary>
+    /// <param name="adaptedText">La adaptación completa, como la leerá la persona (con el glosario).</param>
+    public static MeaningVerification CombineParts(IReadOnlyList<VerificationPart> parts, string adaptedText, int maxKeyFacts)
+    {
+        ArgumentNullException.ThrowIfNull(parts);
+        ArgumentNullException.ThrowIfNull(adaptedText);
+        if (parts.Count == 0)
+        {
+            throw new ArgumentException("There must be at least one part to combine.", nameof(parts));
+        }
+
+        if (parts.Count == 1)
+        {
+            var single = parts[0];
+            return single.IsVerified
+                ? Combine(single.OriginalText, adaptedText, single.VerifierFacts!, single.Metadata!, maxKeyFacts)
+                : NotVerified(single.OriginalText, maxKeyFacts);
+        }
+
+        var inAdaptation = NumberNormalizer.Values(adaptedText);
+        var facts = new List<KeyFact>();
+        var listed = new HashSet<NumericValue>();
+        var unlisted = new List<NumberMention>();
+        for (var index = 0; index < parts.Count; index++)
+        {
+            var part = parts[index];
+            if (!part.IsVerified)
+            {
+                facts.Add(KeyFact.Create(KeyFactType.Other, PartLabel(index + 1), null, NotVerifiedVerdict));
+                facts.AddRange(FiguresOf(part.OriginalText).Select(mention => FigureFact(mention, KeyFactReason.NotVerified)));
+                continue;
+            }
+
+            var checkedFacts = part.VerifierFacts!
+                .Select(fact => fact.WithVerdict(KeyFactVerdict.MostSevere(
+                    CodeVerdict(fact, part.OriginalText, adaptedText, inAdaptation),
+                    fact.Verdict)))
+                .ToList();
+            facts.AddRange(checkedFacts);
+            listed.UnionWith(checkedFacts
+                .Where(fact => NumericConsistencyCheck.Quotes(part.OriginalText, fact.OriginalValue))
+                .SelectMany(fact => NumberNormalizer.Values(fact.OriginalValue)));
+            unlisted.AddRange(FiguresOf(part.OriginalText));
+        }
+
+        var missing = unlisted
+            .Where(mention => !listed.Contains(mention.Value) && !inAdaptation.Contains(mention.Value))
+            .Select(mention => FigureFact(mention, KeyFactReason.FigureNotInAdaptation));
+        var verified = parts.Count(part => part.IsVerified);
+        var status = verified == parts.Count ? VerificationStatus.Verified
+            : verified == 0 ? VerificationStatus.NotVerified
+            : VerificationStatus.PartiallyVerified;
+        var metadata = parts.FirstOrDefault(part => part.IsVerified)?.Metadata;
+        return new MeaningVerification(status, Bounded(Deduplicated(missing.Concat(facts)), maxKeyFacts), metadata);
+    }
+
+    /// <summary>El aviso de una parte que no se ha podido verificar, por ejemplo "Parte 2".</summary>
+    public static string PartLabel(int number) => string.Create(CultureInfo.InvariantCulture, $"Parte {number}");
+
     /// <summary>Fallo seguro: sin respuesta válida del verificador, todas las cifras del original quedan para revisar.</summary>
     public static MeaningVerification NotVerified(string originalText, int maxKeyFacts)
     {
@@ -170,6 +235,18 @@ public sealed class MeaningVerification
             : KeyFactVerdict.MostSevere(
                 new KeyFactVerdict(KeyFactStatus.Review, KeyFactReason.NeedsReview),
                 NumericConsistencyCheck.Check(fact.OriginalValue, fact.AdaptedValue, adaptedText, inAdaptation));
+
+    private static readonly KeyFactVerdict NotVerifiedVerdict = new(KeyFactStatus.Review, KeyFactReason.NotVerified);
+
+    /// <summary>
+    /// Un dato que han encontrado varias partes (el mismo tipo y el mismo texto del original) se queda una vez, con el
+    /// veredicto más grave. Se conserva el orden de la primera vez que aparece.
+    /// </summary>
+    private static IEnumerable<KeyFact> Deduplicated(IEnumerable<KeyFact> facts) =>
+        facts
+            .GroupBy(fact => (fact.Type, Key: fact.OriginalValue.ToUpperInvariant()))
+            .Select(group => group.Aggregate((kept, next) =>
+                KeyFactVerdict.MostSevere(kept.Verdict, next.Verdict) == next.Verdict && next.Verdict != kept.Verdict ? next : kept));
 
     private int Count(KeyFactStatus status) => KeyFacts.Count(fact => fact.Status == status);
 

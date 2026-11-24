@@ -11,4 +11,10 @@ public enum VerificationStatus
     /// El verificador no ha respondido o su respuesta no era válida: todas las cifras del original quedan para revisar.
     /// </summary>
     NotVerified,
+
+    /// <summary>
+    /// Documento largo verificado por partes en el que alguna parte no se ha podido verificar: esa parte queda para revisar
+    /// y las demás tienen su resultado.
+    /// </summary>
+    PartiallyVerified,
 }

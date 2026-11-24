@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { TestBed } from '@angular/core/testing';
-import { progressSteps } from '../../core/documents/document-progress';
+import { progressPosition, progressSteps, stepsAt } from '../../core/documents/document-progress';
 import { DocumentStatus } from '../../core/documents/document.models';
 import { ProgressStepsComponent } from './progress-steps';
 
@@ -33,6 +33,21 @@ describe('ProgressStepsComponent', () => {
 
     expect(element.querySelector('[role="status"]')?.textContent?.trim()).toBe(
       'Paso actual: Adaptando.',
+    );
+  });
+
+  it('shows and announces the part of a long document', async () => {
+    const fixture = TestBed.createComponent(ProgressStepsComponent);
+    fixture.componentRef.setInput(
+      'steps',
+      stepsAt(progressPosition('Processing', 'Adapting', { number: 3, count: 10 })),
+    );
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(items(element)[1]?.replace(/\s+/g, ' ')).toBe('Adaptando parte 3 de 10 (en curso)');
+    expect(element.querySelector('[role="status"]')?.textContent?.trim()).toBe(
+      'Paso actual: Adaptando parte 3 de 10.',
     );
   });
 

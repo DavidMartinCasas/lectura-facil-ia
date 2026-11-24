@@ -64,6 +64,15 @@ public sealed class Document
     /// </summary>
     public ProcessingStage? Stage { get; private set; }
 
+    /// <summary>
+    /// En un documento que se procesa por partes, la parte de la fase actual (desde 1); <c>null</c> si la fase no va por
+    /// partes o el documento tiene una sola (US-23).
+    /// </summary>
+    public int? StagePart { get; private set; }
+
+    /// <summary>Cuántas partes tiene la fase actual; <c>null</c> como <see cref="StagePart"/>.</summary>
+    public int? StageParts { get; private set; }
+
     /// <summary>Código del motivo del último error (por ejemplo <c>llm.provider_unavailable</c>), sin detalles internos.</summary>
     public string? FailureCode { get; private set; }
 
@@ -249,15 +258,25 @@ public sealed class Document
         TransitionTo(DocumentStatus.Published, now);
     }
 
-    /// <summary>Pasa a otra fase de la adaptación. Solo mientras el documento está en <see cref="DocumentStatus.Processing"/>.</summary>
-    public void EnterStage(ProcessingStage stage, DateTimeOffset now)
+    /// <summary>
+    /// Pasa a otra fase de la adaptación. Solo mientras el documento está en <see cref="DocumentStatus.Processing"/>.
+    /// En un documento de varias partes, <paramref name="part"/> y <paramref name="parts"/> dicen por cuál va (US-23).
+    /// </summary>
+    public void EnterStage(ProcessingStage stage, DateTimeOffset now, int? part = null, int? parts = null)
     {
         if (Status != DocumentStatus.Processing)
         {
             throw new InvalidOperationException($"A document in {Status} has no processing stage.");
         }
 
+        if (part is null != parts is null || part < 1 || part > parts)
+        {
+            throw new ArgumentOutOfRangeException(nameof(part), "The part must be between 1 and the number of parts.");
+        }
+
         Stage = stage;
+        StagePart = part;
+        StageParts = parts;
         UpdatedAt = now;
     }
 
@@ -289,6 +308,8 @@ public sealed class Document
         if (next != DocumentStatus.Processing)
         {
             Stage = null;
+            StagePart = null;
+            StageParts = null;
         }
     }
 

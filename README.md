@@ -68,7 +68,7 @@ El doble guion bajo separa niveles y no importan las mayúsculas: `LLM__PRIMARY_
 | `LLM__FALLBACK__ENABLED` | No | `false` | Habilita el proveedor de respaldo. Si es `false`, ningún documento sale del principal. |
 | `LLM__FALLBACK__*` | Solo si está habilitado | — | Las mismas opciones que `LLM__PRIMARY__*` (la clave 🔒). |
 | `LIMITS__MAXFILESIZEBYTES` | No | `5242880` (5 MB) | Tamaño máximo de fichero (1 KB – 50 MB). |
-| `LIMITS__MAXCHARACTERS` | No | `20000` | Caracteres máximos del texto (100 – 200 000). |
+| `LIMITS__MAXCHARACTERS` | No | `150000` | Caracteres máximos del texto (100 – 200 000). Un texto largo se adapta y se verifica por partes. |
 | `LIMITS__MINCHARACTERS` | No | `50` | Caracteres mínimos del texto (1 – 100). |
 | `LIMITS__MAXPDFPAGES` | No | `100` | Páginas máximas de un PDF (1 – 2000). |
 | `LIMITS__PDFEXTRACTIONTIMEOUTSECONDS` | No | `15` | Tiempo máximo para extraer el texto de un PDF, en segundos (1 – 120). |
@@ -76,6 +76,8 @@ El doble guion bajo separa niveles y no importan las mayúsculas: `LLM__PRIMARY_
 | `LIMITS__MAXWORDSPERSENTENCE` | No | `15` | Palabras por frase a partir de las que se avisa (5 – 50). |
 | `LIMITS__MAXOUTPUTTOKENS` | No | `4096` | Tokens máximos por respuesta del modelo (256 – 32 768). |
 | `LIMITS__LLMTIMEOUTSECONDS` | No | `120` | Tiempo máximo por llamada al modelo, en segundos (5 – 600). |
+| `LIMITS__MAXADAPTATIONCHUNKSPERDOCUMENT` | No | `30` | Partes como máximo de un documento (1 – 100); uno más largo se rechaza. Llamadas al modelo por documento, como mucho: partes × (1 + reintentos) + partes. |
+| `LIMITS__MAXADAPTATIONRETRIES` | No | `1` | Veces que se vuelve a adaptar una parte que incumple pautas graves (0 – 3). |
 | `LIMITS__ADAPTATIONSPERHOUR` | No | `10` | Documentos que puede enviar a adaptar cada usuario por hora (1 – 1000). Al superarlo, 429 con `Retry-After`. |
 | `LIMITS__EXPORTSPERMINUTE` | No | `30` | Exportaciones por minuto y usuario (1 – 1000). |
 | `EXPORT__FONTSIZEPOINTS` | No | `14` | Letra del texto de los DOCX y PDF exportados, en puntos (14 – 28). |

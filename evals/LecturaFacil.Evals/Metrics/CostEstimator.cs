@@ -9,8 +9,9 @@ namespace LecturaFacil.Evals.Metrics;
 /// caso de <see cref="AdaptDocument"/>: el texto se parte en trozos de
 /// <see cref="LimitsOptions.MaxCharactersPerAdaptationChunk"/>, cada trozo gasta sus
 /// <see cref="AdaptDocument.MaxAttemptsPerChunk"/> intentos en cada pasada (la primera y cada reintento por pautas), y
-/// cada respuesta llega a <see cref="LimitsOptions.MaxOutputTokens"/>. Cuenta 4 caracteres por token (a la baja en
-/// castellano, que suele tener más caracteres por token). Cada trampa son dos verificaciones (con y sin la alteración).
+/// cada respuesta llega a <see cref="LimitsOptions.MaxOutputTokens"/>. Cada trozo se verifica por separado (US-23).
+/// Cuenta 4 caracteres por token (a la baja en castellano, que suele tener más caracteres por token). Cada trampa son dos
+/// verificaciones (con y sin la alteración).
 /// </summary>
 public static class CostEstimator
 {
@@ -42,9 +43,9 @@ public static class CostEstimator
             var adapterCalls = (long)passes * chunks * AdaptDocument.MaxAttemptsPerChunk;
             // Cada llamada lleva el prompt y, como mucho, un trozo entero.
             input += adapterCalls * Tokens(adapterPromptLength + Math.Min(length, maxChunk));
-            // El verificador recibe el original y una adaptación de tamaño parecido.
-            input += Tokens(verifierPromptLength + (2 * length));
-            output += (adapterCalls + 1) * limits.MaxOutputTokens;
+            // Una verificación por trozo: entre todas reciben el original y una adaptación de tamaño parecido.
+            input += (chunks * Tokens(verifierPromptLength)) + Tokens(2 * length);
+            output += (adapterCalls + chunks) * limits.MaxOutputTokens;
         }
 
         foreach (var length in trapLengths)

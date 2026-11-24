@@ -29,6 +29,13 @@ describe('KeyFactsPanelComponent', () => {
     expect(element.querySelectorAll('.item--warning')).toHaveLength(1);
   });
 
+  it('says when only some parts of a long document could be verified', async () => {
+    const { element } = await render({ ...verification, status: 'PartiallyVerified' });
+
+    expect(element.textContent).toContain(REVIEW_TEXTS.partiallyVerified);
+    expect(element.textContent).not.toContain(REVIEW_TEXTS.notVerified);
+  });
+
   it('asks to acknowledge only the warnings that are pending', async () => {
     const { element, acknowledged } = await render(verification);
 

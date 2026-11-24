@@ -32,6 +32,26 @@ public sealed class WatchDocumentTests
     }
 
     [Fact]
+    public async Task Watch_SendsEachPartOfALongDocument()
+    {
+        var document = Add(Owner);
+        DocumentProgress[] script =
+        [
+            new(DocumentStatus.Processing, ProcessingStage.Adapting, 1, 2),
+            new(DocumentStatus.Processing, ProcessingStage.Adapting, 2, 2),
+            new(DocumentStatus.Draft, null),
+        ];
+        foreach (var progress in script)
+        {
+            _repository.ScriptedProgress.Enqueue(progress);
+        }
+
+        var result = await CreateUseCase(TimeProvider.System).StartAsync(document.Id, Token);
+
+        (await ReadAll(result.Value)).Select(progress => progress.Part).ShouldBe([1, 2, null]);
+    }
+
+    [Fact]
     public async Task Watch_SendsEachStageChangeWhileProcessing()
     {
         var document = Add(Owner);

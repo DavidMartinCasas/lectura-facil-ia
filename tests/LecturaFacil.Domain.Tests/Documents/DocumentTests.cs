@@ -131,6 +131,46 @@ public sealed class DocumentTests
     }
 
     [Fact]
+    public void EnterStage_WithAPart_KeepsWhichPartItIsUntilTheNextStage()
+    {
+        var document = Submit();
+        document.StartProcessing(Now);
+
+        document.EnterStage(ProcessingStage.Adapting, Now, part: 3, parts: 10);
+
+        (document.StagePart, document.StageParts).ShouldBe((3, 10));
+
+        document.EnterStage(ProcessingStage.ReviewingGuidelines, Now);
+
+        (document.StagePart, document.StageParts).ShouldBe((null, null));
+    }
+
+    [Fact]
+    public void EnterStage_WhenTheDocumentLeavesProcessing_ForgetsThePart()
+    {
+        var document = Submit();
+        document.StartProcessing(Now);
+        document.EnterStage(ProcessingStage.Verifying, Now, part: 2, parts: 2);
+
+        document.FailProcessing("adaptation.failed", Now);
+
+        (document.StagePart, document.StageParts).ShouldBe((null, null));
+    }
+
+    [Theory]
+    [InlineData(0, 3)]
+    [InlineData(4, 3)]
+    [InlineData(1, null)]
+    [InlineData(null, 3)]
+    public void EnterStage_WithAPartOutOfRange_Throws(int? part, int? parts)
+    {
+        var document = Submit();
+        document.StartProcessing(Now);
+
+        Should.Throw<ArgumentOutOfRangeException>(() => document.EnterStage(ProcessingStage.Adapting, Now, part, parts));
+    }
+
+    [Fact]
     public void EnterStage_WhenNotProcessing_Throws()
     {
         var document = Submit();

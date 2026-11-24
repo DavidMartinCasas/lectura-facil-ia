@@ -233,7 +233,8 @@ export type KeyFactType =
   | 'Other';
 
 export interface MeaningVerification {
-  readonly status: 'Verified' | 'NotVerified';
+  /** `PartiallyVerified`: documento largo en el que alguna parte no se ha podido verificar. */
+  readonly status: 'Verified' | 'NotVerified' | 'PartiallyVerified';
   readonly summary: string;
   readonly conservedCount: number;
   readonly reviewCount: number;

@@ -2,6 +2,7 @@
 using LecturaFacil.Application.Adaptation;
 using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Users;
+using LecturaFacil.Domain.Adaptation;
 using LecturaFacil.Domain.Documents;
 using Microsoft.Extensions.Options;
 
@@ -81,6 +82,13 @@ public sealed class SubmitDocument(
         }
 
         var originalText = OriginalText.Create(text, limits);
+        // Se comprueba antes de guardar nada ni llamar al modelo: la adaptación lo partirá igual (US-23, OWASP LLM10).
+        var chunkSize = Math.Min(_limits.MaxCharactersPerAdaptationChunk, _limits.MaxCharacters);
+        if (TextChunker.Split(originalText.Value, chunkSize).Count > _limits.MaxAdaptationChunksPerDocument)
+        {
+            return Result<SubmittedDocument>.Failure(DocumentErrors.TooManyParts(_limits.MaxAdaptationChunksPerDocument));
+        }
+
         var document = Document.Submit(currentUser.OwnerId, title, originalText, timeProvider.GetUtcNow());
         // TODO(US-13): en el original, las pautas que agotan su tiempo (TimedOutGuidelines) solo quedan en el log y no se
         // indica cuándo se descartan hallazgos por MaxFindingsPerDocument. La adaptación ya lo guarda en su GuidelineReport

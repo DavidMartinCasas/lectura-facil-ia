@@ -5,6 +5,8 @@
     <p class="summary">{{ verification.summary }}</p>
     @if (verification.status === 'NotVerified') {
       <p class="hint">{{ texts.notVerified }}</p>
+    } @else if (verification.status === 'PartiallyVerified') {
+      <p class="hint">{{ texts.partiallyVerified }}</p>
     }
     <p class="hint">{{ texts.keyFactsHint }}</p>
     <!-- Marcar todos de una vez: solo con 2 avisos o más, y con una confirmación antes. -->

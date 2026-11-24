@@ -83,9 +83,9 @@ internal static class DocumentQueryEndpoints
         IAsyncEnumerable<DocumentProgress> progress,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var (status, stage) in progress.WithCancellation(cancellationToken))
+        await foreach (var (status, stage, part, parts) in progress.WithCancellation(cancellationToken))
         {
-            yield return new DocumentStatusEvent(id, status.ToString(), stage?.ToString());
+            yield return new DocumentStatusEvent(id, status.ToString(), stage?.ToString(), part, parts);
         }
     }
 

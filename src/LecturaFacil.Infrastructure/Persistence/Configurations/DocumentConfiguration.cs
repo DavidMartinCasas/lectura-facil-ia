@@ -50,6 +50,12 @@ internal sealed class DocumentConfiguration : IEntityTypeConfiguration<Document>
             .HasConversion<string>()
             .HasMaxLength(StatusMaxLength);
 
+        builder.Property(document => document.StagePart)
+            .HasColumnName("processing_part");
+
+        builder.Property(document => document.StageParts)
+            .HasColumnName("processing_parts");
+
         builder.Property(document => document.FailureCode)
             .HasColumnName("failure_code")
             .HasMaxLength(Document.FailureCodeMaxLength);

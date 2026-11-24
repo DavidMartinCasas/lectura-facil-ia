@@ -41,7 +41,7 @@ export class ProgressStepsComponent {
     }
     const current = steps.find((step) => step.state === 'current');
     return current
-      ? `${PROGRESS_TEXTS.announceCurrent} ${current.label}.`
+      ? `${PROGRESS_TEXTS.announceCurrent} ${current.label}${current.detail ? ' ' + current.detail : ''}.`
       : PROGRESS_TEXTS.announceReady;
   });
 }

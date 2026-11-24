@@ -421,7 +421,7 @@ public sealed class AdaptDocumentTests
     }
 
     [Fact]
-    public async Task Adapt_WhenTheRetryFailsOnALaterPart_KeepsTheFirstVersionAndCountsWhatTheRetrySpent()
+    public async Task Adapt_WhenTheRetryFailsOnALaterPart_KeepsTheImprovedPartAndTheFirstVersionOfTheOther()
     {
         UseRealGuidelines();
         _limits.MaxCharactersPerAdaptationChunk = 500;
@@ -434,7 +434,9 @@ public sealed class AdaptDocumentTests
 
         llm.Requests.Count.ShouldBe(5);
         var version = result.Value;
-        version.Metadata.PromptVersion.ShouldBe(AdaptDocument.PromptName);
+        // La parte 1 mejora con el reintento y se queda; la 2 no se pudo reintentar y se queda la primera.
+        version.Glossary.Select(term => term.Term).ShouldBe(["BOP"]);
+        version.Metadata.PromptVersion.ShouldBe(AdaptDocument.RetryPromptVersion);
         version.Metadata.InputTokens.ShouldBe((2 * 1000) + 1100);
         version.Metadata.OutputTokens.ShouldBe((2 * 800) + 850);
         version.Metadata.Duration.ShouldBe(TimeSpan.FromMilliseconds((2 * 3000) + 3100));
@@ -666,6 +668,122 @@ public sealed class AdaptDocumentTests
         document.Status.ShouldBe(DocumentStatus.Received);
         _repository.SavedStatuses.ShouldBeEmpty();
     }
+
+    [Fact]
+    public async Task Adapt_WhenOnlyOnePartBreaksASevereGuideline_RetriesOnlyThatPart()
+    {
+        UseRealGuidelines();
+        _limits.MaxCharactersPerAdaptationChunk = 500;
+        var document = Store(ThreeParagraphs());
+        var llm = Sequence("adapter/ok", "adapter/sigla-sin-explicar", "adapter/ok", "adapter/sigla-en-glosario");
+
+        var result = await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        result.IsSuccess.ShouldBeTrue();
+        var requests = llm.Requests.ToList();
+        requests.Count.ShouldBe(4);
+        requests[3].UserMessage.ShouldContain("Párrafo 2.");
+        requests[3].UserMessage.ShouldNotContain("Párrafo 1.");
+        requests[3].SystemPrompt.ShouldContain(GuidelineCatalog.Find(GuidelineCodes.Acronyms).Description);
+        var version = result.Value;
+        version.GuidelineReport.ShouldNotBeNull().HasHighSeverityViolations.ShouldBeFalse();
+        version.Glossary.Select(term => term.Term).ShouldContain("BOP");
+        version.Metadata.PromptVersion.ShouldBe(AdaptDocument.RetryPromptVersion);
+    }
+
+    [Fact]
+    public async Task Adapt_WhenNoPartBreaksASevereGuideline_DoesNotRetryAnyPart()
+    {
+        UseRealGuidelines();
+        _limits.MaxCharactersPerAdaptationChunk = 500;
+        var document = Store(ThreeParagraphs());
+        var llm = FakeLlmProvider.FromFixture("adapter/ok");
+
+        await CreateUseCase(llm).ExecuteAsync(document.Id, Token);
+
+        llm.Requests.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task Adapt_VerifiesEachPartWithTheOriginalItCameFrom()
+    {
+        _limits.MaxCharactersPerAdaptationChunk = 500;
+        var document = Store(ThreeParagraphs());
+
+        var result = await CreateUseCase(FakeLlmProvider.FromFixture("adapter/ok")).ExecuteAsync(document.Id, Token);
+
+        var requests = _verifierLlm.Requests.ToList();
+        requests.Count.ShouldBe(3);
+        requests[1].UserMessage.ShouldContain("Párrafo 2.");
+        requests[1].UserMessage.ShouldNotContain("Párrafo 1.");
+        requests[1].UserMessage.ShouldNotContain("Párrafo 3.");
+        result.Value.MeaningVerification.ShouldNotBeNull().Status.ShouldBe(VerificationStatus.Verified);
+    }
+
+    [Fact]
+    public async Task Adapt_WhenTheVerifierFailsOnOnePart_SavesTheDraftPartiallyVerified()
+    {
+        _limits.MaxCharactersPerAdaptationChunk = 500;
+        var document = Store(ThreeParagraphs());
+        var calls = 0;
+        _verifierLlm = new FakeLlmProvider("Verificador falso", _ => Interlocked.Increment(ref calls) == 2
+            ? LlmRecording.Unavailable
+            : LlmRecording.Load("verify/vacio"));
+
+        var result = await CreateUseCase(FakeLlmProvider.FromFixture("adapter/ok")).ExecuteAsync(document.Id, Token);
+
+        document.Status.ShouldBe(DocumentStatus.Draft);
+        var verification = result.Value.MeaningVerification.ShouldNotBeNull();
+        verification.Status.ShouldBe(VerificationStatus.PartiallyVerified);
+        verification.KeyFacts.ShouldContain(fact => fact.OriginalValue == "Parte 2" && fact.Reason == KeyFactReason.NotVerified);
+    }
+
+    [Fact]
+    public async Task Adapt_WithSeveralParts_SavesWhichPartItIsAdaptingAndVerifying()
+    {
+        _limits.MaxCharactersPerAdaptationChunk = 500;
+        var document = Store(string.Join("\n\n", ThreeParagraphs().Split("\n\n").Take(2)));
+
+        await CreateUseCase(FakeLlmProvider.FromFixture("adapter/ok")).ExecuteAsync(document.Id, Token);
+
+        _repository.SavedStageParts.ShouldBe(
+        [
+            (ProcessingStage.Adapting, 1, 2),
+            (ProcessingStage.Adapting, 2, 2),
+            (ProcessingStage.ReviewingGuidelines, null, null),
+            (ProcessingStage.Verifying, 1, 2),
+            (ProcessingStage.Verifying, 2, 2),
+        ]);
+        (document.StagePart, document.StageParts).ShouldBe((null, null));
+    }
+
+    [Fact]
+    public async Task Adapt_WhenItRetriesAPart_SavesWhichPartItIsRetrying()
+    {
+        UseRealGuidelines();
+        _limits.MaxCharactersPerAdaptationChunk = 500;
+        var document = Store(ThreeParagraphs());
+
+        await CreateUseCase(Sequence("adapter/ok", "adapter/ok", "adapter/sigla-sin-explicar", "adapter/sigla-en-glosario"))
+            .ExecuteAsync(document.Id, Token);
+
+        _repository.SavedStageParts.ShouldContain((ProcessingStage.Retrying, 3, 3));
+        _repository.SavedStageParts.ShouldNotContain(stage => stage.Stage == ProcessingStage.Retrying && stage.Part != 3);
+    }
+
+    [Fact]
+    public async Task Adapt_WithASinglePart_SavesNoPartNumbers()
+    {
+        var document = Store(Paragraph);
+
+        await CreateUseCase(FakeLlmProvider.FromFixture("adapter/ok")).ExecuteAsync(document.Id, Token);
+
+        _repository.SavedStageParts.ShouldAllBe(stage => stage.Part == null && stage.Parts == null);
+    }
+
+    /// <summary>Tres párrafos de ~300 caracteres: con trozos de 500, una parte cada uno.</summary>
+    private static string ThreeParagraphs() =>
+        string.Join("\n\n", Enumerable.Range(1, 3).Select(index => $"Párrafo {index}. " + new string('x', 300)));
 
     private static FakeLlmProvider Sequence(params string[] fixtures)
     {

@@ -61,7 +61,7 @@ public sealed class SubmitDocumentEndpointTests
 
     [Theory]
     [InlineData(50)]
-    [InlineData(20_000)]
+    [InlineData(150_000)]
     public async Task SubmitText_WhenLengthIsAtTheLimits_Returns202(int length)
     {
         await using var factory = new DocumentsApiFactory();
@@ -75,7 +75,7 @@ public sealed class SubmitDocumentEndpointTests
 
     [Theory]
     [InlineData(49, "al menos 50")]
-    [InlineData(20_001, "20000")]
+    [InlineData(150_001, "150000")]
     public async Task SubmitText_WhenLengthIsOutOfTheLimits_Returns400AndStoresNothing(int length, string expectedDetail)
     {
         await using var factory = new DocumentsApiFactory();

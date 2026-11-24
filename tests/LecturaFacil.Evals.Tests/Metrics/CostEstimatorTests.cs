@@ -33,8 +33,8 @@ public sealed class CostEstimatorTests
         var limits = new LimitsOptions { MaxAdaptationRetries = 1, MaxOutputTokens = 1_000, MaxCharactersPerAdaptationChunk = 6_000, MaxCharacters = 20_000 };
         var pricing = new ModelPricing(0m, 1_000_000m);
 
-        // 20 000 caracteres = 4 trozos × 2 intentos × 2 pasadas = 16 llamadas al adaptador, más la verificación.
-        CostEstimator.Estimate([20_000], [], 400, 400, limits, pricing).ShouldBe(17 * 1_000);
+        // 20 000 caracteres = 4 trozos × 2 intentos × 2 pasadas = 16 llamadas al adaptador, más 4 verificaciones.
+        CostEstimator.Estimate([20_000], [], 400, 400, limits, pricing).ShouldBe(20 * 1_000);
     }
 
     [Fact]

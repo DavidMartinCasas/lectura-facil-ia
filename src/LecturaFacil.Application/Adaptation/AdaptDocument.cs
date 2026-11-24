@@ -8,21 +8,27 @@ using LecturaFacil.Application.Verification;
 using LecturaFacil.Domain.Adaptation;
 using LecturaFacil.Domain.Documents;
 using LecturaFacil.Domain.Guidelines;
+using LecturaFacil.Domain.Verification;
 using Microsoft.Extensions.Options;
 
 namespace LecturaFacil.Application.Adaptation;
 
 /// <summary>
 /// Adapta un documento a lectura fácil con el modelo adaptador: "Recibido" → "Procesando" → "Borrador", o "Error" con
-/// un motivo genérico. Un texto largo se adapta por partes (<see cref="TextChunker"/>) y se une. Cada parte tiene un
-/// solo reintento si la respuesta no cumple el esquema; si el proveedor falla, no se reintenta aquí.
-/// Después se revisan las pautas de la adaptación (<see cref="ReviewAdaptation"/>). Si incumple pautas de gravedad alta,
-/// se pide otra adaptación (como mucho <see cref="LimitsOptions.MaxAdaptationRetries"/>) indicando qué pautas incumplió,
-/// y se guarda la mejor según <see cref="BestVersionPolicy"/>. Si el reintento falla, se guarda la primera.
-/// Por último se verifica el significado de la versión que se guarda (<see cref="VerifyMeaning"/>): solo de esa, para
-/// no multiplicar las llamadas al verificador. La verificación nunca impide guardar el borrador; solo añade avisos.
+/// un motivo genérico. Un texto largo se adapta por partes (<see cref="TextChunker"/>) y se une, pero se recuerda qué
+/// parte adaptada salió de qué parte del original (US-23). Cada parte tiene un solo reintento si la respuesta no cumple
+/// el esquema; si el proveedor falla, no se reintenta aquí.
+/// Después se revisan las pautas de cada parte (<see cref="ReviewAdaptation"/>). Si una parte incumple pautas de gravedad
+/// alta, se pide otra adaptación solo de esa parte (como mucho <see cref="LimitsOptions.MaxAdaptationRetries"/>)
+/// indicando qué pautas incumplió, y de cada parte se guarda la mejor según <see cref="BestVersionPolicy"/>. Si el
+/// reintento de una parte falla, se queda la versión que ya tenía.
+/// Por último se verifica el significado de la versión que se guarda (<see cref="VerifyMeaning"/>), parte a parte: solo
+/// de esa versión, para no multiplicar las llamadas al verificador. La verificación nunca impide guardar el borrador;
+/// solo añade avisos. Como mucho hay partes × (1 + reintentos) llamadas al adaptador (más el reintento por esquema de
+/// cada una) y tantas llamadas al verificador como partes.
 /// Cada ejecución, bien o mal, se registra una vez en <see cref="IAdaptationTelemetry"/> (US-17).
-/// Mientras dura, se guarda en qué fase está (<see cref="ProcessingStage"/>) para que la pantalla enseñe el progreso real.
+/// Mientras dura, se guarda en qué fase está (<see cref="ProcessingStage"/>) y, con varias partes, por cuál va, para que la
+/// pantalla enseñe el progreso real.
 /// </summary>
 public sealed class AdaptDocument(
     IDocumentRepository repository,
@@ -95,10 +101,15 @@ public sealed class AdaptDocument(
         }
 
         document.StartProcessing(timeProvider.GetUtcNow());
-        document.EnterStage(ProcessingStage.Adapting, timeProvider.GetUtcNow());
-        await repository.SaveAsync(document, cancellationToken);
+        var chunks = TextChunker.Split(document.OriginalText.Value, Math.Min(_limits.MaxCharactersPerAdaptationChunk, _limits.MaxCharacters));
+        if (chunks.Count > _limits.MaxAdaptationChunksPerDocument)
+        {
+            document.FailProcessing(LlmErrors.InputTooLong.Code, timeProvider.GetUtcNow());
+            await repository.SaveAsync(document, cancellationToken);
+            return Result<AdaptedVersion>.Failure(LlmErrors.InputTooLong);
+        }
 
-        var adaptation = await AdaptAndReviewAsync(document, usage, cancellationToken);
+        var adaptation = await AdaptAndReviewAsync(document, chunks, usage, cancellationToken);
         if (adaptation.IsFailure)
         {
             document.FailProcessing(adaptation.Error!.Code, timeProvider.GetUtcNow());
@@ -106,9 +117,8 @@ public sealed class AdaptDocument(
             return Result<AdaptedVersion>.Failure(adaptation.Error);
         }
 
-        var (content, metadata, report) = adaptation.Value;
-        await EnterStageAsync(document, ProcessingStage.Verifying, cancellationToken);
-        var verification = await verifyMeaning.ExecuteAsync(document.OriginalText.Value, content, cancellationToken);
+        var (parts, content, metadata, report) = adaptation.Value;
+        var verification = await VerifyAsync(document, chunks, parts, content, cancellationToken);
         var version = document.CompleteAdaptation(content, metadata, report, verification, timeProvider.GetUtcNow());
         await repository.SaveAsync(document, cancellationToken);
         return Result<AdaptedVersion>.Success(version);
@@ -130,55 +140,120 @@ public sealed class AdaptDocument(
         await repository.SaveAsync(document, cancellationToken);
     }
 
-    /// <summary>Adapta, revisa las pautas y, si incumple alguna grave, reintenta y se queda con la mejor versión.</summary>
-    private async Task<Result<ReviewedAdaptation>> AdaptAndReviewAsync(Document document, Usage total, CancellationToken cancellationToken)
+    /// <summary>
+    /// Adapta cada parte, revisa sus pautas y reintenta solo las partes que incumplen alguna grave, quedándose con la
+    /// mejor versión de cada una. Si ninguna parte incumple nada grave pero el documento unido sí (una pauta que solo se
+    /// ve en el conjunto), se reintentan todas, como antes de ir por partes.
+    /// </summary>
+    private async Task<Result<ReviewedAdaptation>> AdaptAndReviewAsync(
+        Document document,
+        IReadOnlyList<string> chunks,
+        Usage total,
+        CancellationToken cancellationToken)
     {
-        var first = await AdaptAsync(document, SystemPrompt(document.OriginalFindings), new Usage(total), cancellationToken);
-        if (first.IsFailure)
+        // Lo que cuestan las respuestas válidas se suma aunque un intento acabe fallando en otra parte.
+        var adapterUsage = new Usage(total);
+        var prompt = SystemPrompt(document.OriginalFindings);
+        var best = new ReviewedPart[chunks.Count];
+        for (var index = 0; index < chunks.Count; index++)
         {
-            return Result<ReviewedAdaptation>.Failure(first.Error!);
+            await EnterStageAsync(document, ProcessingStage.Adapting, index, chunks.Count, cancellationToken);
+            var part = await AdaptChunkAsync(prompt, chunks[index], adapterUsage, cancellationToken);
+            if (part.IsFailure)
+            {
+                return Result<ReviewedAdaptation>.Failure(part.Error!);
+            }
+
+            best[index] = new ReviewedPart(part.Value, reviewAdaptation.Execute(part.Value), FromRetry: false);
         }
 
-        var best = await ReviewAsync(document, first.Value, cancellationToken);
-        var last = best;
-        var cost = best.Metadata;
-        for (var retry = 0; retry < _limits.MaxAdaptationRetries && last.Report.HasHighSeverityViolations; retry++)
+        await EnterStageAsync(document, ProcessingStage.ReviewingGuidelines, cancellationToken);
+        var last = (ReviewedPart[])best.Clone();
+        var exhausted = new bool[chunks.Count];
+        for (var retry = 0; retry < _limits.MaxAdaptationRetries; retry++)
         {
-            // Lo que cuestan las respuestas válidas del reintento se suma aunque el reintento acabe fallando en otra parte.
-            var retryUsage = new Usage(total);
-            await EnterStageAsync(document, ProcessingStage.Retrying, cancellationToken);
-            var attempt = await AdaptAsync(document, RetrySystemPrompt(document.OriginalFindings, last.Report), retryUsage, cancellationToken);
-            cost = AddCost(cost, retryUsage);
-            if (attempt.IsFailure)
+            var toRetry = PartsToRetry(last, exhausted);
+            if (toRetry.Count == 0)
             {
-                // La versión que ya hay es válida: un reintento fallido no tira el trabajo hecho.
                 break;
             }
 
-            last = await ReviewAsync(document, attempt.Value, cancellationToken);
-            if (BestVersionPolicy.PrefersRetry(best.Content, best.Report, last.Content, last.Report))
+            foreach (var (index, report) in toRetry)
             {
-                best = last;
+                await EnterStageAsync(document, ProcessingStage.Retrying, index, chunks.Count, cancellationToken);
+                var attempt = await AdaptChunkAsync(
+                    RetrySystemPrompt(document.OriginalFindings, report), chunks[index], adapterUsage, cancellationToken);
+                if (attempt.IsFailure)
+                {
+                    // La versión que ya tiene esta parte es válida: un reintento fallido no tira el trabajo hecho.
+                    exhausted[index] = true;
+                    continue;
+                }
+
+                last[index] = new ReviewedPart(attempt.Value, reviewAdaptation.Execute(attempt.Value), FromRetry: true);
+                if (BestVersionPolicy.PrefersRetry(best[index].Content, best[index].Report, last[index].Content, last[index].Report))
+                {
+                    best[index] = last[index];
+                }
             }
+
+            await EnterStageAsync(document, ProcessingStage.ReviewingGuidelines, cancellationToken);
         }
 
+        var content = AdaptedContent.Merge([.. best.Select(part => part.Content)]);
         // La versión guardada indica el prompt que la generó y lo que han costado todos los intentos.
-        var metadata = best.Metadata with
-        {
-            InputTokens = cost.InputTokens,
-            OutputTokens = cost.OutputTokens,
-            Duration = cost.Duration,
-        };
-        return Result<ReviewedAdaptation>.Success(best with { Metadata = metadata });
+        var metadata = new AdaptationMetadata(
+            adapterUsage.Provider,
+            adapterUsage.Model,
+            best.Any(part => part.FromRetry) ? RetryPromptVersion : PromptName,
+            adapterUsage.InputTokens,
+            adapterUsage.OutputTokens,
+            adapterUsage.Duration);
+        return Result<ReviewedAdaptation>.Success(
+            new ReviewedAdaptation([.. best.Select(part => part.Content)], content, metadata, reviewAdaptation.Execute(content)));
     }
 
-    private async Task<ReviewedAdaptation> ReviewAsync(
+    /// <summary>
+    /// Las partes que hay que volver a adaptar, con las pautas que incumplieron: las que incumplen alguna grave y, si
+    /// ninguna lo hace pero el documento unido sí, todas con el informe del documento.
+    /// </summary>
+    private List<(int Index, GuidelineReport Report)> PartsToRetry(ReviewedPart[] last, bool[] exhausted)
+    {
+        var failing = last
+            .Select((part, index) => (Index: index, part.Report))
+            .Where(part => !exhausted[part.Index] && part.Report.HasHighSeverityViolations)
+            .ToList();
+        if (last.Any(part => part.Report.HasHighSeverityViolations))
+        {
+            return failing;
+        }
+
+        var merged = reviewAdaptation.Execute(AdaptedContent.Merge([.. last.Select(part => part.Content)]));
+        return merged.HasHighSeverityViolations
+            ? [.. Enumerable.Range(0, last.Length).Where(index => !exhausted[index]).Select(index => (index, merged))]
+            : [];
+    }
+
+    /// <summary>Verifica la versión que se guarda, una llamada por parte, y enseña por cuál va.</summary>
+    private async Task<MeaningVerification> VerifyAsync(
         Document document,
-        (AdaptedContent Content, AdaptationMetadata Metadata) adaptation,
+        IReadOnlyList<string> chunks,
+        IReadOnlyList<AdaptedContent> parts,
+        AdaptedContent content,
         CancellationToken cancellationToken)
     {
-        await EnterStageAsync(document, ProcessingStage.ReviewingGuidelines, cancellationToken);
-        return new(adaptation.Content, adaptation.Metadata, reviewAdaptation.Execute(adaptation.Content));
+        var toVerify = chunks.Select((chunk, index) => new PartToVerify(chunk, parts[index])).ToList();
+        if (toVerify.Count == 1)
+        {
+            await EnterStageAsync(document, ProcessingStage.Verifying, cancellationToken);
+            return await verifyMeaning.ExecuteAsync(toVerify, content, onPart: null, cancellationToken);
+        }
+
+        return await verifyMeaning.ExecuteAsync(
+            toVerify,
+            content,
+            (part, total, token) => EnterStageAsync(document, ProcessingStage.Verifying, part - 1, total, token),
+            cancellationToken);
     }
 
     /// <summary>Guarda la fase en la que entra el documento: el seguimiento por SSE la lee y la envía a la pantalla.</summary>
@@ -188,43 +263,22 @@ public sealed class AdaptDocument(
         await repository.SaveAsync(document, cancellationToken);
     }
 
-    private static AdaptationMetadata AddCost(AdaptationMetadata total, Usage attempt) =>
-        total with
-        {
-            InputTokens = total.InputTokens + attempt.InputTokens,
-            OutputTokens = total.OutputTokens + attempt.OutputTokens,
-            Duration = total.Duration + attempt.Duration,
-        };
-
-    /// <param name="usage">Acumula lo que cuestan las respuestas válidas, también si el intento acaba fallando.</param>
-    private async Task<Result<(AdaptedContent Content, AdaptationMetadata Metadata)>> AdaptAsync(
-        Document document,
-        Prompt systemPrompt,
-        Usage usage,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// Igual, diciendo por qué parte va (<paramref name="index"/> desde 0). Con una sola parte no se guarda el número:
+    /// la pantalla no tiene nada que contar.
+    /// </summary>
+    private async Task EnterStageAsync(Document document, ProcessingStage stage, int index, int parts, CancellationToken cancellationToken)
     {
-        var maxChunk = Math.Min(_limits.MaxCharactersPerAdaptationChunk, _limits.MaxCharacters);
-        var parts = new List<AdaptedContent>();
-        var chunks = TextChunker.Split(document.OriginalText.Value, maxChunk);
-        if (chunks.Count > _limits.MaxAdaptationChunksPerDocument)
+        if (parts == 1)
         {
-            return Result<(AdaptedContent, AdaptationMetadata)>.Failure(LlmErrors.InputTooLong);
+            document.EnterStage(stage, timeProvider.GetUtcNow());
+        }
+        else
+        {
+            document.EnterStage(stage, timeProvider.GetUtcNow(), index + 1, parts);
         }
 
-        foreach (var chunk in chunks)
-        {
-            var part = await AdaptChunkAsync(systemPrompt, chunk, usage, cancellationToken);
-            if (part.IsFailure)
-            {
-                return Result<(AdaptedContent, AdaptationMetadata)>.Failure(part.Error!);
-            }
-
-            parts.Add(part.Value);
-        }
-
-        var metadata = new AdaptationMetadata(
-            usage.Provider, usage.Model, systemPrompt.Name, usage.InputTokens, usage.OutputTokens, usage.Duration);
-        return Result<(AdaptedContent, AdaptationMetadata)>.Success((AdaptedContent.Merge(parts), metadata));
+        await repository.SaveAsync(document, cancellationToken);
     }
 
     private async Task<Result<AdaptedContent>> AdaptChunkAsync(
@@ -309,8 +363,15 @@ public sealed class AdaptDocument(
         return lines.ToString().TrimEnd();
     }
 
-    /// <summary>Una adaptación con su informe de pautas.</summary>
-    private sealed record ReviewedAdaptation(AdaptedContent Content, AdaptationMetadata Metadata, GuidelineReport Report);
+    /// <summary>La adaptación que se guarda: cada parte, todas unidas, lo que ha costado y su informe de pautas.</summary>
+    private sealed record ReviewedAdaptation(
+        IReadOnlyList<AdaptedContent> Parts,
+        AdaptedContent Content,
+        AdaptationMetadata Metadata,
+        GuidelineReport Report);
+
+    /// <summary>Una parte adaptada con su informe de pautas y si sale de un reintento.</summary>
+    private sealed record ReviewedPart(AdaptedContent Content, GuidelineReport Report, bool FromRetry);
 
     /// <summary>
     /// Suma de lo que han costado las respuestas válidas de todas las partes. Si tiene <c>parent</c>, también se lo suma

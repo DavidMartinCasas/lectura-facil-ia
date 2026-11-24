@@ -3,7 +3,7 @@ import { Injectable, InjectionToken, inject } from '@angular/core';
 import { Observable, distinctUntilChanged, map } from 'rxjs';
 import { ApiError } from '../errors/api-error';
 import { ERROR_TEXTS } from '../ui-texts';
-import { DocumentProgress, isProcessingStage } from './document-progress';
+import { DocumentProgress, PartProgress, isProcessingStage } from './document-progress';
 import { DOCUMENTS_PATH } from './documents-api.service';
 import { DocumentStatus, isAwaitingAdaptation, isDocumentStatus } from './document.models';
 
@@ -93,15 +93,33 @@ export class DocumentEventsService {
   }
 }
 
+/** La parte de un documento largo, si el evento la trae bien: dos enteros con 1 ≤ parte ≤ total. */
+function partOf(part: unknown, parts: unknown): PartProgress | null {
+  return Number.isInteger(part) &&
+    Number.isInteger(parts) &&
+    (part as number) >= 1 &&
+    (part as number) <= (parts as number)
+    ? { number: part as number, count: parts as number }
+    : null;
+}
+
 function parseProgress(data: string): DocumentProgress | null {
   try {
     const parsed: unknown = JSON.parse(data);
     if (typeof parsed === 'object' && parsed !== null && 'status' in parsed) {
-      const { status, stage } = parsed as { status: unknown; stage?: unknown };
-      // Una fase desconocida no rompe el seguimiento: se sigue solo con el estado.
-      return isDocumentStatus(status)
-        ? { status, stage: isProcessingStage(stage) ? stage : null }
-        : null;
+      const { status, stage, part, parts } = parsed as {
+        status: unknown;
+        stage?: unknown;
+        part?: unknown;
+        parts?: unknown;
+      };
+      if (!isDocumentStatus(status)) {
+        return null;
+      }
+      // Una fase o una parte desconocidas no rompen el seguimiento: se sigue solo con el estado.
+      const progress: DocumentProgress = { status, stage: isProcessingStage(stage) ? stage : null };
+      const known = partOf(part, parts);
+      return known === null ? progress : { ...progress, part: known };
     }
   } catch {
     // Un evento mal formado se ignora: el siguiente traerá el estado.

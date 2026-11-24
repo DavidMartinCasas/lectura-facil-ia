@@ -24,6 +24,9 @@ internal sealed class InMemoryDocumentRepository : IDocumentRepository
     /// <summary>Fases del proceso guardadas con <see cref="SaveAsync"/>, en orden.</summary>
     public List<ProcessingStage> SavedStages { get; } = [];
 
+    /// <summary>Fases guardadas con la parte por la que iba (US-23), en orden.</summary>
+    public List<(ProcessingStage Stage, int? Part, int? Parts)> SavedStageParts { get; } = [];
+
     /// <summary>Progreso que devolverá <see cref="FindProgressForOwnerAsync"/>, uno por llamada (el último se repite).</summary>
     public Queue<DocumentProgress> ScriptedProgress { get; } = new();
 
@@ -64,7 +67,7 @@ internal sealed class InMemoryDocumentRepository : IDocumentRepository
 
         var progress = ScriptedProgress.Count switch
         {
-            0 => new DocumentProgress(document.Status, document.Stage),
+            0 => new DocumentProgress(document.Status, document.Stage, document.StagePart, document.StageParts),
             1 => ScriptedProgress.Peek(),
             _ => ScriptedProgress.Dequeue(),
         };
@@ -99,6 +102,7 @@ internal sealed class InMemoryDocumentRepository : IDocumentRepository
         if (document.Stage is { } stage)
         {
             SavedStages.Add(stage);
+            SavedStageParts.Add((stage, document.StagePart, document.StageParts));
         }
 
         if (document.Stage is null || SavedStatuses.Count == 0 || SavedStatuses[^1] != document.Status)

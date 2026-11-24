@@ -117,6 +117,21 @@ public sealed class SubmitDocumentTests
     }
 
     [Fact]
+    public async Task SubmitText_WhenTheTextNeedsMorePartsThanAllowed_ReturnsTextTooLongBeforeQueueingIt()
+    {
+        _limits.MaxCharactersPerAdaptationChunk = 60;
+        _limits.MaxAdaptationChunksPerDocument = 2;
+        var text = string.Join("\n\n", Enumerable.Repeat(ValidText[..55], 3));
+
+        var result = await CreateUseCase().SubmitTextAsync(new SubmitTextCommand(text, null), Token);
+
+        result.Error!.Code.ShouldBe(DocumentErrors.TextTooLongCode);
+        result.Error.Message.ShouldContain("más de 2 partes");
+        _repository.Added.ShouldBeEmpty();
+        _queue.Enqueued.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task SubmitText_WhenTextIsTooLong_ReturnsTextTooLongAndStoresNothing()
     {
         var result = await CreateUseCase().SubmitTextAsync(new SubmitTextCommand(new string('a', 201), null), Token);

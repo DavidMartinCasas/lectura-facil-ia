@@ -50,6 +50,33 @@ describe('progressSteps', () => {
     expect(at('Verifying')).toEqual(['done', 'done', 'done', 'current', 'pending']);
   });
 
+  it('says which part of a long document it is adapting or verifying', () => {
+    const adapting = stepsAt(progressPosition('Processing', 'Adapting', { number: 3, count: 10 }));
+    const verifying = stepsAt(progressPosition('Processing', 'Verifying', { number: 2, count: 5 }));
+
+    expect(adapting[1]).toEqual({ label: 'Adaptando', state: 'current', detail: 'parte 3 de 10' });
+    expect(verifying[3]).toEqual({
+      label: 'Verificando',
+      state: 'current',
+      detail: 'parte 2 de 5',
+    });
+    expect(verifying.filter((step) => step.detail)).toHaveLength(1);
+  });
+
+  it('says which part it is adapting again', () => {
+    const steps = stepsAt(progressPosition('Processing', 'Retrying', { number: 4, count: 6 }));
+
+    expect(steps[1].detail).toBe('la parte 4 de 6');
+  });
+
+  it('moves on to the next part of the same step', () => {
+    const shown = progressPosition('Processing', 'Adapting', { number: 1, count: 2 });
+    const target = progressPosition('Processing', 'Adapting', { number: 2, count: 2 });
+
+    expect(nextPosition(shown, target)).toEqual(target);
+    expect(nextPosition(target, target)).toBeNull();
+  });
+
   it('says it is adapting again when the first adaptation broke severe guidelines', () => {
     const steps = progressSteps('Processing', 'Retrying');
 
