@@ -80,9 +80,9 @@ p {
   font-size: var(--lf-fs-label);
   color: var(--lf-muted);
 
+  // Ocupa todo el ancho que deja el botón de detalles: son una o dos frases, no un texto que leer.
   p {
     flex: 1 1 20rem;
-    max-inline-size: var(--lf-reading-width);
   }
 
   strong {
