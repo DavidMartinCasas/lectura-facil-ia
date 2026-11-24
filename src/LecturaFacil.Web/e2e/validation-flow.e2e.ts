@@ -92,22 +92,34 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(panel.getByText(VALIDATION_TEXTS.pendingHint)).toBeVisible();
     expect(calls.sent).toEqual([{ version: 1 }]);
 
-    // Sin elegir nada, el formulario dice qué falta.
-    await panel.getByRole('button', { name: VALIDATION_TEXTS.record }).click();
-    await expect(panel.getByText(VALIDATION_TEXTS.outcomeRequired)).toBeVisible();
-    await expect(panel.getByText(VALIDATION_TEXTS.validatedByRequired)).toBeVisible();
-    await expect(panel.getByText(VALIDATION_TEXTS.participantsRequired)).toBeVisible();
+    // El resultado se anota en un diálogo; sin elegir nada, dice qué falta.
+    const openRecord = panel.getByRole('button', { name: VALIDATION_TEXTS.openRecord });
+    await openRecord.click();
+    const dialog = page.getByRole('dialog', { name: VALIDATION_TEXTS.recordTitle });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: VALIDATION_TEXTS.record }).click();
+    await expect(dialog.getByText(VALIDATION_TEXTS.outcomeRequired)).toBeVisible();
+    await expect(dialog.getByText(VALIDATION_TEXTS.validatedByRequired)).toBeVisible();
+    await expect(dialog.getByText(VALIDATION_TEXTS.participantsRequired)).toBeVisible();
     await expectNoAxeViolations(page);
 
-    await panel.getByRole('radio', { name: VALIDATION_TEXTS.outcomes.Approved }).check();
-    await panel
+    // Cancelar no anota nada y devuelve el foco al botón.
+    await dialog.getByRole('button', { name: VALIDATION_TEXTS.cancel }).click();
+    await expect(dialog).toBeHidden();
+    await expect(openRecord).toBeFocused();
+    expect(calls.recorded).toEqual([]);
+
+    await openRecord.click();
+    await dialog.getByRole('radio', { name: VALIDATION_TEXTS.outcomes.Approved }).check();
+    await dialog
       .getByRole('textbox', { name: VALIDATION_TEXTS.validatedByLabel })
       .fill('Grupo de lectura');
-    await panel.getByRole('spinbutton', { name: VALIDATION_TEXTS.participantsLabel }).fill('5');
-    await panel
+    await dialog.getByRole('spinbutton', { name: VALIDATION_TEXTS.participantsLabel }).fill('5');
+    await dialog
       .getByRole('textbox', { name: VALIDATION_TEXTS.notesLabel })
       .fill('Se entiende bien.');
-    await panel.getByRole('button', { name: VALIDATION_TEXTS.record }).click();
+    await dialog.getByRole('button', { name: VALIDATION_TEXTS.record }).click();
+    await expect(dialog).toBeHidden();
 
     await expect(
       panel.getByText(
@@ -144,15 +156,20 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await panel.getByRole('button', { name: VALIDATION_TEXTS.send }).click();
     await expect(panel.getByText(VALIDATION_TEXTS.pendingHint)).toBeVisible();
 
-    await panel.getByRole('radio', { name: VALIDATION_TEXTS.outcomes.ChangesRequested }).check();
-    const hardParts = panel.getByRole('group', { name: VALIDATION_TEXTS.hardPartsLegend });
+    await panel.getByRole('button', { name: VALIDATION_TEXTS.openRecord }).click();
+    const dialog = page.getByRole('dialog', { name: VALIDATION_TEXTS.recordTitle });
+    await dialog.getByRole('radio', { name: VALIDATION_TEXTS.outcomes.ChangesRequested }).check();
+    const hardParts = dialog.getByRole('group', { name: VALIDATION_TEXTS.hardPartsLegend });
     await expect(hardParts).toBeVisible();
     await expectNoAxeViolations(page);
     await hardParts.getByRole('checkbox', { name: '¿Cuánto dinero dan?' }).check();
-    await panel.getByRole('textbox', { name: VALIDATION_TEXTS.validatedByLabel }).fill('Grupo');
-    await panel.getByRole('spinbutton', { name: VALIDATION_TEXTS.participantsLabel }).fill('4');
-    await panel.getByRole('button', { name: VALIDATION_TEXTS.record }).click();
+    await dialog.getByRole('textbox', { name: VALIDATION_TEXTS.validatedByLabel }).fill('Grupo');
+    await dialog.getByRole('spinbutton', { name: VALIDATION_TEXTS.participantsLabel }).fill('4');
+    await dialog.getByRole('button', { name: VALIDATION_TEXTS.record }).click();
+    await expect(dialog).toBeHidden();
 
+    await expect(panel.getByText(VALIDATION_TEXTS.changesMarked)).toBeVisible();
+    await panel.getByRole('button', { name: VALIDATION_TEXTS.showDetails }).click();
     await expect(panel.getByText(VALIDATION_TEXTS.hardPartsTitle)).toBeVisible();
     expect(calls.recorded[0]).toMatchObject({ hardSections: [0], hardGlossary: false });
     // En pantallas estrechas el original y la adaptación van en pestañas.

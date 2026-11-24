@@ -1,33 +1,26 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <section class="validation" aria-labelledby="validation-title">
-  <h2 id="validation-title">{{ texts.title }}</h2>
-
-  @switch (document().status) {
-    @case ('Draft') {
-      @if (changesRequested(); as previous) {
-        <div class="previous" role="note">
-          <p>{{ texts.changesRequested(formatDate(previous.recordedAt), who(previous)) }}</p>
-          @if (hardPartCount(previous) > 0) {
-            <p class="hard-title">{{ texts.hardPartsTitle }}</p>
-            <ul class="hard-list">
-              @for (question of previous.hardSections; track $index) {
-                <li>{{ question }}</li>
-              }
-              @if (previous.hardGlossary) {
-                <li>{{ texts.glossaryPart }}</li>
-              }
-            </ul>
+  <div class="bar">
+    <h2 id="validation-title">{{ texts.title }}</h2>
+    <ol class="steps" [attr.aria-label]="texts.stepsLabel">
+      @for (step of steps; track step; let index = $index) {
+        <li
+          [class.done]="index < currentStep()"
+          [class.current]="index === currentStep()"
+          [attr.aria-current]="index === currentStep() ? 'step' : null"
+        >
+          @if (index < currentStep()) {
+            <span aria-hidden="true">✓</span>
+            <span class="visually-hidden">{{ texts.stepDone }}</span>
           }
-          @if (previous.notes) {
-            <p class="notes">
-              <strong>{{ texts.notes }}</strong> {{ previous.notes }}
-            </p>
-          }
-        </div>
+          {{ texts.steps[step] }}
+        </li>
       }
-      <div class="step">
-        <p class="hint">{{ texts.draftHint }}</p>
-        <div class="actions">
+    </ol>
+
+    <div class="actions">
+      @switch (document().status) {
+        @case ('Draft') {
           <button
             mat-flat-button
             type="button"
@@ -37,178 +30,126 @@
           >
             {{ saving() ? texts.sending : texts.send }}
           </button>
-          @if (!document().canSendToValidation) {
-            <span id="send-blocked" class="blocked">{{ sendBlockedReason() }}</span>
-          }
-        </div>
-      </div>
-    }
-    @case ('PendingValidation') {
-      <p class="hint">{{ texts.pendingHint }}</p>
-      <form class="result" (submit)="submit($event)" novalidate>
-        <fieldset
-          [attr.aria-invalid]="outcomeMissing() ? true : null"
-          [attr.aria-describedby]="outcomeMissing() ? 'outcome-error' : null"
-        >
-          <legend>{{ texts.outcomeLegend }}</legend>
-          <mat-radio-group name="outcome" [value]="outcome()" (change)="outcome.set($event.value)">
-            @for (option of outcomes; track option) {
-              <mat-radio-button [value]="option">{{ texts.outcomes[option] }}</mat-radio-button>
-            }
-          </mat-radio-group>
-          @if (outcomeMissing()) {
-            <p id="outcome-error" class="field-error">{{ texts.outcomeRequired }}</p>
-          }
-        </fieldset>
-
-        @if (asksForChanges()) {
-          <fieldset class="hard-parts" aria-describedby="hard-parts-hint">
-            <legend>{{ texts.hardPartsLegend }}</legend>
-            <p id="hard-parts-hint" class="hint">{{ texts.hardPartsHint }}</p>
-            @for (section of document().adaptation.sections; track $index; let index = $index) {
-              <mat-checkbox
-                [checked]="hardSections().has(index)"
-                (change)="toggleSection(index, $event.checked)"
-                >{{ section.question }}</mat-checkbox
-              >
-            }
-            @if (document().adaptation.glossary.length > 0) {
-              <mat-checkbox
-                [checked]="hardGlossary()"
-                (change)="hardGlossary.set($event.checked)"
-                >{{ texts.glossaryPart }}</mat-checkbox
-              >
-            }
-          </fieldset>
         }
-
-        <div class="who">
-          <mat-form-field appearance="outline">
-            <mat-label>{{ texts.validatedByLabel }}</mat-label>
-            <input
-              matInput
-              name="validatedBy"
-              required
-              [attr.maxlength]="validatedByMaxLength"
-              [value]="validatedBy()"
-              (input)="onValidatedByInput($event)"
-              [attr.aria-invalid]="validatedByMissing() ? true : null"
-              [attr.aria-describedby]="validatedByMissing() ? 'validated-by-error' : null"
-            />
-            @if (validatedByMissing()) {
-              <mat-hint id="validated-by-error" class="field-error">{{
-                texts.validatedByRequired
-              }}</mat-hint>
-            } @else {
-              <mat-hint>{{ texts.validatedByHint }}</mat-hint>
-            }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>{{ texts.participantsLabel }}</mat-label>
-            <input
-              matInput
-              name="participants"
-              type="number"
-              inputmode="numeric"
-              min="1"
-              required
-              [attr.max]="maxParticipants"
-              [value]="participants()"
-              (input)="onParticipantsInput($event)"
-              [attr.aria-invalid]="participantsInvalid() ? true : null"
-              [attr.aria-describedby]="participantsInvalid() ? 'participants-error' : null"
-            />
-            @if (participantsInvalid()) {
-              <mat-hint id="participants-error" class="field-error">{{
-                texts.participantsRequired
-              }}</mat-hint>
-            } @else {
-              <mat-hint>{{ texts.participantsHint }}</mat-hint>
-            }
-          </mat-form-field>
-        </div>
-
-        <mat-form-field appearance="outline">
-          <mat-label>{{ texts.notesLabel }}</mat-label>
-          <textarea
-            matInput
-            name="notes"
-            rows="3"
-            [attr.maxlength]="notesMaxLength"
-            [value]="notes()"
-            (input)="onNotesInput($event)"
-          ></textarea>
-          <mat-hint>{{ texts.notesHint }}</mat-hint>
-        </mat-form-field>
-
-        <div class="actions">
-          <button mat-flat-button type="submit" [disabled]="saving()">
-            {{ saving() ? texts.recording : texts.record }}
+        @case ('PendingValidation') {
+          <button mat-flat-button type="button" [disabled]="saving()" (click)="openRecord()">
+            {{ saving() ? texts.recording : texts.openRecord }}
           </button>
           <button mat-stroked-button type="button" [disabled]="saving()" (click)="withdraw.emit()">
             {{ texts.withdraw }}
           </button>
-        </div>
-      </form>
-    }
-    @case ('Validated') {
-      @if (validation(); as validation) {
-        <p class="done">
-          {{ texts.validated(formatDate(validation.recordedAt), who(validation)) }}
-        </p>
-        @if (validation.notes) {
-          <p class="notes">
-            <strong>{{ texts.notes }}</strong> {{ validation.notes }}
-          </p>
         }
-      }
-      <div class="step">
-        <p class="hint">{{ texts.publishHint }}</p>
-        <div class="actions">
-          <button mat-flat-button type="button" [disabled]="saving()" (click)="publish.emit()">
+        @case ('Validated') {
+          <button
+            mat-flat-button
+            type="button"
+            [disabled]="saving()"
+            aria-describedby="validation-summary"
+            (click)="publish.emit()"
+          >
             {{ saving() ? texts.publishing : texts.publish }}
           </button>
-        </div>
-      </div>
+        }
+      }
+    </div>
+  </div>
+
+  <div class="summary">
+    <p id="validation-summary">
+      @switch (document().status) {
+        @case ('Draft') {
+          @if (shown(); as previous) {
+            <span class="changes"
+              >{{ texts.changesRequested(formatDate(previous.recordedAt), who(previous)) }}
+            </span>
+            @if (showsParts()) {
+              {{ texts.changesMarked }}
+            }
+          } @else if (document().canSendToValidation) {
+            {{ texts.draftHint }}
+          }
+          @if (!document().canSendToValidation) {
+            <span id="send-blocked" class="blocked">{{ sendBlockedReason() }}</span>
+          }
+        }
+        @case ('PendingValidation') {
+          {{ texts.pendingHint }}
+        }
+        @case ('Validated') {
+          @if (shown(); as validation) {
+            <strong>{{
+              texts.validated(formatDate(validation.recordedAt), who(validation))
+            }}</strong>
+          }
+          {{ texts.publishHint }}
+        }
+        @case ('Published') {
+          <strong>{{ texts.published }}</strong>
+          @if (shown(); as validation) {
+            {{ texts.validated(formatDate(validation.recordedAt), who(validation)) }}
+          }
+        }
+      }
+    </p>
+    @if (hasDetails()) {
+      <button
+        type="button"
+        class="toggle"
+        aria-controls="validation-details"
+        [attr.aria-expanded]="detailsOpen()"
+        (click)="toggleDetails()"
+      >
+        {{ detailsOpen() ? texts.hideDetails : texts.showDetails }}
+      </button>
     }
-    @case ('Published') {
-      <p class="done">{{ texts.published }}</p>
-      @if (validation(); as validation) {
-        <p class="hint">
-          {{ texts.validated(formatDate(validation.recordedAt), who(validation)) }}
-        </p>
+  </div>
+
+  @if (hasDetails() && detailsOpen()) {
+    <div id="validation-details" class="details">
+      @if (shown(); as validation) {
+        @if (showsParts()) {
+          <div class="parts">
+            <p class="hard-title">{{ texts.hardPartsTitle }}</p>
+            <ul class="hard-list">
+              @for (question of validation.hardSections; track $index) {
+                <li>{{ question }}</li>
+              }
+              @if (validation.hardGlossary) {
+                <li>{{ texts.glossaryPart }}</li>
+              }
+            </ul>
+          </div>
+        }
         @if (validation.notes) {
           <p class="notes">
             <strong>{{ texts.notes }}</strong> {{ validation.notes }}
           </p>
         }
       }
-    }
-  }
-
-  @if (rounds().length > 0) {
-    <div class="rounds">
-      <h3 id="rounds-title">{{ texts.roundsTitle }}</h3>
-      <ol aria-labelledby="rounds-title">
-        @for (round of rounds(); track round.round) {
-          <li>
-            <span
-              class="round-outcome"
-              [class.round-outcome--approved]="round.outcome === 'Approved'"
-              >{{ texts.roundOutcomes[round.outcome] }}</span>{{ ' '
-            }}<span>{{
-              texts.roundLine(
-                round.round,
-                round.version,
-                formatDate(round.recordedAt),
-                who(round),
-                hardPartCount(round)
-              )
-            }}</span>
-          </li>
-        }
-      </ol>
+      @if (rounds().length > 0) {
+        <div class="rounds">
+          <h3 id="rounds-title">{{ texts.roundsTitle }}</h3>
+          <ol aria-labelledby="rounds-title">
+            @for (round of rounds(); track round.round) {
+              <li>
+                <span
+                  class="round-outcome"
+                  [class.round-outcome--approved]="round.outcome === 'Approved'"
+                  >{{ texts.roundOutcomes[round.outcome] }}</span>{{ ' '
+                }}<span>{{
+                  texts.roundLine(
+                    round.round,
+                    round.version,
+                    formatDate(round.recordedAt),
+                    who(round),
+                    hardPartCount(round)
+                  )
+                }}</span>
+              </li>
+            }
+          </ol>
+        </div>
+      }
     </div>
   }
 </section>

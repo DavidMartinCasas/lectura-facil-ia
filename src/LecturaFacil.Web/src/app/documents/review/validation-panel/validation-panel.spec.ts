@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
+import { of } from 'rxjs';
 import {
   DocumentStatus,
   ReviewableDocument,
@@ -9,6 +11,7 @@ import {
 import { VALIDATION_TEXTS } from '../../../core/ui-texts';
 import { adaptationFixture, documentFixture } from '../../../testing/document-fixtures';
 import { ValidationPanelComponent } from './validation-panel';
+import { ValidationResultDialogComponent } from './validation-result-dialog';
 
 const VALIDATION: ValidationRecord = {
   round: 1,
@@ -31,6 +34,15 @@ const CHANGES: ValidationRecord = {
   notes: 'Falta el plazo.',
 };
 
+const RESULT: ValidationResult = {
+  outcome: 'Approved',
+  validatedBy: 'Grupo',
+  participants: 4,
+  hardSections: [],
+  hardGlossary: false,
+  notes: null,
+};
+
 function reviewable(status: DocumentStatus, overrides: Partial<ReviewableDocument> = {}) {
   return {
     ...documentFixture(status, { adaptation: adaptationFixture() }),
@@ -38,7 +50,12 @@ function reviewable(status: DocumentStatus, overrides: Partial<ReviewableDocumen
   } as ReviewableDocument;
 }
 
-async function render(document: ReviewableDocument, saving = false) {
+async function render(
+  document: ReviewableDocument,
+  { saving = false, dialogResult }: { saving?: boolean; dialogResult?: ValidationResult } = {},
+) {
+  const dialog = { open: vi.fn(() => ({ afterClosed: () => of(dialogResult) })) };
+  TestBed.configureTestingModule({ providers: [{ provide: MatDialog, useValue: dialog }] });
   const fixture = TestBed.createComponent(ValidationPanelComponent);
   fixture.componentRef.setInput('document', document);
   fixture.componentRef.setInput('saving', saving);
@@ -53,20 +70,32 @@ async function render(document: ReviewableDocument, saving = false) {
     [...element.querySelectorAll<HTMLButtonElement>('button')].find((candidate) =>
       candidate.textContent?.includes(text),
     )!;
-  return { fixture, element, events, button };
+  const openDetails = async () => {
+    button(VALIDATION_TEXTS.showDetails).click();
+    await fixture.whenStable();
+  };
+  return { fixture, element, events, button, dialog, openDetails };
 }
 
-function type(element: HTMLElement, selector: string, value: string): void {
-  const field = element.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)!;
-  field.value = value;
-  field.dispatchEvent(new Event('input'));
-}
-
-function checkboxes(element: HTMLElement): HTMLInputElement[] {
-  return [...element.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')];
+function text(element: Element | null | undefined): string {
+  return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
 }
 
 describe('ValidationPanelComponent', () => {
+  it('shows the four steps with the current one marked', async () => {
+    const { element } = await render(reviewable('Validated', { validation: VALIDATION }));
+
+    const steps = [...element.querySelectorAll('.steps li')];
+    expect(steps.map(text)).toEqual([
+      `✓${VALIDATION_TEXTS.stepDone} ${VALIDATION_TEXTS.steps['Draft']}`,
+      `✓${VALIDATION_TEXTS.stepDone} ${VALIDATION_TEXTS.steps['PendingValidation']}`,
+      VALIDATION_TEXTS.steps['Validated'],
+      VALIDATION_TEXTS.steps['Published'],
+    ]);
+    expect(steps[2].getAttribute('aria-current')).toBe('step');
+    expect(element.querySelectorAll('[aria-current]')).toHaveLength(1);
+  });
+
   it('offers to send a reviewed draft to validation', async () => {
     const { element, events, button } = await render(
       reviewable('Draft', { canSendToValidation: true }),
@@ -75,7 +104,8 @@ describe('ValidationPanelComponent', () => {
     button(VALIDATION_TEXTS.send).click();
 
     expect(events.send).toBe(1);
-    expect(element.textContent).not.toContain(VALIDATION_TEXTS.sendBlocked);
+    expect(element.querySelector('#send-blocked')).toBeNull();
+    expect(text(element.querySelector('.summary'))).toContain(VALIDATION_TEXTS.draftHint);
   });
 
   it('says why a draft with pending key facts cannot be sent yet', async () => {
@@ -86,26 +116,31 @@ describe('ValidationPanelComponent', () => {
     const send = button(VALIDATION_TEXTS.send);
     expect(send.disabled).toBe(true);
     expect(send.getAttribute('aria-describedby')).toBe('send-blocked');
-    expect(element.querySelector('#send-blocked')?.textContent).toContain(
-      VALIDATION_TEXTS.sendBlocked,
-    );
+    expect(text(element.querySelector('#send-blocked'))).toBe(VALIDATION_TEXTS.sendBlocked);
     expect(events.send).toBe(0);
   });
 
-  it('reminds a draft of the changes the group asked for and of the parts that were hard', async () => {
-    const { element } = await render(
+  it('reminds a draft of the changes the group asked for, with the hard parts in the details', async () => {
+    const { element, openDetails } = await render(
       reviewable('Draft', { validation: CHANGES, validations: [CHANGES] }),
     );
 
-    const note = element.querySelector('.previous')!;
-    expect(note.textContent).toContain(
+    const summary = text(element.querySelector('.summary'));
+    expect(summary).toContain(
       VALIDATION_TEXTS.changesRequested('23 de noviembre de 2026', 'Grupo de lectura (4 personas)'),
     );
-    expect(note.textContent).toContain('Falta el plazo.');
-    expect([...note.querySelectorAll('.hard-list li')].map((item) => item.textContent)).toEqual([
+    expect(summary).toContain(VALIDATION_TEXTS.changesMarked);
+    expect(element.querySelector('#validation-details')).toBeNull();
+
+    await openDetails();
+
+    const details = element.querySelector('#validation-details')!;
+    expect([...details.querySelectorAll('.hard-list li')].map(text)).toEqual([
       '¿Cuánto dinero dan?',
       VALIDATION_TEXTS.glossaryPart,
     ]);
+    expect(text(details)).toContain('Falta el plazo.');
+    expect(element.querySelector('.toggle')?.getAttribute('aria-expanded')).toBe('true');
   });
 
   it('asks to change the text before sending again the same version the group did not understand', async () => {
@@ -114,89 +149,32 @@ describe('ValidationPanelComponent', () => {
     );
 
     expect(button(VALIDATION_TEXTS.send).disabled).toBe(true);
-    expect(element.querySelector('#send-blocked')?.textContent).toContain(
-      VALIDATION_TEXTS.sendUnchanged,
-    );
+    expect(text(element.querySelector('#send-blocked'))).toBe(VALIDATION_TEXTS.sendUnchanged);
   });
 
-  it('asks for the outcome, who validated it and how many people before recording the result', async () => {
-    const { fixture, element, events, button } = await render(reviewable('PendingValidation'));
+  it('opens the form with the sections of the version and records what it returns', async () => {
+    const { events, button, dialog } = await render(reviewable('PendingValidation'), {
+      dialogResult: RESULT,
+    });
 
-    button(VALIDATION_TEXTS.record).click();
-    await fixture.whenStable();
+    button(VALIDATION_TEXTS.openRecord).click();
+
+    expect(dialog.open).toHaveBeenCalledWith(
+      ValidationResultDialogComponent,
+      expect.objectContaining({
+        data: { sections: ['¿Cuánto dinero dan?'], hasGlossary: true },
+        restoreFocus: true,
+      }),
+    );
+    expect(events.records).toEqual([RESULT]);
+  });
+
+  it('records nothing when the form is cancelled', async () => {
+    const { events, button } = await render(reviewable('PendingValidation'));
+
+    button(VALIDATION_TEXTS.openRecord).click();
 
     expect(events.records).toEqual([]);
-    expect(element.querySelector('#outcome-error')?.textContent).toContain(
-      VALIDATION_TEXTS.outcomeRequired,
-    );
-    expect(element.textContent).toContain(VALIDATION_TEXTS.validatedByRequired);
-    expect(element.querySelector('#participants-error')?.textContent).toContain(
-      VALIDATION_TEXTS.participantsRequired,
-    );
-  });
-
-  it('does not accept an impossible number of people', async () => {
-    const { fixture, element, events, button } = await render(reviewable('PendingValidation'));
-
-    element.querySelectorAll<HTMLInputElement>('input[type="radio"]')[0].click();
-    type(element, 'input[name="validatedBy"]', 'Grupo');
-    type(element, 'input[name="participants"]', '100');
-    await fixture.whenStable();
-    button(VALIDATION_TEXTS.record).click();
-    await fixture.whenStable();
-
-    expect(events.records).toEqual([]);
-    expect(element.querySelector('#participants-error')).not.toBeNull();
-  });
-
-  it('records an approval without hard parts or empty notes', async () => {
-    const { fixture, element, events, button } = await render(reviewable('PendingValidation'));
-
-    element.querySelectorAll<HTMLInputElement>('input[type="radio"]')[0].click();
-    await fixture.whenStable();
-    expect(checkboxes(element)).toEqual([]);
-    type(element, 'input[name="validatedBy"]', '  Grupo de lectura  ');
-    type(element, 'input[name="participants"]', '5');
-    type(element, 'textarea[name="notes"]', '   ');
-    await fixture.whenStable();
-    button(VALIDATION_TEXTS.record).click();
-
-    expect(events.records).toEqual([
-      {
-        outcome: 'Approved',
-        validatedBy: 'Grupo de lectura',
-        participants: 5,
-        hardSections: [],
-        hardGlossary: false,
-        notes: null,
-      },
-    ]);
-  });
-
-  it('marks the sections and the glossary that were hard when the group asks for changes', async () => {
-    const { fixture, element, events, button } = await render(reviewable('PendingValidation'));
-
-    element.querySelectorAll<HTMLInputElement>('input[type="radio"]')[1].click();
-    await fixture.whenStable();
-    const [section, glossary] = checkboxes(element);
-    expect(element.querySelector('.hard-parts')?.textContent).toContain('¿Cuánto dinero dan?');
-    section.click();
-    glossary.click();
-    type(element, 'input[name="validatedBy"]', 'Grupo');
-    type(element, 'input[name="participants"]', '4');
-    await fixture.whenStable();
-    button(VALIDATION_TEXTS.record).click();
-
-    expect(events.records).toEqual([
-      {
-        outcome: 'ChangesRequested',
-        validatedBy: 'Grupo',
-        participants: 4,
-        hardSections: [0],
-        hardGlossary: true,
-        notes: null,
-      },
-    ]);
   });
 
   it('can withdraw a document from validation', async () => {
@@ -208,33 +186,50 @@ describe('ValidationPanelComponent', () => {
   });
 
   it('shows who validated it, how many people and offers to publish it', async () => {
-    const { element, events, button } = await render(
+    const { element, events, button, openDetails } = await render(
       reviewable('Validated', { validation: VALIDATION, validations: [VALIDATION] }),
     );
 
-    expect(element.textContent).toContain(
+    expect(text(element.querySelector('.summary'))).toContain(
       VALIDATION_TEXTS.validated('23 de noviembre de 2026', 'Grupo de lectura (5 personas)'),
     );
-    expect(element.textContent).toContain('Se entiende bien.');
+    await openDetails();
+    expect(text(element.querySelector('#validation-details'))).toContain('Se entiende bien.');
     expect(element.querySelector('.rounds')).toBeNull();
     button(VALIDATION_TEXTS.publish).click();
 
     expect(events.publish).toBe(1);
   });
 
-  it('shows every round when there was more than one', async () => {
-    const approved = { ...VALIDATION, round: 2, version: 2, recordedAt: '2026-11-26T10:00:00Z' };
-    const { element } = await render(
+  it('shows every round in the details when there was more than one', async () => {
+    const approved = {
+      ...VALIDATION,
+      round: 2,
+      version: 2,
+      notes: null,
+      recordedAt: '2026-11-26T10:00:00Z',
+    };
+    const { element, openDetails } = await render(
       reviewable('Validated', { validation: approved, validations: [CHANGES, approved] }),
     );
 
-    const rounds = [...element.querySelectorAll('.rounds li')].map((item) =>
-      item.textContent?.replace(/\s+/g, ' ').trim(),
-    );
-    expect(rounds).toEqual([
+    await openDetails();
+
+    expect([...element.querySelectorAll('.rounds li')].map(text)).toEqual([
       `${VALIDATION_TEXTS.roundOutcomes.ChangesRequested} ${VALIDATION_TEXTS.roundLine(1, 1, '23 de noviembre de 2026', 'Grupo de lectura (4 personas)', 2)}`,
       `${VALIDATION_TEXTS.roundOutcomes.Approved} ${VALIDATION_TEXTS.roundLine(2, 2, '26 de noviembre de 2026', 'Grupo de lectura (5 personas)', 0)}`,
     ]);
+  });
+
+  it('offers no details when there is nothing to show', async () => {
+    const { element } = await render(
+      reviewable('Validated', {
+        validation: { ...VALIDATION, notes: null },
+        validations: [VALIDATION],
+      }),
+    );
+
+    expect(element.querySelector('.toggle')).toBeNull();
   });
 
   it('says a published document is the final version and offers no more steps', async () => {
@@ -242,7 +237,7 @@ describe('ValidationPanelComponent', () => {
       reviewable('Published', { validation: VALIDATION, validations: [VALIDATION] }),
     );
 
-    expect(element.textContent).toContain(VALIDATION_TEXTS.published);
-    expect(element.querySelector('button')).toBeNull();
+    expect(text(element.querySelector('.summary'))).toContain(VALIDATION_TEXTS.published);
+    expect(element.querySelector('.actions button')).toBeNull();
   });
 });

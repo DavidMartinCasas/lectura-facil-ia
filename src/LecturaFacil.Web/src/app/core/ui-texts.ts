@@ -288,15 +288,29 @@ export const KEY_FACT_TYPE_LABELS: Readonly<Record<KeyFactType, string>> = {
 /** Validación humana: la hacen personas del grupo destinatario fuera de la aplicación; aquí se anota. */
 export const VALIDATION_TEXTS = {
   title: 'Validación',
-  draftHint:
-    'Cuando hayas revisado el borrador, envíalo a validación. Personas del grupo destinatario tienen que leerlo y entenderlo.',
+  stepsLabel: 'Pasos de la validación',
+  stepDone: 'hecho:',
+  steps: {
+    Draft: 'Borrador',
+    PendingValidation: 'En validación',
+    Validated: 'Validado',
+    Published: 'Publicado',
+  } as Record<string, string>,
+  openRecord: 'Anotar el resultado',
+  recordTitle: 'Anotar el resultado de la validación',
+  recordHint: 'Lo que ha decidido el grupo después de leer el documento.',
+  cancel: 'Cancelar',
+  changesMarked: 'Lo que costó entender está marcado en la adaptación.',
+  showDetails: 'Ver detalles',
+  hideDetails: 'Ocultar detalles',
+  draftHint: 'Cuando lo hayas revisado, envíalo para que lo lea el grupo destinatario.',
   send: 'Enviar a validación',
   sending: 'Enviando…',
   sendBlocked: 'Antes de enviarlo, marca como revisados los avisos de los datos clave.',
   sendUnchanged: 'Cambia el texto antes de volver a enviarlo.',
   changesRequested: (date: string, by: string) => `El ${date}, ${by} pidió cambios.`,
   pendingHint:
-    'Exporta el documento y llévalo al grupo de validación. Cuando lo hayan leído, anota aquí lo que han decidido. Mientras tanto no se puede editar.',
+    'Exporta el documento y llévalo al grupo. Cuando lo hayan leído, anota el resultado. Mientras tanto no se puede editar.',
   outcomeLegend: '¿El grupo lo entiende?',
   outcomes: {
     Approved: 'Sí, lo entiende',
@@ -311,7 +325,7 @@ export const VALIDATION_TEXTS = {
   hardPartsLegend: '¿Qué partes costó entender? (opcional)',
   hardPartsHint: 'Las verás marcadas en la adaptación para saber dónde cambiarla.',
   glossaryPart: 'Glosario',
-  hardPartsTitle: 'Costó entender (lo verás marcado en la adaptación):',
+  hardPartsTitle: 'Costó entender:',
   hardMark: 'Costó entender',
   people: (count: number | null) =>
     count === null ? '' : count === 1 ? ' (1 persona)' : ` (${count} personas)`,

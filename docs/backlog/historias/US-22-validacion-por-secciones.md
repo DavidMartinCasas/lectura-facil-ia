@@ -41,6 +41,10 @@ Escenario: No reenviar sin cambios
   Entonces "Enviar a validación" está desactivado y dice "Cambia el texto antes de volver a enviarlo"
   Y la API responde 409 validation.unchanged
 
+Escenario: El texto sigue en el centro
+  Entonces la validación ocupa una barra fina con los pasos y el botón que toca
+  Y el resultado se anota en un diálogo que, al cancelarlo, no guarda nada y devuelve el foco al botón
+
 Escenario: Historial de rondas
   Dado un documento con más de una validación
   Entonces se ve cada ronda con su resultado, versión, fecha, grupo, personas y partes difíciles
@@ -57,7 +61,10 @@ Escenario: Portada validada
 - **Application:** errores `validation.unchanged` (409) y `validation.unknown_part` (400); `DocumentDetails.Validations`;
   la portada lleva quién validó.
 - **Api:** `RecordValidationRequest` con `participants`, `hardSections` y `hardGlossary`; `DocumentResponse.validations`.
-- **Angular:** panel de validación (casillas, personas, motivo del bloqueo, rondas) y marcas en el texto adaptado.
+- **Angular:** la validación es una barra fina encima del texto (los cuatro pasos, el botón que toca y una línea de
+  resumen); lo que pidió el grupo, las observaciones y las rondas se despliegan con «Ver detalles». El resultado se anota
+  en un diálogo (`ValidationResultDialogComponent`) que devuelve el foco al botón al cerrarse. Las partes difíciles se
+  marcan en violeta en el texto adaptado.
 
 ## Tests requeridos
 - [x] Dominio: partes difíciles permitidas, personas, bloqueo del reenvío y rondas.

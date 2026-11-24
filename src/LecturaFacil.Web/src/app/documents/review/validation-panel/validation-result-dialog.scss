@@ -1,0 +1,66 @@
+// SPDX-License-Identifier: Apache-2.0
+mat-dialog-content {
+  display: grid;
+  gap: 0.75rem;
+}
+
+p {
+  margin: 0;
+}
+
+.hint {
+  color: var(--lf-muted);
+}
+
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  padding: 0;
+  margin-block-end: 0.25rem;
+  font-weight: 700;
+}
+
+mat-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.5rem;
+}
+
+.hard-parts {
+  display: grid;
+  justify-items: start;
+  gap: 0.125rem;
+  padding: 0.5rem 0.75rem;
+  border-inline-start: 4px solid var(--lf-violet);
+  border-radius: var(--lf-radius-s);
+  background: var(--lf-violet-soft);
+
+  legend {
+    float: left;
+    inline-size: 100%;
+  }
+
+  .hint {
+    margin-block-end: 0.25rem;
+  }
+}
+
+// Quién lo ha validado y cuántas personas eran, juntos; en pantallas estrechas, uno debajo de otro.
+.who {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(8rem, 1fr);
+  gap: 0 0.75rem;
+
+  @media (max-width: 36rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.field-error {
+  color: var(--lf-danger);
+  font-size: var(--lf-fs-label);
+}
