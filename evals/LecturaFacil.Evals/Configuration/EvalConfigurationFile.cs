@@ -44,4 +44,7 @@ internal sealed class ModelEntry : ProviderEntry
     public decimal InputPricePerMillion { get; set; }
 
     public decimal OutputPricePerMillion { get; set; }
+
+    /// <summary>Moneda de los precios de este perfil; si falta, la del fichero.</summary>
+    public string? Currency { get; set; }
 }

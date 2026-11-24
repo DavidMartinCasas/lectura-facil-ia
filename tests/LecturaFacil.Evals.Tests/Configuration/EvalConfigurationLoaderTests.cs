@@ -23,6 +23,12 @@ public sealed class EvalConfigurationLoaderTests : IDisposable
               "adapterModel": "mini", "verifierModel": "otro", "temperature": 0.2,
               "inputPricePerMillion": 0.44, "outputPricePerMillion": 1.76
             },
+            "europa": {
+              "type": "OpenAICompatible", "displayName": "Nube UE",
+              "endpointVariable": "NUBE_ENDPOINT", "apiKeyVariable": "NUBE_KEY",
+              "adapterModel": "grande", "verifierModel": "pequeño", "currency": "EUR",
+              "inputPricePerMillion": 0.09, "outputPricePerMillion": 0.35
+            },
             "negativo": {
               "type": "OpenAICompatible", "displayName": "Mal", "endpointVariable": "LOCAL_ENDPOINT", "apiKeyVariable": "LOCAL_KEY",
               "adapterModel": "a", "verifierModel": "b", "inputPricePerMillion": -1
@@ -60,6 +66,25 @@ public sealed class EvalConfigurationLoaderTests : IDisposable
         nube.Pricing.InputPerMillion.ShouldBe(0.44m);
         result.Value.Models[0].Pricing.IsFree.ShouldBeTrue();
         result.Value.Embeddings!.Model.ShouldBe("bge-m3");
+    }
+
+    [Fact]
+    public void Load_WhenAPaidProfileHasItsOwnCurrency_UsesItForTheRun()
+    {
+        var result = Load("local", "europa");
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.Currency.ShouldBe("EUR");
+        result.Value.Models[1].Pricing.OutputPerMillion.ShouldBe(0.35m);
+    }
+
+    [Fact]
+    public void Load_WhenPaidProfilesUseDifferentCurrencies_FailsNamingThem()
+    {
+        var result = Load("nube", "europa");
+
+        result.Error!.Code.ShouldBe(EvalConfigurationLoader.InvalidCode);
+        result.Error.Message.ShouldContain("EUR, USD");
     }
 
     [Fact]

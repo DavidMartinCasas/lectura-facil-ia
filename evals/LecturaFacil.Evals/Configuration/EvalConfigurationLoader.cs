@@ -11,7 +11,8 @@ namespace LecturaFacil.Evals.Configuration;
 /// <summary>
 /// Lee los perfiles de <c>evals/modelos.json</c> que se han pedido y los valida con las mismas reglas que la
 /// configuración de la API (<see cref="LlmOptions"/>): https o red local, clave y modelos obligatorios, temperatura
-/// acotada. Los mensajes de error nombran la opción o la variable, nunca su valor.
+/// acotada. Los mensajes de error nombran la opción o la variable, nunca su valor. Cada perfil puede tener precios en su
+/// propia moneda, pero los perfiles de pago de una misma ejecución deben compartirla: el informe suma costes.
 /// </summary>
 public static class EvalConfigurationLoader
 {
@@ -51,6 +52,7 @@ public static class EvalConfigurationLoader
     private static Result<EvalConfiguration> Resolve(EvalConfigurationFile file, IReadOnlyList<string> names, Func<string, string?> environment)
     {
         var profiles = new List<ModelProfile>();
+        var currencies = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var name in names)
         {
             if (!file.Models.TryGetValue(name, out var entry))
@@ -65,6 +67,16 @@ public static class EvalConfigurationLoader
             }
 
             profiles.Add(profile.Value);
+            if (!profile.Value.Pricing.IsFree)
+            {
+                currencies.Add(entry.Currency ?? file.Currency);
+            }
+        }
+
+        if (currencies.Count > 1)
+        {
+            return Invalid(
+                $"Los modelos elegidos tienen precios en monedas distintas ({string.Join(", ", currencies)}): evalúelos por separado o ponga sus precios en la misma moneda.");
         }
 
         var embeddings = file.Embeddings is null ? null : ToEmbeddings(file.Embeddings, environment);
@@ -73,7 +85,8 @@ public static class EvalConfigurationLoader
             return Result<EvalConfiguration>.Failure(embeddings.Error!);
         }
 
-        return Result<EvalConfiguration>.Success(new EvalConfiguration(profiles.AsReadOnly(), embeddings?.Value, file.Currency));
+        var currency = currencies.Count == 1 ? currencies.Min! : file.Currency;
+        return Result<EvalConfiguration>.Success(new EvalConfiguration(profiles.AsReadOnly(), embeddings?.Value, currency));
     }
 
     private static Result<ModelProfile> ToProfile(string name, ModelEntry entry, Func<string, string?> environment)

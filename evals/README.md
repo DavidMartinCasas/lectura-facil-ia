@@ -17,6 +17,8 @@ export EVALS_LOCAL_ENDPOINT=http://localhost:8080/v1   # su servidor compatible 
 export EVALS_LOCAL_API_KEY=...
 export EVALS_AZURE_ENDPOINT=https://<su-recurso>.openai.azure.com/
 export EVALS_AZURE_API_KEY=...
+export EVALS_OVH_ENDPOINT=https://<endpoint-compatible-con-openai>/v1   # la URL de la API que indica el catálogo
+export EVALS_OVH_API_KEY=...
 export EVALS_EMBEDDINGS_ENDPOINT=http://localhost:8080/v1
 export EVALS_EMBEDDINGS_API_KEY=...
 dotnet run --project evals/LecturaFacil.Evals -- --models gemma,qwen,azure-mini
@@ -39,6 +41,12 @@ hacia localhost o una red privada).
   verificador, configure **el mismo verificador** en todos los perfiles (de otra familia que todos los adaptadores).
 - Los límites (`MaxOutputTokens`, reintentos, tamaño de los trozos…) son los valores por defecto de la API
   (`LimitsOptions`), y el informe los registra.
+- El perfil `ovh` usa OVHcloud AI Endpoints (UE) con la misma pareja que el servidor propio (Gemma adapta, Qwen3.5-9B
+  verifica), para comparar calidad y coste con la nube. Sus precios son los del catálogo de noviembre de 2026; como el
+  perfil tiene un solo precio, lleva el mayor de cada modelo (entrada de Qwen3.5-9B, salida de Gemma).
+- `currency` es la moneda de los precios. La del fichero vale para todos los perfiles, y cada perfil puede indicar la
+  suya (`ovh` cobra en euros). Los perfiles de pago de una misma ejecución deben compartir moneda: `--models gemma,ovh`
+  sale en EUR, y `--models azure-mini,ovh` se rechaza.
 - `embeddings` es opcional. Sin él no se mide la similitud. Es el mismo modelo para todos los perfiles.
 - **Límite de gasto:** si algún perfil tiene precio, la herramienta muestra una cota superior del coste (todos los
   trozos, intentos y reintentos con la respuesta máxima) y pide confirmación antes de llamar a nada. `--yes` la omite.
