@@ -195,13 +195,12 @@ describe('ValidationPanelComponent', () => {
     );
     await openDetails();
     expect(text(element.querySelector('#validation-details'))).toContain('Se entiende bien.');
-    expect(element.querySelector('.rounds')).toBeNull();
     button(VALIDATION_TEXTS.publish).click();
 
     expect(events.publish).toBe(1);
   });
 
-  it('shows every round in the details when there was more than one', async () => {
+  it('lists every round, newest first, with only the latest one open', async () => {
     const approved = {
       ...VALIDATION,
       round: 2,
@@ -215,19 +214,43 @@ describe('ValidationPanelComponent', () => {
 
     await openDetails();
 
-    expect([...element.querySelectorAll('.rounds li')].map(text)).toEqual([
-      `${VALIDATION_TEXTS.roundOutcomes.ChangesRequested} ${VALIDATION_TEXTS.roundLine(1, 1, '23 de noviembre de 2026', 'Grupo de lectura (4 personas)', 2)}`,
-      `${VALIDATION_TEXTS.roundOutcomes.Approved} ${VALIDATION_TEXTS.roundLine(2, 2, '26 de noviembre de 2026', 'Grupo de lectura (5 personas)', 0)}`,
+    const heads = [...element.querySelectorAll<HTMLButtonElement>('.round-head')];
+    expect(heads.map(text)).toEqual([
+      `${VALIDATION_TEXTS.roundOutcomes.Approved} ${VALIDATION_TEXTS.roundLine(2, 2, '26 de noviembre de 2026', 'Grupo de lectura (5 personas)')}`,
+      `${VALIDATION_TEXTS.roundOutcomes.ChangesRequested} ${VALIDATION_TEXTS.roundLine(1, 1, '23 de noviembre de 2026', 'Grupo de lectura (4 personas)')}2, ${VALIDATION_TEXTS.hardPartsCount(2)}, ${VALIDATION_TEXTS.hasNotes}`,
     ]);
+    expect(heads.map((head) => head.getAttribute('aria-expanded'))).toEqual(['true', 'false']);
+    expect(text(element.querySelector('#round-2'))).toBe(VALIDATION_TEXTS.roundEmpty);
+    expect(element.querySelector('#round-1')).toBeNull();
   });
 
-  it('offers no details when there is nothing to show', async () => {
-    const { element } = await render(
-      reviewable('Validated', {
-        validation: { ...VALIDATION, notes: null },
-        validations: [VALIDATION],
-      }),
+  it('opens an older round to show what the group asked for and its notes', async () => {
+    const approved = { ...VALIDATION, round: 2, version: 2 };
+    const { fixture, element, openDetails } = await render(
+      reviewable('Validated', { validation: approved, validations: [CHANGES, approved] }),
     );
+    await openDetails();
+
+    const older = element.querySelectorAll<HTMLButtonElement>('.round-head')[1];
+    expect(older.getAttribute('aria-controls')).toBe('round-1');
+    older.click();
+    await fixture.whenStable();
+
+    const body = element.querySelector('#round-1')!;
+    expect(older.getAttribute('aria-expanded')).toBe('true');
+    expect([...body.querySelectorAll('.hard-list li')].map(text)).toEqual([
+      '¿Cuánto dinero dan?',
+      VALIDATION_TEXTS.glossaryPart,
+    ]);
+    expect(text(body)).toContain('Falta el plazo.');
+
+    older.click();
+    await fixture.whenStable();
+    expect(element.querySelector('#round-1')).toBeNull();
+  });
+
+  it('offers no details before any round has been recorded', async () => {
+    const { element } = await render(reviewable('PendingValidation'));
 
     expect(element.querySelector('.toggle')).toBeNull();
   });

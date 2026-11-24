@@ -46,8 +46,11 @@ Escenario: El texto sigue en el centro
   Y el resultado se anota en un diálogo que, al cancelarlo, no guarda nada y devuelve el foco al botón
 
 Escenario: Historial de rondas
-  Dado un documento con más de una validación
-  Entonces se ve cada ronda con su resultado, versión, fecha, grupo, personas y partes difíciles
+  Dado un documento con alguna validación anotada
+  Cuando pulso "Ver rondas"
+  Entonces veo una fila por ronda, la más reciente primero y desplegada, con su resultado, versión, fecha, grupo y
+    personas, y marcas si tiene partes difíciles (con cuántas) u observaciones
+  Y al desplegar una ronda anterior veo qué partes costó entender y sus observaciones
 
 Escenario: Portada validada
   Dado un documento validado o publicado
@@ -62,8 +65,8 @@ Escenario: Portada validada
   la portada lleva quién validó.
 - **Api:** `RecordValidationRequest` con `participants`, `hardSections` y `hardGlossary`; `DocumentResponse.validations`.
 - **Angular:** la validación es una barra fina encima del texto (los cuatro pasos, el botón que toca y una línea de
-  resumen); lo que pidió el grupo, las observaciones y las rondas se despliegan con «Ver detalles». El resultado se anota
-  en un diálogo (`ValidationResultDialogComponent`) que devuelve el foco al botón al cerrarse. Las partes difíciles se
+  resumen); las rondas se despliegan con «Ver rondas», cada una como una fila que se abre para ver lo que pidió el
+  grupo y sus observaciones. El resultado se anota en un diálogo (`ValidationResultDialogComponent`) que devuelve el foco al botón al cerrarse. Las partes difíciles se
   marcan en violeta en el texto adaptado.
 
 ## Tests requeridos

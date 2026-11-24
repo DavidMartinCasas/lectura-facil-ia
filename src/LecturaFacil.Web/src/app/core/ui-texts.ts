@@ -301,8 +301,8 @@ export const VALIDATION_TEXTS = {
   recordHint: 'Lo que ha decidido el grupo después de leer el documento.',
   cancel: 'Cancelar',
   changesMarked: 'Lo que costó entender está marcado en la adaptación.',
-  showDetails: 'Ver detalles',
-  hideDetails: 'Ocultar detalles',
+  showDetails: 'Ver rondas',
+  hideDetails: 'Ocultar rondas',
   draftHint: 'Cuando lo hayas revisado, envíalo para que lo lea el grupo destinatario.',
   send: 'Enviar a validación',
   sending: 'Enviando…',
@@ -334,13 +334,12 @@ export const VALIDATION_TEXTS = {
     Approved: 'Lo entiende',
     ChangesRequested: 'Pidió cambios',
   },
-  roundLine: (round: number, version: number, date: string, by: string, hardParts: number) =>
-    `Ronda ${round}: versión ${version}, ${date}, ${by}` +
-    (hardParts === 0
-      ? '.'
-      : hardParts === 1
-        ? ', 1 parte difícil.'
-        : `, ${hardParts} partes difíciles.`),
+  roundLine: (round: number, version: number, date: string, by: string) =>
+    `Ronda ${round}: versión ${version}, ${date}, ${by}`,
+  hasNotes: 'Tiene observaciones',
+  hardPartsCount: (count: number) =>
+    count === 1 ? '1 parte difícil' : `${count} partes difíciles`,
+  roundEmpty: 'El grupo no marcó partes difíciles ni dejó observaciones.',
   notesLabel: 'Observaciones (opcional)',
   notesHint: 'Qué ha costado entender o qué hay que cambiar.',
   outcomeRequired: 'Elige si el grupo lo entiende o pide cambios.',

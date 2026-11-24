@@ -106,50 +106,96 @@
 
   @if (hasDetails() && detailsOpen()) {
     <div id="validation-details" class="details">
-      @if (shown(); as validation) {
-        @if (showsParts()) {
-          <div class="parts">
-            <p class="hard-title">{{ texts.hardPartsTitle }}</p>
-            <ul class="hard-list">
-              @for (question of validation.hardSections; track $index) {
-                <li>{{ question }}</li>
+      <h3 id="rounds-title">{{ texts.roundsTitle }}</h3>
+      <ol class="rounds" aria-labelledby="rounds-title">
+        @for (round of rounds(); track round.round) {
+          @let open = isRoundOpen(round.round);
+          @let parts = hardPartCount(round);
+          <li class="round" [class.round--open]="open">
+            <button
+              type="button"
+              class="round-head"
+              [attr.aria-expanded]="open"
+              [attr.aria-controls]="'round-' + round.round"
+              (click)="toggleRound(round.round)"
+            >
+              <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" />
+              </svg>
+              <span
+                class="round-outcome"
+                [class.round-outcome--approved]="round.outcome === 'Approved'"
+                >{{ texts.roundOutcomes[round.outcome] }}</span>{{ ' '
+              }}<span class="round-line">{{
+                texts.roundLine(
+                  round.round,
+                  round.version,
+                  formatDate(round.recordedAt),
+                  who(round)
+                )
+              }}</span>
+              @if (parts > 0 || round.notes) {
+                <span class="marks">
+                  @if (parts > 0) {
+                    <span class="mark mark--hard">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          d="M5 21V4m0 0h11l-2 4 2 4H5"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                      <span aria-hidden="true">{{ parts }}</span>
+                      <span class="visually-hidden">{{ ', ' + texts.hardPartsCount(parts) }}</span>
+                    </span>
+                  }
+                  @if (round.notes) {
+                    <span class="mark mark--notes" [attr.title]="texts.hasNotes">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          d="M6 3h9l3 3v15H6z M9 10h6 M9 14h6 M9 18h4"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                      <span class="visually-hidden">{{ ', ' + texts.hasNotes }}</span>
+                    </span>
+                  }
+                </span>
               }
-              @if (validation.hardGlossary) {
-                <li>{{ texts.glossaryPart }}</li>
-              }
-            </ul>
-          </div>
-        }
-        @if (validation.notes) {
-          <p class="notes">
-            <strong>{{ texts.notes }}</strong> {{ validation.notes }}
-          </p>
-        }
-      }
-      @if (rounds().length > 0) {
-        <div class="rounds">
-          <h3 id="rounds-title">{{ texts.roundsTitle }}</h3>
-          <ol aria-labelledby="rounds-title">
-            @for (round of rounds(); track round.round) {
-              <li>
-                <span
-                  class="round-outcome"
-                  [class.round-outcome--approved]="round.outcome === 'Approved'"
-                  >{{ texts.roundOutcomes[round.outcome] }}</span>{{ ' '
-                }}<span>{{
-                  texts.roundLine(
-                    round.round,
-                    round.version,
-                    formatDate(round.recordedAt),
-                    who(round),
-                    hardPartCount(round)
-                  )
-                }}</span>
-              </li>
+            </button>
+            @if (open) {
+              <div class="round-body" [id]="'round-' + round.round">
+                @if (parts > 0) {
+                  <div class="parts">
+                    <p class="hard-title">{{ texts.hardPartsTitle }}</p>
+                    <ul class="hard-list">
+                      @for (question of round.hardSections; track $index) {
+                        <li>{{ question }}</li>
+                      }
+                      @if (round.hardGlossary) {
+                        <li>{{ texts.glossaryPart }}</li>
+                      }
+                    </ul>
+                  </div>
+                }
+                @if (round.notes) {
+                  <p class="notes">
+                    <strong>{{ texts.notes }}</strong> {{ round.notes }}
+                  </p>
+                }
+                @if (parts === 0 && !round.notes) {
+                  <p class="empty">{{ texts.roundEmpty }}</p>
+                }
+              </div>
             }
-          </ol>
-        </div>
-      }
+          </li>
+        }
+      </ol>
     </div>
   }
 </section>
