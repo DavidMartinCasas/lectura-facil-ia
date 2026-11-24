@@ -12,8 +12,12 @@ public sealed class LimitsOptions
     [Range(1_024, 50 * 1024 * 1024, ErrorMessage = "Limits:MaxFileSizeBytes debe estar entre {1} y {2}.")]
     public int MaxFileSizeBytes { get; set; } = 5 * 1024 * 1024;
 
+    /// <summary>
+    /// Caracteres máximos del texto de entrada. Un texto largo se adapta y se verifica por partes (US-23); con los valores
+    /// por defecto caben unas 25 partes de <see cref="MaxCharactersPerAdaptationChunk"/>.
+    /// </summary>
     [Range(100, 200_000, ErrorMessage = "Limits:MaxCharacters debe estar entre {1} y {2}.")]
-    public int MaxCharacters { get; set; } = 20_000;
+    public int MaxCharacters { get; set; } = 150_000;
 
     /// <summary>Caracteres mínimos del texto de entrada. Su máximo es el mínimo de <see cref="MaxCharacters"/>, así nunca lo supera.</summary>
     [Range(1, 100, ErrorMessage = "Limits:MinCharacters debe estar entre {1} y {2}.")]
@@ -56,20 +60,26 @@ public sealed class LimitsOptions
     [Range(500, 200_000, ErrorMessage = "Limits:MaxCharactersPerAdaptationChunk debe estar entre {1} y {2}.")]
     public int MaxCharactersPerAdaptationChunk { get; set; } = 6_000;
 
-    /// <summary>Partes como máximo en que se divide un documento para adaptarlo. Acota las llamadas al modelo (OWASP LLM10).</summary>
+    /// <summary>
+    /// Partes como máximo en que se divide un documento para adaptarlo. Un texto que necesitaría más se rechaza al
+    /// enviarlo. Acota las llamadas al modelo por documento: como mucho
+    /// <c>partes × (1 + MaxAdaptationRetries) + partes</c> (adaptar, reintentar y verificar cada parte; OWASP LLM10).
+    /// </summary>
     [Range(1, 100, ErrorMessage = "Limits:MaxAdaptationChunksPerDocument debe estar entre {1} y {2}.")]
-    public int MaxAdaptationChunksPerDocument { get; set; } = 10;
+    public int MaxAdaptationChunksPerDocument { get; set; } = 30;
 
     /// <summary>
-    /// Nuevas adaptaciones que se piden como mucho cuando la adaptación incumple pautas de gravedad alta (US-07). Cada
-    /// una vuelve a adaptar el documento entero y se guarda la mejor versión. 0 desactiva el reintento (OWASP LLM10).
+    /// Nuevas adaptaciones que se piden como mucho cuando la adaptación incumple pautas de gravedad alta (US-07). Solo se
+    /// vuelven a adaptar las partes que las incumplen (US-23) y de cada una se guarda la mejor versión. 0 desactiva el
+    /// reintento (OWASP LLM10).
     /// </summary>
     [Range(0, 3, ErrorMessage = "Limits:MaxAdaptationRetries debe estar entre {1} y {2}.")]
     public int MaxAdaptationRetries { get; set; } = 1;
 
     /// <summary>
-    /// Caracteres como mucho del original más la adaptación que se envían juntos al verificador del significado (US-11).
-    /// Si se superan, no se llama al modelo y todas las cifras del original quedan para revisar (OWASP LLM10).
+    /// Caracteres como mucho del original más la adaptación de cada parte que se envían juntos al verificador del
+    /// significado (US-11, US-23). Si una parte los supera, no se llama al modelo para ella y sus cifras quedan para
+    /// revisar (OWASP LLM10).
     /// </summary>
     [Range(1_000, 400_000, ErrorMessage = "Limits:MaxCharactersPerVerification debe estar entre {1} y {2}.")]
     public int MaxCharactersPerVerification { get; set; } = 50_000;
@@ -106,7 +116,7 @@ public sealed class LimitsOptions
     /// <c>PUT /api/documents/{id}/versions/{n}</c>. Una adaptación ocupa más que el original porque explica más.
     /// </summary>
     [Range(1_000, 400_000, ErrorMessage = "Limits:MaxEditedCharacters debe estar entre {1} y {2}.")]
-    public int MaxEditedCharacters { get; set; } = 40_000;
+    public int MaxEditedCharacters { get; set; } = 200_000;
 
     /// <summary>
     /// Exportaciones que puede pedir cada usuario por minuto en <c>POST /api/documents/{id}/export</c> (US-14, US-16).

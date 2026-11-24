@@ -38,7 +38,7 @@ public sealed class EfDocumentRepository(AppDbContext context) : IDocumentReposi
     public Task<DocumentProgress?> FindProgressForOwnerAsync(DocumentId id, OwnerId ownerId, CancellationToken cancellationToken) =>
         Documents.AsNoTracking()
             .Where(document => document.Id == id && document.OwnerId == ownerId)
-            .Select(document => new DocumentProgress(document.Status, document.Stage))
+            .Select(document => new DocumentProgress(document.Status, document.Stage, document.StagePart, document.StageParts))
             .FirstOrDefaultAsync(cancellationToken);
 
     public async Task<IReadOnlyList<DocumentId>> ListAwaitingAdaptationAsync(CancellationToken cancellationToken) =>

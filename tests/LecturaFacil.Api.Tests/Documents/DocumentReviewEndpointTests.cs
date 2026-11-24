@@ -130,7 +130,7 @@ public sealed class DocumentReviewEndpointTests
         var document = GetDocumentEndpointTests.Seed(factory, TestUsers.DefaultOwner, GetDocumentEndpointTests.Adapt);
         using var client = await factory.CreateApiClientAsync();
 
-        using var response = await client.PutAsJsonAsync(VersionUri(document.Id.Value, 1), Edit(new string('a', 40_001)), Token);
+        using var response = await client.PutAsJsonAsync(VersionUri(document.Id.Value, 1), Edit(new string('a', 200_001)), Token);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         document.AdaptedVersions.Count.ShouldBe(1);

@@ -930,6 +930,7 @@ Con tardes y fines de semana, el alcance se ajusta así. Lo recortado pasa a la 
 | Interfaz lado a lado con edición | Historial completo (solo lista simple de documentos) |
 | Exportación en DOCX, Markdown y texto | Exportación a PDF, si no da tiempo (se puede generar desde el DOCX) |
 | Validación humana anotada por quien adapta (US-21) | Validadores con cuenta propia |
+| Documentos largos adaptados y verificados por partes, una tras otra (US-23) | Procesar las partes en paralelo |
 | Evaluación con **10 textos y 3 modelos** | 20 textos y 5 modelos |
 | Login con usuario de prueba | Roles distintos (técnica y validador) |
 

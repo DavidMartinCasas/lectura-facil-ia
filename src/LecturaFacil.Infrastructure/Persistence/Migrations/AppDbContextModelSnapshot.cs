@@ -52,6 +52,14 @@ namespace LecturaFacil.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(32)")
                         .HasColumnName("processing_stage");
 
+                    b.Property<int?>("StagePart")
+                        .HasColumnType("integer")
+                        .HasColumnName("processing_part");
+
+                    b.Property<int?>("StageParts")
+                        .HasColumnType("integer")
+                        .HasColumnName("processing_parts");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)

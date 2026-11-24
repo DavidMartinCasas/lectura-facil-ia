@@ -114,6 +114,21 @@ describe('DocumentEventsService', () => {
     expect(statuses).toEqual(['Processing', 'Draft']);
   });
 
+  it('sends which part of a long document it is in, and ignores a part that makes no sense', () => {
+    const progress: unknown[] = [];
+    service.watchProgress('doc-1').subscribe((next) => progress.push(next));
+
+    sources[0].emit('{"status":"Processing","stage":"Adapting","part":3,"parts":10}');
+    sources[0].emit('{"status":"Processing","stage":"Adapting","part":11,"parts":10}');
+    sources[0].emit('{"status":"Processing","stage":"Verifying","part":"2","parts":5}');
+
+    expect(progress).toEqual([
+      { status: 'Processing', stage: 'Adapting', part: { number: 3, count: 10 } },
+      { status: 'Processing', stage: 'Adapting' },
+      { status: 'Processing', stage: 'Verifying' },
+    ]);
+  });
+
   it('ignores malformed events and unknown statuses', () => {
     const { statuses } = watch();
 

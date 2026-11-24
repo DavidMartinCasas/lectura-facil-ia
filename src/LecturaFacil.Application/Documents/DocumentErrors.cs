@@ -53,6 +53,16 @@ public static class DocumentErrors
         TextTooLongCode,
         string.Create(CultureInfo.InvariantCulture, $"El texto no puede superar {maxCharacters} caracteres."));
 
+    /// <summary>
+    /// El texto cabe en <see cref="LimitsOptions.MaxCharacters"/>, pero habría que adaptarlo en más partes de las
+    /// permitidas (<see cref="LimitsOptions.MaxAdaptationChunksPerDocument"/>). Mismo código que un texto demasiado largo.
+    /// </summary>
+    public static Error TooManyParts(int maxParts) => new(
+        TextTooLongCode,
+        string.Create(
+            CultureInfo.InvariantCulture,
+            $"El texto es demasiado largo: habría que adaptarlo en más de {maxParts} partes. Divídalo en varios documentos."));
+
     private static string FormatSize(int bytes) => bytes >= BytesPerMegabyte
         ? string.Create(Spanish, $"{bytes / (double)BytesPerMegabyte:0.#} MB")
         : string.Create(Spanish, $"{bytes / (double)BytesPerKilobyte:0.#} KB");

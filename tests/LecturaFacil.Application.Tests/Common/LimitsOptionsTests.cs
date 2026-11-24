@@ -18,7 +18,7 @@ public sealed class LimitsOptionsTests
         var options = new LimitsOptions();
 
         options.MaxFileSizeBytes.ShouldBe(5 * 1024 * 1024);
-        options.MaxCharacters.ShouldBe(20_000);
+        options.MaxCharacters.ShouldBe(150_000);
         options.MaxWordsPerSentence.ShouldBe(15);
         options.MaxConnectorsPerSentence.ShouldBe(1);
         options.MaxFindingsPerDocument.ShouldBe(500);
@@ -31,7 +31,7 @@ public sealed class LimitsOptionsTests
         options.MaxCharactersPerAdaptationChunk.ShouldBe(6_000);
         options.AdaptationConcurrency.ShouldBe(1);
         options.AdaptationsPerHour.ShouldBe(10);
-        options.MaxAdaptationChunksPerDocument.ShouldBe(10);
+        options.MaxAdaptationChunksPerDocument.ShouldBe(30);
         options.DocumentEventsPollMilliseconds.ShouldBe(1_000);
         options.DocumentEventsMaxSeconds.ShouldBe(600);
     }

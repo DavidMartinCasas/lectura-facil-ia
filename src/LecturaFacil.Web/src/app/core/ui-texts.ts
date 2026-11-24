@@ -98,6 +98,9 @@ export const PROGRESS_TEXTS = {
     verifying: 'Verificando',
     ready: 'Listo',
   },
+  /** La parte por la que va un documento largo, detrás del paso: "Adaptando parte 3 de 10". */
+  part: (part: number, parts: number, retrying: boolean) =>
+    `${retrying ? 'la parte' : 'parte'} ${part} de ${parts}`,
   stateDone: 'hecho',
   stateCurrent: 'en curso',
   statePending: 'pendiente',
@@ -205,6 +208,8 @@ export const REVIEW_TEXTS = {
     'Los avisos se quedan a la vista. Márcalos como revisados cuando los hayas comprobado.',
   noKeyFacts: 'No hay datos clave que comprobar.',
   notVerified: 'No se ha podido verificar el significado: revisa las cifras con el original.',
+  partiallyVerified:
+    'Alguna parte del documento no se ha podido verificar: revísala con el original. Las demás partes sí se han verificado.',
   original: 'Original:',
   adapted: 'En la adaptación:',
   notInAdaptation: 'No aparece',

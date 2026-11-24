@@ -2,7 +2,7 @@
 <section class="progress" aria-labelledby="progress-title">
   <h2 id="progress-title" [class.visually-hidden]="!showTitle()">{{ texts.title }}</h2>
   <ol class="steps">
-    @for (step of steps(); track step.label) {
+    @for (step of steps(); track $index) {
       <li
         class="step"
         [class]="'step--' + step.state"
@@ -10,7 +10,8 @@
       >
         <span class="marker" aria-hidden="true">{{ markers[step.state] }}</span>
         <span class="label"
-          >{{ step.label }} <span class="state">({{ stateLabels[step.state] }})</span></span
+          >{{ step.label }}{{ step.detail ? ' ' + step.detail : '' }}
+          <span class="state">({{ stateLabels[step.state] }})</span></span
         >
       </li>
     }

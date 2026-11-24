@@ -327,5 +327,6 @@ public sealed record KeyFactResponse(
     bool RequiresAcknowledgement);
 
 /// <summary>Evento SSE <c>status</c>: el estado actual del documento y, mientras se adapta, la fase en la que está
-/// (<c>Adapting</c>, <c>ReviewingGuidelines</c>, <c>Retrying</c> o <c>Verifying</c>).</summary>
-public sealed record DocumentStatusEvent(Guid Id, string Status, string? Stage = null);
+/// (<c>Adapting</c>, <c>ReviewingGuidelines</c>, <c>Retrying</c> o <c>Verifying</c>). En un documento de varias partes,
+/// <c>part</c> y <c>parts</c> dicen por qué parte va esa fase (US-23).</summary>
+public sealed record DocumentStatusEvent(Guid Id, string Status, string? Stage = null, int? Part = null, int? Parts = null);

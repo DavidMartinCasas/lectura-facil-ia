@@ -19,7 +19,7 @@ Un segundo LLM puede encontrar esos datos y compararlos, pero también se equivo
    - lo que acompaña a la cifra también debe seguir ahí: la unidad (días, meses, años, euros, porcentaje), el periodo, el máximo o mínimo y si los días son hábiles o naturales.
 4. **Regla de combinación: manda el resultado más grave** (conservado < revisar < omitido). El verificador **solo puede añadir avisos**; nunca quita uno del código. Además, cada cifra del original que el verificador no ha listado y que no está en la adaptación se añade como aviso.
 5. **Fallo seguro:** si el verificador no responde, su respuesta no cumple el esquema o los textos superan `Limits:MaxCharactersPerVerification`, la verificación queda como `NotVerified` y **todas las cifras del original quedan para revisar**. La adaptación se guarda igualmente como borrador: la verificación informa, no bloquea ni corrige.
-6. **Se verifica solo la versión que se guarda** (la mejor tras los reintentos de la US-07), con una sola llamada y sin reintentos, para acotar el coste (OWASP LLM10).
+6. **Se verifica solo la versión que se guarda** (la mejor tras los reintentos de la US-07), con una llamada por parte y sin reintentos, para acotar el coste (OWASP LLM10). Un documento largo (US-23) se verifica por partes: cada parte del original con su parte adaptada. Las citas del original se buscan en su parte; las de la adaptación, en la adaptación entera. Si alguna parte no se puede verificar, el estado es `PartiallyVerified`: sus cifras quedan para revisar y se añade un aviso "Parte N".
 
 ## Consecuencias
 
@@ -28,4 +28,5 @@ Un segundo LLM puede encontrar esos datos y compararlos, pero también se equivo
 - Los avisos nunca se descartan por el límite `Limits:MaxKeyFactsPerVersion`, que solo acota los datos conservados. Si un texto anómalo agota el tiempo de las expresiones regulares, la verificación queda como `NotVerified` con un único aviso: "revisar todo el documento".
 - La comprobación por código puede dar falsos avisos (por ejemplo, si la adaptación escribe "2.5" en lugar de "2,5", o una cifra del original no importa). Se acepta: un aviso de más lo descarta una persona; uno de menos puede llegar a la ciudadanía.
 - Con el respaldo habilitado, el verificador también puede responder desde el respaldo, con su `VerifierModel`. La regla de "otra familia" se aplica a cada proveedor.
-- El original y la adaptación viajan juntos al verificador: con `MaxCharacters` alto, sube `MaxCharactersPerVerification` y comprueba que caben en el contexto del modelo verificador.
+- El original y la adaptación de cada parte viajan juntos al verificador: `MaxCharactersPerVerification` se aplica a cada parte, no al documento entero. Si subes `MaxCharactersPerAdaptationChunk`, comprueba que una parte y su adaptación caben en el contexto del modelo verificador.
+- Un dato cuyo original queda partido entre dos partes puede salir como aviso; se acepta por la misma razón que los falsos avisos.

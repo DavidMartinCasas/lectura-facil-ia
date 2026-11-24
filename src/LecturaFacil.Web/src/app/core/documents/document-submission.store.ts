@@ -136,7 +136,7 @@ export class DocumentSubmissionStore {
     this._status.set(progress.status);
     // Al fallar, el servidor ya no dice la fase: se marca con error la última que dijo (como pronto, la de adaptar:
     // si falla, el documento ya se había recibido).
-    const target = progressPosition(progress.status, progress.stage);
+    const target = progressPosition(progress.status, progress.stage, progress.part ?? null);
     const last = this.target ?? this._shown();
     this.target =
       target.failed && progress.stage === null && last !== null && last.index > target.index
