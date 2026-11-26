@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
-# Pide al servidor que despliegue <sha> (US-19). En el servidor, la clave solo puede ejecutar deploy/scripts/deploy.sh
-# (command= en authorized_keys), que recibe el SHA y nada más. Guía: docs/despliegue.md, "Despliegue automático".
+# Pide al servidor que despliegue <sha> con las imágenes de esos digests (US-19). En el servidor, la clave solo puede
+# ejecutar deploy/scripts/deploy.sh (command= en authorized_keys), que recibe esta línea y nada más.
+# Guía: docs/despliegue.md, "Despliegue automático".
 #
-#   .github/scripts/deploy-over-ssh.sh <sha>
+#   .github/scripts/deploy-over-ssh.sh <sha> <digest-api> <digest-web>
 #
 # Variables obligatorias (GitHub Secrets y variables del environment "production"):
 #   DEPLOY_HOST              nombre o IP del servidor en la red privada.
@@ -13,6 +14,8 @@
 set -euo pipefail
 
 sha=${1:?Indica el SHA que se despliega.}
+api_digest=${2:?Indica el digest de la imagen de la API.}
+web_digest=${3:?Indica el digest de la imagen de la web.}
 : "${DEPLOY_HOST:?Falta la variable DEPLOY_HOST.}"
 : "${DEPLOY_USER:?Falta la variable DEPLOY_USER.}"
 : "${DEPLOY_SSH_KEY:?Falta el secreto DEPLOY_SSH_KEY.}"
@@ -20,6 +23,7 @@ sha=${1:?Indica el SHA que se despliega.}
 
 # Ni el host ni el usuario pueden empezar por "-": ssh los tomaría como opciones (por ejemplo, -oProxyCommand=…).
 readonly NAME_PATTERN='^[A-Za-z0-9._][A-Za-z0-9._-]*$'
+readonly RELEASE_PATTERN='^[0-9a-f]{40} sha256:[0-9a-f]{64} sha256:[0-9a-f]{64}$'
 readonly CONNECT_TIMEOUT_SECONDS=30
 readonly KEEPALIVE_SECONDS=30
 if [[ ! $DEPLOY_HOST =~ $NAME_PATTERN ]]; then
@@ -28,6 +32,11 @@ if [[ ! $DEPLOY_HOST =~ $NAME_PATTERN ]]; then
 fi
 if [[ ! $DEPLOY_USER =~ $NAME_PATTERN ]]; then
   echo "::error::DEPLOY_USER no es un nombre de usuario válido." >&2
+  exit 2
+fi
+release="$sha $api_digest $web_digest"
+if [[ ! $release =~ $RELEASE_PATTERN ]]; then
+  echo "::error::La versión no es un SHA y dos digests sha256 válidos." >&2
   exit 2
 fi
 
@@ -44,4 +53,4 @@ ssh -i "$ssh_dir/key" \
   -o UserKnownHostsFile="$ssh_dir/known_hosts" \
   -o ConnectTimeout="$CONNECT_TIMEOUT_SECONDS" \
   -o ServerAliveInterval="$KEEPALIVE_SECONDS" \
-  -- "$DEPLOY_USER@$DEPLOY_HOST" "$sha"
+  -- "$DEPLOY_USER@$DEPLOY_HOST" "$release"
