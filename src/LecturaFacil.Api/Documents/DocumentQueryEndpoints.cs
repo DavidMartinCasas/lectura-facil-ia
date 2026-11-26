@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
+using System.Net.ServerSentEvents;
 using System.Runtime.CompilerServices;
 using LecturaFacil.Application.Common;
 using LecturaFacil.Application.Documents;
 using LecturaFacil.Domain.Documents;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace LecturaFacil.Api.Documents;
 
@@ -14,6 +16,9 @@ namespace LecturaFacil.Api.Documents;
 internal static class DocumentQueryEndpoints
 {
     public const string StatusEventType = "status";
+
+    /// <summary>Evento sin datos que mantiene viva la conexión; el navegador solo escucha <see cref="StatusEventType"/>.</summary>
+    public const string PingEventType = "ping";
 
     public static RouteGroupBuilder MapDocumentQueries(this RouteGroupBuilder group)
     {
@@ -65,7 +70,13 @@ internal static class DocumentQueryEndpoints
         return result.IsSuccess ? TypedResults.Ok(DocumentResponse.From(result.Value)) : ToProblem(result.Error!);
     }
 
-    private static async Task<IResult> EventsAsync(Guid id, WatchDocument watchDocument, CancellationToken cancellationToken)
+    private static async Task<IResult> EventsAsync(
+        Guid id,
+        WatchDocument watchDocument,
+        IOptions<LimitsOptions> limits,
+        TimeProvider timeProvider,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
     {
         if (id == Guid.Empty)
         {
@@ -73,19 +84,63 @@ internal static class DocumentQueryEndpoints
         }
 
         var result = await watchDocument.StartAsync(DocumentId.From(id), cancellationToken);
-        return result.IsSuccess
-            ? TypedResults.ServerSentEvents(ToEvents(id, result.Value, cancellationToken), StatusEventType)
-            : ToProblem(result.Error!);
+        if (!result.IsSuccess)
+        {
+            return ToProblem(result.Error!);
+        }
+
+        // Un nginx delante (por ejemplo, el de un proxy inverso) no guarda los eventos en su búfer: llegan al momento.
+        httpContext.Response.Headers["X-Accel-Buffering"] = "no";
+        var heartbeat = TimeSpan.FromSeconds(limits.Value.DocumentEventsHeartbeatSeconds);
+        return TypedResults.ServerSentEvents(ToEvents(id, result.Value, heartbeat, timeProvider, cancellationToken));
     }
 
-    private static async IAsyncEnumerable<DocumentStatusEvent> ToEvents(
+    /// <summary>Cada cambio como evento <c>status</c> y, si pasa <paramref name="heartbeat"/> sin cambios, un <c>ping</c>.</summary>
+    private static async IAsyncEnumerable<SseItem<DocumentStatusEvent?>> ToEvents(
         Guid id,
         IAsyncEnumerable<DocumentProgress> progress,
+        TimeSpan heartbeat,
+        TimeProvider timeProvider,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var (status, stage, part, parts) in progress.WithCancellation(cancellationToken))
+        await using var changes = progress.GetAsyncEnumerator(cancellationToken);
+        var next = changes.MoveNextAsync().AsTask();
+        try
         {
-            yield return new DocumentStatusEvent(id, status.ToString(), stage?.ToString(), part, parts);
+            while (true)
+            {
+                using var wait = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                var ping = Task.Delay(heartbeat, timeProvider, wait.Token);
+                if (await Task.WhenAny(next, ping) == ping)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    yield return new SseItem<DocumentStatusEvent?>(null, PingEventType);
+                    continue;
+                }
+
+                await wait.CancelAsync();
+                if (!await next)
+                {
+                    yield break;
+                }
+
+                var (status, stage, part, parts) = changes.Current;
+                yield return new SseItem<DocumentStatusEvent?>(
+                    new DocumentStatusEvent(id, status.ToString(), stage?.ToString(), part, parts),
+                    StatusEventType);
+                next = changes.MoveNextAsync().AsTask();
+            }
+        }
+        finally
+        {
+            // No se libera el enumerador con una lectura pendiente: se espera a que la cancelación la termine.
+            try
+            {
+                await next;
+            }
+            catch (OperationCanceledException)
+            {
+            }
         }
     }
 

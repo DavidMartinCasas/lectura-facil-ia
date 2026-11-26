@@ -36,6 +36,7 @@ describe('App', () => {
     const controller = TestBed.inject(HttpTestingController);
     const fixture = TestBed.createComponent(App);
     flushConfig(controller, 'Instancia de demostración: no subas datos personales.');
+    flushSession(controller, null);
     await fixture.whenStable();
     const element = fixture.nativeElement as HTMLElement;
 
@@ -54,12 +55,36 @@ describe('App', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.site-notice')).toBeNull();
   });
 
-  it('links to the samples page', async () => {
+  it('with a session, links to my documents and to the samples page', async () => {
+    const controller = TestBed.inject(HttpTestingController);
     const fixture = TestBed.createComponent(App);
+    flushSession(controller, { email: 'persona@example.org' });
     await fixture.whenStable();
     const links = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('nav a'));
 
-    expect(links.some((link) => link.getAttribute('href') === '/ejemplos')).toBe(true);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/documentos', '/ejemplos']);
+  });
+
+  it('without a session, shows no menu and only the link to log in', async () => {
+    const controller = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(App);
+    flushSession(controller, null);
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('nav')).toBeNull();
+    expect(element.querySelector('.login-link')?.getAttribute('href')).toBe('/entrar');
+  });
+
+  it('asks the server only once for the session when the guard also asks', async () => {
+    const controller = TestBed.inject(HttpTestingController);
+    TestBed.createComponent(App);
+    const guard = firstValueFrom(TestBed.inject(AuthService).loadSession());
+
+    flushSession(controller, { email: 'persona@example.org' });
+
+    expect(await guard).toBe(true);
+    controller.expectNone('/api/auth/me');
   });
 
   it('hides the menu on the login screen', async () => {
@@ -148,4 +173,13 @@ function flushConfig(controller: HttpTestingController, notice = ''): void {
   controller
     .expectOne('/api/config/public')
     .flush({ notice, turnstileEnabled: false, turnstileSiteKey: '' });
+}
+
+function flushSession(controller: HttpTestingController, user: { email: string } | null): void {
+  const request = controller.expectOne('/api/auth/me');
+  if (user) {
+    request.flush(user);
+  } else {
+    request.flush({ status: 401 }, { status: 401, statusText: 'Unauthorized' });
+  }
 }

@@ -17,7 +17,7 @@ const THEME_LABELS: Record<ThemeMode, string> = {
 
 /**
  * Marco de la aplicación: una barra superior con la marca, la navegación, el tema y la cuenta; debajo, toda la pantalla para el trabajo. La pantalla de entrar va sin barra: todavía no hay
- * nada a lo que ir.
+ * nada a lo que ir. Sin sesión tampoco hay navegación: todas sus pantallas la exigen, así que solo queda «Entrar».
  */
 @Component({
   selector: 'app-root',
@@ -49,6 +49,10 @@ export class App {
 
   constructor() {
     this.config.load();
+    // La portada no tiene guard: sin esto, la barra no sabría si enseñar el menú y la cuenta o el enlace para entrar.
+    if (this.auth.user() === undefined) {
+      this.auth.loadSession().subscribe();
+    }
   }
 
   /** Inicial del correo para el círculo de la cuenta. */

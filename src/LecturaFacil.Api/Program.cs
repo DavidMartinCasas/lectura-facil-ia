@@ -27,6 +27,15 @@ builder.Services
 var app = builder.Build();
 
 app.ValidateOptionsOrStop();
+
+// Paso de despliegue (servicio "migrate" de deploy/docker-compose.yml): aplica las migraciones con el rol propietario de
+// la base y termina. La API que atiende peticiones usa otro rol, sin permisos para cambiar el esquema.
+if (args.Contains(DatabaseMigrator.MigrateArgument, StringComparer.Ordinal))
+{
+    await app.Services.MigrateDatabaseAsync(app.Lifetime.ApplicationStopping);
+    return;
+}
+
 app.UseApi();
 app.MapHealthEndpoints();
 app.MapAuthEndpoints();

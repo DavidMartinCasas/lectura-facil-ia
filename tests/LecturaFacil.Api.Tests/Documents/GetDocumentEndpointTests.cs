@@ -275,6 +275,29 @@ public sealed class GetDocumentEndpointTests
     }
 
     [Fact]
+    public async Task Events_WhileNothingChanges_SendsAPingSoProxiesKeepTheConnectionOpen()
+    {
+        await using var factory = new DocumentsApiFactory(settings: new Dictionary<string, string>
+        {
+            ["Limits:DocumentEventsHeartbeatSeconds"] = "1",
+        });
+        var document = Seed(factory, TestUsers.DefaultOwner, processing => processing.StartProcessing(Now));
+        using var client = await factory.CreateApiClientAsync();
+
+        using var response = await client.GetAsync(EventsUri(document.Id.Value), HttpCompletionOption.ResponseHeadersRead, Token);
+        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(Token));
+        var lines = new List<string>();
+        while (!lines.Contains("event: ping"))
+        {
+            lines.Add(await reader.ReadLineAsync(Token) ?? throw new InvalidOperationException("El flujo se ha cerrado sin ping."));
+        }
+
+        response.Headers.GetValues("X-Accel-Buffering").ShouldBe(["no"]);
+        lines.ShouldContain("event: status");
+        lines.IndexOf("event: status").ShouldBeLessThan(lines.IndexOf("event: ping"));
+    }
+
+    [Fact]
     public async Task Events_WhenTheDocumentBelongsToAnotherUser_Returns404()
     {
         await using var factory = new DocumentsApiFactory();

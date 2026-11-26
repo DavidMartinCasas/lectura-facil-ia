@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, catchError, map, of, tap } from 'rxjs';
+import { Observable, catchError, finalize, map, of, shareReplay, tap } from 'rxjs';
 
 export const AUTH_PATH = '/api/auth';
 
@@ -24,16 +24,22 @@ export class AuthService {
   readonly user = this.current.asReadonly();
   readonly isAuthenticated = computed(() => !!this.current());
 
+  /** Pregunta en curso a /me: quien llama mientras tanto (la barra al arrancar, el guard) comparte la misma. */
+  private pending: Observable<boolean> | undefined;
+
   /** Pregunta al servidor si hay sesión. De paso, el servidor deja la cookie con el token antiforgery. */
   loadSession(): Observable<boolean> {
-    return this.http.get<CurrentUser>(`${AUTH_PATH}/me`).pipe(
+    this.pending ??= this.http.get<CurrentUser>(`${AUTH_PATH}/me`).pipe(
       tap((user) => this.current.set(user)),
       map(() => true),
       catchError(() => {
         this.current.set(null);
         return of(false);
       }),
+      finalize(() => (this.pending = undefined)),
+      shareReplay({ bufferSize: 1, refCount: false }),
     );
+    return this.pending;
   }
 
   login(email: string, password: string): Observable<CurrentUser> {

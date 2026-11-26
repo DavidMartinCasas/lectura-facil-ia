@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+# Producción: se añade al compose base y no publica ningún puerto en el host.
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml up -d --build
+#
+# La web se une a una red externa que comparte con tu proxy inverso (Nginx Proxy Manager, Caddy, Traefik,
+# cloudflared…), que la alcanza por su nombre (WEB_HOSTNAME) en el puerto 8080. Créala antes y conecta a ella el proxy:
+#   docker network create lf-public
+# Solo la web está en esa red: la API y PostgreSQL siguen en sus redes internas. Guía completa: docs/despliegue.md.
+
+services:
+  web:
+    # Sin puertos en el host: solo se llega a la web desde la red compartida con el proxy.
+    ports: !reset []
+    networks:
+      frontend:
+      public:
+        aliases:
+          - ${WEB_HOSTNAME:-lectura-facil-web}
+
+networks:
+  public:
+    name: ${PUBLIC_NETWORK:-lf-public}
+    external: true

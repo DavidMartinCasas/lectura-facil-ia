@@ -6,7 +6,13 @@ namespace LecturaFacil.Infrastructure.Persistence;
 
 public static class DatabaseMigrator
 {
-    /// <summary>Aplica las migraciones pendientes. Se usa al arrancar mientras no haya un paso de despliegue propio.</summary>
+    /// <summary>Argumento de la API que aplica las migraciones y termina, sin atender peticiones.</summary>
+    public const string MigrateArgument = "--migrate";
+
+    /// <summary>
+    /// Aplica las migraciones pendientes: en el despliegue, con <see cref="MigrateArgument"/>; en desarrollo, al arrancar
+    /// si <see cref="DatabaseOptions.ApplyMigrationsOnStartup"/> está activado.
+    /// </summary>
     public static async Task MigrateDatabaseAsync(this IServiceProvider services, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(services);

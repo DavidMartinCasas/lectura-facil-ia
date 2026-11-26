@@ -133,6 +133,8 @@ svg {
   align-items: center;
   gap: 0.5rem;
   flex: none;
+  // A la derecha también cuando no hay navegación (sin sesión).
+  margin-inline-start: auto;
 }
 
 // Botones de icono de la barra: tema y salir.
