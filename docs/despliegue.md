@@ -370,9 +370,9 @@ flowchart LR
     pr["Pull request"] --> ci["CI (ci.yml)<br/>build · tests · lint · e2e<br/>gitleaks · evaluación --dry-run"]
     ci -- "verde + fusión" --> main["push a main"]
     main --> ci2["CI otra vez<br/>(la llama deploy.yml)"]
-    ci2 --> pub["Imágenes en GHCR<br/>etiqueta = sha"]
+    ci2 --> pub["Imágenes en GHCR<br/>etiqueta = sha + digests"]
     pub --> ts["Runner en el tailnet<br/>nodo efímero tag:ci"]
-    ts -- "SSH, solo el puerto 22" --> vps["Servidor · deploy.sh sha"]
+    ts -- "SSH, solo el puerto 22" --> vps["Servidor · deploy.sh sha digests"]
     vps --> health{"/health 200 y<br/>X-App-Version = sha"}
     health -- "sí" --> ok["Desplegado"]
     health -- "no" --> back["Vuelve a la versión anterior<br/>y el workflow falla"]
@@ -382,11 +382,17 @@ flowchart LR
 |---|---|---|
 | CI | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | En cada PR y rama: build sin avisos, `dotnet format`, tests con cobertura (artefacto y resumen del job), paquetes vulnerables, lint, tests, e2e y build del front, `npm audit`, gitleaks, hadolint, shellcheck, actionlint, validación de compose, prueba de humo, roles de PostgreSQL, prueba de `deploy.sh` y evaluación `--dry-run`. |
 | Despliegue | [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) | Solo en push a `main` (nunca en PRs ni con código de forks), uno cada vez: CI → publicar → desplegar. Permisos mínimos por job: `packages: write` solo al publicar. |
-| Script del servidor | [`deploy/scripts/deploy.sh`](../deploy/scripts/deploy.sh) | Copia de la base, ficheros de `deploy/` en el commit, `pull`, `up -d` (`migrate` antes que la API), espera a `/health` con la versión y, si falla, vuelve a la anterior. |
+| Script del servidor | [`deploy/scripts/deploy.sh`](../deploy/scripts/deploy.sh) | Copia de la base, ficheros de `deploy/` en el commit, `pull` por digest, `up -d` (`migrate` antes que la API), espera a `/health` con la versión y, si falla, vuelve a la anterior. |
 | Dependencias | [`.github/dependabot.yml`](../.github/dependabot.yml) | PR semanales para NuGet, npm, imágenes Docker y acciones (que siguen fijadas por SHA). |
 
 Las imágenes son `ghcr.io/<propietario>/lectura-facil-api:<sha>` y `ghcr.io/<propietario>/lectura-facil-web:<sha>`,
 con `<propietario>` en minúsculas. No hay etiqueta `latest`: cada despliegue nombra exactamente qué versión corre.
+
+**Por digest, no solo por etiqueta.** En GHCR una etiqueta se puede volver a publicar con otra imagen (cualquier
+workflow con `packages: write` puede hacerlo). Por eso el job que publica anota el digest (`sha256:…`) de cada imagen y
+el servidor descarga `lectura-facil-api:<sha>@<digest>`: si alguien reescribiera la etiqueta, se seguiría desplegando
+exactamente la imagen que se construyó en `main`. Las variables `API_IMAGE_DIGEST` y `WEB_IMAGE_DIGEST` de
+`docker-compose.yml` las pone `deploy.sh`; vacías (en local o a mano), se usa la etiqueta.
 
 #### 9.1 Usuario de despliegue en el servidor
 
@@ -416,8 +422,9 @@ sola línea:
 restrict,from="100.64.0.0/10,fd7a:115c:a1e0::/48",command="/opt/docker/apps/lectura-facil/deploy/scripts/deploy.sh" ssh-ed25519 AAAA… github-actions lectura-facil
 ```
 
-- `command=` ejecuta siempre el script, pida lo que pida el cliente. El script solo acepta un SHA de 40 caracteres
-  hexadecimales (le llega en `SSH_ORIGINAL_COMMAND`); cualquier otra cosa la rechaza sin tocar nada.
+- `command=` ejecuta siempre el script, pida lo que pida el cliente. Por SSH, el script solo acepta
+  `<sha> <digest-api> <digest-web>` (40 caracteres hexadecimales y dos `sha256:` de 64; le llega en
+  `SSH_ORIGINAL_COMMAND`); cualquier otra cosa, también un SHA sin digests, la rechaza sin tocar nada.
 - `restrict` quita la terminal, los reenvíos de puertos y de agente y X11.
 - `from=` solo acepta la clave desde las direcciones de Tailscale (`100.64.0.0/10` y, en IPv6, `fd7a:115c:a1e0::/48`).
 - El script solo despliega commits que estén en `main`: un SHA de otra rama o desconocido lo rechaza antes de tocar
@@ -427,7 +434,8 @@ restrict,from="100.64.0.0/10,fd7a:115c:a1e0::/48",command="/opt/docker/apps/lect
   y `from=` dejarían de aplicarse.
 
 Como el script pone `deploy/` en el commit desplegado, el repositorio queda en `HEAD` separado (*detached*); es normal.
-El último SHA desplegado se guarda en `deploy/.release` (no se versiona) y es al que se vuelve si el siguiente falla.
+La última versión desplegada (SHA y digests) se guarda en `deploy/.release` (no se versiona) y es a la que se vuelve, por
+digest, si la siguiente falla.
 
 **`deploy/.env` en el servidor:**
 
@@ -562,14 +570,17 @@ Si una migración no puede ser compatible (renombrar o borrar una columna en uso
 copia** que `deploy.sh` hace antes de cada despliegue (`/var/backups/lectura-facil`, paso 7), con lo que se pierde lo
 escrito desde entonces. Indícalo en la PR de esa migración.
 
-Para volver a mano a una versión concreta ya publicada: `sudo -u lf-deploy deploy/scripts/deploy.sh <sha>`.
+Para volver a mano a una versión concreta ya publicada: `sudo -u lf-deploy deploy/scripts/deploy.sh <sha>` (por
+etiqueta) o, mejor, con sus digests: `deploy.sh <sha> <digest-api> <digest-web>`. Los digests de cada versión están en
+el log del job *Publicar imágenes* y en la página de cada paquete de GHCR.
 
 #### 9.6 Probar el script sin servidor
 
 [`tests/deploy/test-deploy.sh`](../tests/deploy/test-deploy.sh) monta un registro local que hace de GHCR y despliega el
-compose real con la capa de producción, en un proyecto y una red aparte. Prueba el primer despliegue, una actualización
-con copia de la base, una versión rota y una imagen que no existe (las dos vuelven a la anterior y fallan) y un SHA no
-válido. Lo ejecuta la CI; en local:
+compose real con la capa de producción, en un proyecto y una red aparte. Prueba que solo se aceptan commits de `main`,
+el primer despliegue, una actualización con copia de la base, una versión rota y una imagen que no existe (las dos
+vuelven a la anterior y fallan), un despliegue por digest con la etiqueta reescrita en el registro, un digest que no
+existe y versiones no válidas o sin digests por SSH. Lo ejecuta la CI; en local:
 
 ```bash
 cp deploy/.env.example deploy/.env          # si no lo tienes

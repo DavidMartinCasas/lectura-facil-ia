@@ -189,7 +189,7 @@ jobs:
           koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
           /mnt/deploy/scripts/backup-postgres.sh /mnt/deploy/scripts/deploy.sh /mnt/deploy/postgres/initdb/10-roles.sh
           /mnt/tests/deploy/test-deploy.sh /mnt/.github/scripts/coverage-summary.sh
-          /mnt/.github/scripts/deploy-over-ssh.sh /mnt/.github/scripts/check-version.sh
+          /mnt/.github/scripts/deploy-over-ssh.sh /mnt/.github/scripts/check-version.sh /mnt/.github/scripts/publish-images.sh
           /mnt/.github/scripts/validate-compose.sh /mnt/.github/scripts/smoke-test.sh /mnt/.github/scripts/check-db-roles.sh
 
       - name: Validar docker-compose

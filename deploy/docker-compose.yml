@@ -14,8 +14,9 @@ name: lectura-facil
 
 # Lo común a la API y a su paso de migraciones: la misma imagen y el mismo endurecimiento.
 x-api: &api
-  # IMAGE_REGISTRY: prefijo del registro con barra final (vacío = imágenes construidas aquí). Ver docs/despliegue.md.
-  image: ${IMAGE_REGISTRY:-}lectura-facil-api:${IMAGE_TAG:-local}
+  # IMAGE_REGISTRY: prefijo del registro con barra final (vacío = imágenes construidas aquí). API_IMAGE_DIGEST y
+  # WEB_IMAGE_DIGEST (sha256:…) los pone deploy/scripts/deploy.sh: fijan la imagen exacta. Ver docs/despliegue.md.
+  image: ${IMAGE_REGISTRY:-}lectura-facil-api:${IMAGE_TAG:-local}${API_IMAGE_DIGEST:+@${API_IMAGE_DIGEST:-}}
   build:
     context: ..
     dockerfile: src/LecturaFacil.Api/Dockerfile
@@ -105,7 +106,7 @@ services:
     restart: unless-stopped
 
   web:
-    image: ${IMAGE_REGISTRY:-}lectura-facil-web:${IMAGE_TAG:-local}
+    image: ${IMAGE_REGISTRY:-}lectura-facil-web:${IMAGE_TAG:-local}${WEB_IMAGE_DIGEST:+@${WEB_IMAGE_DIGEST:-}}
     build:
       context: ../src/LecturaFacil.Web
     ports:
