@@ -37,6 +37,11 @@ compose() {
 }
 
 clean_up() {
+  local status=$?
+  if ((status != 0)) && [[ -f $DEPLOY_STATE_FILE ]]; then
+    compose ps -a || true
+    compose logs --no-color --tail 50 || true
+  fi
   if [[ -f $DEPLOY_STATE_FILE ]]; then
     compose down -v --remove-orphans >/dev/null 2>&1 || true
   fi

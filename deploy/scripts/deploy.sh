@@ -120,7 +120,7 @@ sync_repository() {
 healthy() {
   local sha=$1 headers
   headers=$(compose "$sha" exec -T web wget -q -S -T 5 -O - "$HEALTH_URL" 2>&1 >/dev/null) || return 1
-  printf '%s\n' "$headers" | tr -d '\r' | grep -Eqi "^[[:space:]]*x-app-version:[[:space:]]*$sha[[:space:]]*$"
+  printf '%s\n' "$headers" | tr -d '\r' | grep -Eqi "^[[:space:]]*x-app-version:[[:space:]]*${sha}[[:space:]]*$"
 }
 
 wait_for_health() {
