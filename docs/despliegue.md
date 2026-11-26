@@ -249,8 +249,10 @@ Para no repetir los `-f`, puedes definir en tu shell
    - *Domain*: `<subdominio>` (por ejemplo, `lectura-facil.<tu-dominio>`).
    - *Scheme* `http`, *Forward Hostname* `lectura-facil-web`, *Port* `8080`.
    - *SSL*: ninguno y *Force SSL* desactivado: el HTTPS lo pone Cloudflare.
-   - No hace falta configuración avanzada: la API envía `X-Accel-Buffering: no` para que el progreso (SSE) no se quede
-     en el búfer, y un `ping` cada 30 s para que no se corte la conexión.
+   - No hace falta configuración avanzada: la API envía `X-Accel-Buffering: no` (el nginx de la web la deja pasar
+     hasta el proxy) para que el progreso (SSE) no se quede en el búfer, y un `ping` cada 30 s para que no se corte la
+     conexión. Si tu proxy no es nginx y no entiende esa cabecera, desactiva su búfer para
+     `/api/documents/*/events`.
 2. **Cloudflare Zero Trust** → el túnel → *Published application routes* → *Add*:
    - `<subdominio>` → `http://nginx-proxy-manager:80`, sin cambiar la cabecera `Host`.
    - No uses rutas comodín (`*.dominio`): publica solo este subdominio.

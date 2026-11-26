@@ -9,7 +9,7 @@ namespace LecturaFacil.Infrastructure.Llm;
 /// locales. Un nombre de host con http no se admite aunque no tenga puntos: el DNS podría resolverlo a una IP pública
 /// (dominios de búsqueda) y la clave y los documentos viajarían sin cifrar.
 /// Cuentan como privadas las de RFC 1918, las IPv6 locales únicas (fc00::/7) y el espacio compartido 100.64.0.0/10
-/// (RFC 6598), que no se enruta en internet y es el que usan VPN como Tailscale para llegar a un servidor de modelos.
+/// (RFC 6598), que no se enruta en internet y es el que usan algunas VPN de malla para llegar a un servidor de modelos.
 /// </summary>
 public static class ProviderEndpoint
 {
