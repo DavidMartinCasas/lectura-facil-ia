@@ -13,18 +13,20 @@
         <span class="brand-name">{{ texts.name }}</span>
       </a>
 
-      <nav id="main-nav" class="nav" [attr.aria-label]="texts.mainNavigation">
-        <a
-          routerLink="/documentos"
-          routerLinkActive="active"
-          [routerLinkActiveOptions]="{ exact: true }"
-          ariaCurrentWhenActive="page"
-          >{{ texts.navList }}</a
-        >
-        <a routerLink="/ejemplos" routerLinkActive="active" ariaCurrentWhenActive="page">{{
-          texts.navSamples
-        }}</a>
-      </nav>
+      @if (auth.isAuthenticated()) {
+        <nav id="main-nav" class="nav" [attr.aria-label]="texts.mainNavigation">
+          <a
+            routerLink="/documentos"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            ariaCurrentWhenActive="page"
+            >{{ texts.navList }}</a
+          >
+          <a routerLink="/ejemplos" routerLinkActive="active" ariaCurrentWhenActive="page">{{
+            texts.navSamples
+          }}</a>
+        </nav>
+      }
 
       <div class="tools">
         <!-- Tema: un botón que pasa de uno al siguiente (sistema → claro → oscuro) y enseña el actual. -->

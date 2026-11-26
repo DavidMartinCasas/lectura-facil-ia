@@ -11,7 +11,12 @@
       </p>
       <div class="actions">
         <a mat-flat-button routerLink="/nuevo">Adaptar un documento</a>
-        <a mat-stroked-button routerLink="/documentos">Ver mis documentos</a>
+        <!-- Sin sesión no hay documentos que ver: se ofrece entrar. Mientras se pregunta, ninguno de los dos. -->
+        @if (auth.user()) {
+          <a mat-stroked-button routerLink="/documentos">Ver mis documentos</a>
+        } @else if (auth.user() === null) {
+          <a mat-stroked-button routerLink="/entrar">Entrar</a>
+        }
       </div>
       <p class="draft-note" role="note">
         Cada adaptación es un <strong>borrador</strong>. Siempre la tiene que revisar y validar una
