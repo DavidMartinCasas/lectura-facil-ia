@@ -7,7 +7,6 @@
 set -euo pipefail
 
 reports_dir=${1:-TestResults}
-summary=${GITHUB_STEP_SUMMARY:-/dev/stdout}
 
 shopt -s nullglob
 reports=("$reports_dir"/coverage.cobertura*.xml)
@@ -26,7 +25,8 @@ percentage() {
   awk -v covered="$1" -v valid="$2" 'BEGIN { if (valid == 0) print "—"; else printf "%.1f %%", 100 * covered / valid }'
 }
 
-{
+write_summary() {
+  local report assembly lines branches
   echo "### Cobertura de los tests"
   echo
   echo "| Ensamblado | Líneas | Ramas |"
@@ -39,4 +39,10 @@ percentage() {
   done
   echo
   echo "Umbral: 80 % de líneas y de ramas en Domain y Application (AGENTS.md, sección 7)."
-} >> "$summary"
+}
+
+if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
+  write_summary >> "$GITHUB_STEP_SUMMARY"
+else
+  write_summary
+fi
