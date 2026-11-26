@@ -10,11 +10,11 @@ namespace LecturaFacil.Api.Configuration;
 /// </summary>
 internal static partial class StartupValidation
 {
-    public static void ValidateOptionsOrStop(this WebApplication app)
+    public static async Task ValidateOptionsOrStopAsync(this WebApplication app, CancellationToken cancellationToken)
     {
         try
         {
-            app.Services.GetRequiredService<IStartupValidator>().Validate();
+            await app.Services.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(cancellationToken);
         }
         catch (Exception exception) when (TryGetFailures(exception, out var failures))
         {

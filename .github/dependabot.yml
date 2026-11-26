@@ -19,6 +19,10 @@ updates:
     groups:
       nuget:
         patterns: ["*"]
+    ignore:
+      # PDFsharp-MigraDoc 6.2.4 es la última versión MIT; la 6.5.0 pasó a AGPL-3.0, que AGENTS.md no admite.
+      - dependency-name: "PDFsharp-MigraDoc"
+        versions: [">= 6.3.0"]
     commit-message:
       prefix: "chore(deps)"
 

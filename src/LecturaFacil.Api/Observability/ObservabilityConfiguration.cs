@@ -55,7 +55,7 @@ internal static class ObservabilityConfiguration
 
     /// <summary>
     /// Las opciones tal como están en la configuración. Si no son válidas, la validación al arrancar para la API
-    /// (<c>ValidateOptionsOrStop</c>): aquí no se valida para no duplicar mensajes.
+    /// (<c>ValidateOptionsOrStopAsync</c>): aquí no se valida para no duplicar mensajes.
     /// </summary>
     private static ObservabilityOptions Options(IConfiguration configuration) =>
         configuration.GetSection(ObservabilityOptions.SectionName).Get<ObservabilityOptions>() ?? new ObservabilityOptions();
