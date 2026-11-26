@@ -60,7 +60,8 @@ check_settings() {
     *) error "DEPLOY_SYNC_REPO debe ser true o false."; exit 2 ;;
   esac
   # Con una versión fija en deploy/.env, /health nunca devolvería el SHA y cada despliegue volvería atrás.
-  if grep -Eq '^[[:space:]]*OBSERVABILITY__RELEASE=[^[:space:]#]' "$repo_root/deploy/.env" 2>/dev/null; then
+  # (Vacía también es OBSERVABILITY__RELEASE="" o ''.)
+  if grep -Eq "^[[:space:]]*OBSERVABILITY__RELEASE=[\"']?[^[:space:]#\"']" "$repo_root/deploy/.env" 2>/dev/null; then
     error "Deja vacía OBSERVABILITY__RELEASE en deploy/.env: en el despliegue automático la versión es el SHA."
     exit 2
   fi
