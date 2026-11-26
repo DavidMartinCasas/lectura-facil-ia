@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: Apache-2.0
+# Actualizaciones de dependencias (US-19). Una PR semanal por ecosistema, con las actualizaciones agrupadas; cada PR
+# pasa la CI completa antes de fusionarse. Las alertas de seguridad abren PR aparte, sin esperar al lunes.
+# Las imágenes de herramientas fijadas dentro de ci.yml (gitleaks, hadolint, shellcheck, actionlint) se actualizan a mano.
+version: 2
+
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      nuget:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: npm
+    directory: /src/LecturaFacil.Web
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      angular:
+        patterns: ["@angular/*", "@angular-devkit/*", "angular-eslint"]
+      npm:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore(deps)"
+
+  # Imágenes base de los Dockerfiles.
+  - package-ecosystem: docker
+    directories:
+      - /src/LecturaFacil.Api
+      - /src/LecturaFacil.Web
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      docker:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore(deps)"
+
+  # Imagen de PostgreSQL de deploy/docker-compose.yml.
+  - package-ecosystem: docker-compose
+    directory: /deploy
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deps)"
+
+  # Acciones de los workflows: Dependabot mantiene el SHA fijado y actualiza el comentario con la versión.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci(deps)"
