@@ -63,8 +63,9 @@ Escenario: Guía de despliegue
 - Un solo compose base y un *override* de producción, sin duplicar definiciones.
 
 ## Tests requeridos
-- [ ] `docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml config --quiet` en CI.
-- [ ] Linter de Dockerfiles (hadolint) en CI.
+- [x] `docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml config --quiet` en CI.
+- [x] Linter de Dockerfiles (hadolint) en CI.
+- [x] Prueba de humo en CI: los roles existen, la cuenta de la API no es superusuaria y no puede crear tablas.
 
 ## Fuera de alcance
 - Despliegue automático desde GitHub Actions (US-19).
@@ -82,6 +83,20 @@ curl -s https://<subdominio>/health
 - [ ] La persona ha desplegado siguiendo `docs/despliegue.md` y la URL responde.
 - [ ] Pruebas negativas de red hechas y anotadas en la PR.
 - [ ] Más la **DoD global**.
+
+## Decisiones al implementar
+- **El servidor ya estaba preparado** (endurecido, Docker, Tailscale y un túnel de Cloudflare con Nginx Proxy Manager
+  para otras aplicaciones). Por eso el compose de producción **no incluye `cloudflared`**: la web se une a una red
+  externa (`PUBLIC_NETWORK`, por defecto `lf-public`) que comparte solo con el proxy inverso. La red del proxy con sus
+  paneles de administración no llega a la web.
+- **Entrada:** Cloudflare → túnel → Nginx Proxy Manager → `http://lectura-facil-web:8080`. Cualquier otro proxy sirve.
+- **Migraciones en un paso propio:** el servicio `migrate` ejecuta la API con `--migrate` y el rol propietario, y
+  termina; la API arranca después con el rol de aplicación (solo DML) y sin migraciones al arrancar. Los dos roles se
+  crean en el compose base, así local, CI y producción son iguales.
+- **SSE detrás de proxies:** la API envía `X-Accel-Buffering: no` y un evento `ping` cada
+  `Limits:DocumentEventsHeartbeatSeconds` (30 s), por debajo del corte de nginx (60 s) y de Cloudflare (100 s).
+- **Endpoint por Tailscale:** se admite `http` hacia `100.64.0.0/10` (RFC 6598, la red de Tailscale), cifrada por la VPN.
+- Las imágenes se construyen en el servidor; publicarlas en un registro y desplegar desde CI queda para la US-19.
 
 ## Prompt de arranque
 ```text

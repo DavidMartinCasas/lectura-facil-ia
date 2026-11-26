@@ -34,6 +34,7 @@ public sealed class LimitsOptionsTests
         options.MaxAdaptationChunksPerDocument.ShouldBe(30);
         options.DocumentEventsPollMilliseconds.ShouldBe(1_000);
         options.DocumentEventsMaxSeconds.ShouldBe(600);
+        options.DocumentEventsHeartbeatSeconds.ShouldBe(30);
     }
 
     [Fact]

@@ -107,6 +107,13 @@ public sealed class LimitsOptions
     [Range(10, 3_600, ErrorMessage = "Limits:DocumentEventsMaxSeconds debe estar entre {1} y {2}.")]
     public int DocumentEventsMaxSeconds { get; set; } = 600;
 
+    /// <summary>
+    /// Segundos sin cambios tras los que la conexión SSE envía un evento <c>ping</c> (que el navegador ignora). Así los
+    /// proxies que cortan las respuestas sin datos (nginx a los 60 s, Cloudflare a los 100 s) no cierran la conexión.
+    /// </summary>
+    [Range(1, 300, ErrorMessage = "Limits:DocumentEventsHeartbeatSeconds debe estar entre {1} y {2}.")]
+    public int DocumentEventsHeartbeatSeconds { get; set; } = 30;
+
     /// <summary>Documentos por página que puede pedir como mucho <c>GET /api/documents</c>. Acota la respuesta.</summary>
     [Range(10, 1_000, ErrorMessage = "Limits:MaxDocumentsPerList debe estar entre {1} y {2}.")]
     public int MaxDocumentsPerList { get; set; } = 100;

@@ -11,14 +11,16 @@ Asistente **open source y autoalojable** que adapta textos administrativos a **l
 Necesitas Docker con Docker Compose.
 
 ```bash
-cp deploy/.env.example deploy/.env   # y cambia POSTGRES_PASSWORD y las opciones LLM__PRIMARY__*
+cp deploy/.env.example deploy/.env   # y cambia las tres contraseñas POSTGRES_* y las opciones LLM__PRIMARY__*
 docker compose -f deploy/docker-compose.yml up --build
 ```
 
 - Aplicación: <http://localhost:8080>
 - Estado de la API: `curl http://localhost:8080/health` → `{"status":"Healthy"}`
 
-Solo se publica el frontend, y solo en `127.0.0.1`. nginx reenvía `/api` y `/health` a la API, y PostgreSQL no expone su puerto.
+Solo se publica el frontend, y solo en `127.0.0.1`. nginx reenvía `/api` y `/health` a la API, y PostgreSQL no expone su puerto. Las migraciones las aplica el servicio `migrate` con un rol propietario; la API usa otro rol que solo lee y escribe filas.
+
+Para publicarla en un servidor (sin puertos abiertos, detrás de un proxy inverso con HTTPS, con copias de seguridad), sigue [`docs/despliegue.md`](docs/despliegue.md).
 
 ### Para desarrollar
 
@@ -59,7 +61,7 @@ El doble guion bajo separa niveles y no importan las mayúsculas: `LLM__PRIMARY_
 | `DATABASE__APPLYMIGRATIONSONSTARTUP` | No | `false` | Aplica las migraciones al arrancar. |
 | `LLM__PRIMARY__TYPE` | Sí | — | `OpenAICompatible` (Ollama, LM Studio, vLLM, llama-swap…) o `AzureFoundry`. |
 | `LLM__PRIMARY__DISPLAYNAME` | Sí | — | Nombre visible del proveedor (máx. 60 caracteres). |
-| `LLM__PRIMARY__ENDPOINT` | Sí | — | URL absoluta `https`, sin credenciales. Se admite `http` solo hacia `localhost` o una IP privada, nunca hacia un nombre (el DNS podría resolverlo a una IP pública). |
+| `LLM__PRIMARY__ENDPOINT` | Sí | — | URL absoluta `https`, sin credenciales. Se admite `http` solo hacia `localhost` o una IP privada (también `100.64.0.0/10`, la de Tailscale), nunca hacia un nombre (el DNS podría resolverlo a una IP pública). |
 | `LLM__PRIMARY__APIKEY` 🔒 | Sí | — | Clave del proveedor. |
 | `LLM__PRIMARY__ADAPTERMODEL` | Sí | — | Modelo o despliegue que adapta el texto. |
 | `LLM__PRIMARY__VERIFIERMODEL` | Sí | — | Modelo o despliegue que verifica el significado. |
@@ -79,6 +81,7 @@ El doble guion bajo separa niveles y no importan las mayúsculas: `LLM__PRIMARY_
 | `LIMITS__MAXADAPTATIONCHUNKSPERDOCUMENT` | No | `30` | Partes como máximo de un documento (1 – 100); uno más largo se rechaza. Llamadas al modelo por documento, como mucho: partes × (1 + reintentos) + partes. |
 | `LIMITS__MAXADAPTATIONRETRIES` | No | `1` | Veces que se vuelve a adaptar una parte que incumple pautas graves (0 – 3). |
 | `LIMITS__ADAPTATIONSPERHOUR` | No | `10` | Documentos que puede enviar a adaptar cada usuario por hora (1 – 1000). Al superarlo, 429 con `Retry-After`. |
+| `LIMITS__DOCUMENTEVENTSHEARTBEATSECONDS` | No | `30` | Segundos sin cambios tras los que el progreso (SSE) envía un `ping`, para que los proxies no corten la conexión (1 – 300). |
 | `LIMITS__EXPORTSPERMINUTE` | No | `30` | Exportaciones por minuto y usuario (1 – 1000). |
 | `EXPORT__FONTSIZEPOINTS` | No | `14` | Letra del texto de los DOCX y PDF exportados, en puntos (14 – 28). |
 | `EXPORT__LINESPACING` | No | `1.5` | Interlineado de los DOCX y PDF exportados (1,5 – 3). |
@@ -225,6 +228,7 @@ La decisión está en [ADR 0003](docs/adr/0003-proveedores-configurables.md).
 
 - [Documento de diseño](docs/TFM-Lectura-Facil.md)
 - [Backlog y plan del sprint](docs/backlog/README.md)
+- [Despliegue en un servidor](docs/despliegue.md)
 - [Reglas para agentes de programación](AGENTS.md)
 - [Licencias de las dependencias y de la fuente](docs/licencias.md)
 - [Ejemplos de exportación en DOCX, PDF, Markdown y texto](docs/ejemplos/US-14/README.md)

@@ -724,8 +724,9 @@ flowchart LR
 
     azure["Azure AI Foundry<br/>Spain Central · Data Zone EU<br/>gpt-4.1-mini · mistral-medium-3-5"]
 
-    cfd --> fe
-    cfd --> be
+    cfd --> npm["Nginx Proxy Manager<br/>(red lf-public)"]
+    npm --> fe
+    fe --> be
     be --> pg
     be --> ts1
     ts1 -- "WireGuard cifrado<br/>solo el puerto de llama-swap" --> ts2
@@ -749,7 +750,7 @@ flowchart TD
 | Componente | Dónde | Notas |
 |---|---|---|
 | Frontend Angular, API .NET, PostgreSQL | VPS OVHcloud (2–4 vCPU, 4 GB RAM) | Docker Compose |
-| Entrada web | Cloudflare Tunnel (`cloudflared` en el VPS) | Ningún puerto abierto a internet; HTTPS y WAF de Cloudflare |
+| Entrada web | Cloudflare Tunnel (`cloudflared` en el VPS) y Nginx Proxy Manager | Ningún puerto abierto a internet; HTTPS y WAF de Cloudflare. El proxy llega a la web por una red propia (`lf-public`); guía en `docs/despliegue.md` |
 | Administración del VPS | SSH **solo por Tailscale** | Firewall del VPS bloqueando toda entrada |
 | Enlace VPS ↔ servidor IA | Tailscale | ACLs: `tag:lf-web` solo llega a `tag:ia:<puerto de llama-swap>` |
 | Modelos principales | Servidor IA propio (llama-swap) | API key + proxy que solo expone las rutas de inferencia |

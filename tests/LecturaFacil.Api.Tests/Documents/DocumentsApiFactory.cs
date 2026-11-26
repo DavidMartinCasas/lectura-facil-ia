@@ -11,7 +11,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LecturaFacil.Api.Tests.Documents;
 
 /// <summary>API sin base de datos: los documentos se guardan en <see cref="Repository"/> para poder comprobarlos.</summary>
-public sealed class DocumentsApiFactory(string environment = "Production") : WebApplicationFactory<Program>
+public sealed class DocumentsApiFactory(string environment = "Production", IReadOnlyDictionary<string, string>? settings = null)
+    : WebApplicationFactory<Program>
 {
     public RecordingDocumentRepository Repository { get; } = new();
 
@@ -19,7 +20,7 @@ public sealed class DocumentsApiFactory(string environment = "Production") : Web
     {
         builder.UseEnvironment(environment);
         builder.UseSetting("Database:ConnectionString", TestConfiguration.UnreachableDatabase);
-        foreach (var (key, value) in TestConfiguration.ValidLlmSettings)
+        foreach (var (key, value) in TestConfiguration.ValidLlmSettings.Concat(settings ?? new Dictionary<string, string>()))
         {
             builder.UseSetting(key, value);
         }

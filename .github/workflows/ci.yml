@@ -88,25 +88,47 @@ jobs:
   containers:
     name: Contenedores
     runs-on: ubuntu-24.04
+    env:
+      BASE: -f deploy/docker-compose.yml
+      PROD: -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
+      - name: Lint de Dockerfiles (hadolint)
+        run: |
+          for dockerfile in src/LecturaFacil.Api/Dockerfile src/LecturaFacil.Web/Dockerfile; do
+            echo "$dockerfile"
+            docker run --rm -i hadolint/hadolint:v2.14.0@sha256:27086352fd5e1907ea2b934eb1023f217c5ae087992eb59fde121dce9c9ff21e < "$dockerfile"
+          done
+
+      - name: Lint de scripts (shellcheck)
+        run: >
+          docker run --rm -v "${{ github.workspace }}/deploy:/mnt:ro"
+          koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
+          /mnt/scripts/backup-postgres.sh /mnt/postgres/initdb/10-roles.sh
+
       - name: Validar docker-compose
         run: |
           cp deploy/.env.example deploy/.env
-          # Contraseña con separadores: la API debe arrancar igual (credenciales escapadas).
+          # Contraseñas con separadores y comillas: los roles se crean y la API arranca igual (credenciales escapadas).
           sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci;con=separadores/' deploy/.env
-          docker compose -f deploy/docker-compose.yml config --quiet
+          sed -i "s/^POSTGRES_OWNER_PASSWORD=.*/POSTGRES_OWNER_PASSWORD=ci-owner;o'reilly/" deploy/.env
+          sed -i 's/^POSTGRES_APP_PASSWORD=.*/POSTGRES_APP_PASSWORD=ci-app;con=separadores/' deploy/.env
+          docker compose $BASE config --quiet
+          docker compose $PROD config --quiet
+          # Producción no publica ningún puerto en el host.
+          published=$(docker compose $PROD config --format json | jq '[.services[] | select((.ports // []) | length > 0)] | length')
+          test "$published" = 0
 
       - name: Construir imágenes
-        run: docker compose -f deploy/docker-compose.yml build
+        run: docker compose $BASE build
 
       # Criterio "Todo arranca con Docker Compose": /health a través de nginx y la página de inicio.
       - name: Prueba de humo
         run: |
-          docker compose -f deploy/docker-compose.yml up -d --wait
+          docker compose $BASE up -d --wait
           for i in $(seq 1 30); do
             curl -fsS http://localhost:8080/health > health.json && break
             sleep 2
@@ -116,10 +138,30 @@ jobs:
           curl -fsSI http://localhost:8080/ | grep -qi "^content-security-policy: default-src 'self'"
           curl -fsSI http://localhost:8080/ | grep -qi "^x-content-type-options: nosniff"
 
+      # Mínimo privilegio (US-10): las migraciones terminaron bien y la cuenta de la API solo puede tocar filas.
+      - name: Roles de PostgreSQL
+        run: |
+          test "$(docker compose $BASE ps -a --format '{{.ExitCode}}' migrate)" = 0
+          as_app() {
+            docker compose $BASE exec -T postgres sh -c \
+              'PGPASSWORD="$POSTGRES_APP_PASSWORD" psql -h 127.0.0.1 -U "$POSTGRES_APP_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -tAc "$1"' \
+              sh "$1"
+          }
+          test "$(as_app "select rolsuper or rolcreatedb or rolcreaterole from pg_roles where rolname = current_user")" = f
+          test "$(as_app "select count(*) > 0 from \"__EFMigrationsHistory\"")" = t
+          if as_app "create table intruso (id int)"; then
+            echo "::error::La cuenta de la API puede crear tablas."
+            exit 1
+          fi
+          if as_app "drop table \"__EFMigrationsHistory\""; then
+            echo "::error::La cuenta de la API puede borrar tablas."
+            exit 1
+          fi
+
       - name: Logs si falla
         if: failure()
-        run: docker compose -f deploy/docker-compose.yml logs --no-color
+        run: docker compose $BASE logs --no-color
 
       - name: Parar
         if: always()
-        run: docker compose -f deploy/docker-compose.yml down -v
+        run: docker compose $BASE down -v

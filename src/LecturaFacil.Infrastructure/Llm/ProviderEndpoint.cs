@@ -8,6 +8,8 @@ namespace LecturaFacil.Infrastructure.Llm;
 /// Reglas para la URL de un proveedor: https siempre; http solo hacia localhost o una IP privada, para proveedores
 /// locales. Un nombre de host con http no se admite aunque no tenga puntos: el DNS podría resolverlo a una IP pública
 /// (dominios de búsqueda) y la clave y los documentos viajarían sin cifrar.
+/// Cuentan como privadas las de RFC 1918, las IPv6 locales únicas (fc00::/7) y el espacio compartido 100.64.0.0/10
+/// (RFC 6598), que no se enruta en internet y es el que usan VPN como Tailscale para llegar a un servidor de modelos.
 /// </summary>
 public static class ProviderEndpoint
 {
@@ -46,6 +48,7 @@ public static class ProviderEndpoint
         var bytes = address.GetAddressBytes();
         return bytes[0] == 10
             || (bytes[0] == 172 && bytes[1] is >= 16 and <= 31)
-            || (bytes[0] == 192 && bytes[1] == 168);
+            || (bytes[0] == 192 && bytes[1] == 168)
+            || (bytes[0] == 100 && bytes[1] is >= 64 and <= 127);
     }
 }

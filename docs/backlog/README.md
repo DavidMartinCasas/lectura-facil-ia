@@ -80,7 +80,7 @@ Las historias que se lanzan el mismo día no dependen entre sí y pueden hacerse
 | [US-07](historias/US-07-revisor-de-pautas.md) | Revisor de pautas | EP-03 | Must | 2 | Vie 20 | US-05, US-06 | No | 🔍 |
 | [US-08](historias/US-08-indice-de-legibilidad.md) | Índice de legibilidad INFLESZ | EP-03 | Must | 3 | Jue 19 | US-01 | No | 🔍 |
 | [US-09](historias/US-09-resiliencia-y-respaldo.md) | Proveedores configurables con respaldo opcional | EP-03 | Must | 3 | Jue 19 | US-03 | No | 🔍 |
-| [US-10](historias/US-10-despliegue-esqueleto-vps.md) | Despliegue del esqueleto en el VPS | EP-08 | Must | 3 | Sáb 21 | US-01 | **Sí: infraestructura** | ⬜ |
+| [US-10](historias/US-10-despliegue-esqueleto-vps.md) | Despliegue del esqueleto en el VPS | EP-08 | Must | 3 | Sáb 21 | US-01 | **Sí: infraestructura** | 🔍 |
 | [US-11](historias/US-11-verificador-del-significado.md) | Verificador del significado | EP-04 | Must | 5 | Vie 20 | US-06 | No | 🔍 |
 | [US-12](historias/US-12-subida-y-progreso-ui.md) | Pantalla de subida y progreso | EP-05 | Must | 3 | Vie 20 | US-04, US-06 | No | 🔍 |
 | [US-13](historias/US-13-vista-lado-a-lado.md) | Vista lado a lado con edición | EP-05 | Must | 5 | Sáb 21 | US-07, US-08, US-11, US-12 | No | 🔍 |
