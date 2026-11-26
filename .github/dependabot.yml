@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Actualizaciones de dependencias (US-19). Una PR semanal por ecosistema, con las actualizaciones agrupadas; cada PR
 # pasa la CI completa antes de fusionarse. Las alertas de seguridad abren PR aparte, sin esperar al lunes.
+# cooldown: solo se proponen versiones con 7 días o más, no las recién publicadas (cuando más se cuelan paquetes
+# comprometidos). No afecta a las actualizaciones de seguridad.
 # Las imágenes de herramientas fijadas dentro de ci.yml (gitleaks, hadolint, shellcheck, actionlint) se actualizan a mano.
 version: 2
 
@@ -10,6 +12,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       nuget:
@@ -22,6 +26,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       angular:
@@ -39,6 +45,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     groups:
       docker:
         patterns: ["*"]
@@ -51,6 +59,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "chore(deps)"
 
@@ -60,6 +70,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     groups:
       github-actions:
         patterns: ["*"]

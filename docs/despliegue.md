@@ -420,6 +420,11 @@ restrict,from="100.64.0.0/10",command="/opt/docker/apps/lectura-facil/deploy/scr
   hexadecimales (le llega en `SSH_ORIGINAL_COMMAND`); cualquier otra cosa la rechaza sin tocar nada.
 - `restrict` quita la terminal, los reenvíos de puertos y de agente y X11.
 - `from=` solo acepta la clave desde la red de Tailscale (`100.64.0.0/10`).
+- El script solo despliega commits que estén en `main`: un SHA de otra rama o desconocido lo rechaza antes de tocar
+  nada, aunque llegue con la clave de la CI.
+- **No actives Tailscale SSH en este servidor** (`tailscale set --ssh=false`) ni metas `tag:ci` en la sección `ssh` de
+  la política: Tailscale SSH atiende el puerto 22 del tailnet sin pasar por `authorized_keys`, y `command=`, `restrict`
+  y `from=` dejarían de aplicarse.
 
 Como el script pone `deploy/` en el commit desplegado, el repositorio queda en `HEAD` separado (*detached*); es normal.
 El último SHA desplegado se guarda en `deploy/.release` (no se versiona) y es al que se vuelve si el siguiente falla.

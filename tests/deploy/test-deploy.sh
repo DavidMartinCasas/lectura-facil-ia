@@ -7,8 +7,8 @@
 #   docker compose -f deploy/docker-compose.yml build
 #   tests/deploy/test-deploy.sh
 #
-# Casos: primer despliegue, actualización con copia de la base, versión rota (vuelve a la anterior), imagen que no
-# existe (vuelve a la anterior) y SHA no válido (no toca nada).
+# Casos: solo commits de main (en un repositorio git de prueba), primer despliegue, actualización con copia de la base,
+# versión rota (vuelve a la anterior), imagen que no existe (vuelve a la anterior) y SHA no válido (no toca nada).
 set -euo pipefail
 
 repo_root=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
@@ -21,6 +21,7 @@ readonly first=1111111111111111111111111111111111111111
 readonly second=2222222222222222222222222222222222222222
 readonly broken=3333333333333333333333333333333333333333
 readonly missing=4444444444444444444444444444444444444444
+readonly unknown=5555555555555555555555555555555555555555
 
 work_dir=$(mktemp -d)
 export COMPOSE_PROJECT_NAME=lf-deploy-test
@@ -84,7 +85,34 @@ expect_running() {
   [[ $(served_version) == "$sha" ]] || fail "/health devuelve la versión '$(served_version)' y se esperaba $sha."
 }
 
+git_test() { git -c user.name=Prueba -c user.email=prueba@example.invalid -c commit.gpgsign=false "$@"; }
+
+# Un remoto con main y otra rama; el script copiado en un clon. Solo se acepta lo que está en main.
+check_only_main_is_deployed() {
+  local origin=$work_dir/origin.git clone=$work_dir/clone other status sha
+  git init --quiet --bare "$origin"
+  git clone --quiet "$origin" "$clone" 2>/dev/null
+  mkdir -p "$clone/deploy/scripts"
+  cp "$deploy_script" "$clone/deploy/scripts/deploy.sh"
+  git_test -C "$clone" add deploy
+  git_test -C "$clone" commit --quiet -m main
+  git -C "$clone" push --quiet origin HEAD:refs/heads/main
+  git_test -C "$clone" commit --quiet --allow-empty -m "otra rama"
+  git -C "$clone" push --quiet origin HEAD:refs/heads/otra
+  other=$(git -C "$clone" rev-parse HEAD)
+
+  for sha in "$other" "$unknown"; do
+    status=0
+    DEPLOY_SYNC_REPO=true DEPLOY_STATE_FILE=$work_dir/clone-release "$clone/deploy/scripts/deploy.sh" "$sha" || status=$?
+    [[ $status == 2 ]] || fail "deploy.sh $sha (fuera de main) terminó con $status y se esperaba 2."
+  done
+  [[ $(git -C "$clone" rev-parse HEAD) == "$other" ]] || fail "El repositorio cambió de commit con un SHA rechazado."
+}
+
 [[ -f $repo_root/deploy/.env ]] || fail "Falta deploy/.env (cópialo de deploy/.env.example)."
+
+check_only_main_is_deployed
+pass "solo se despliegan commits de main"
 
 docker run -d --rm --name "$registry_container" -p "127.0.0.1:$registry_port:5000" "$registry_image" >/dev/null
 docker network create "$PUBLIC_NETWORK" >/dev/null
@@ -116,5 +144,10 @@ pass "imagen que no existe: vuelve a la anterior y falla"
 
 expect_deploy 2 "not-a-sha"
 SSH_ORIGINAL_COMMAND="$first; rm -rf /" expect_deploy 2 ""
+SSH_ORIGINAL_COMMAND=$'
+'"$first"$'
+id' expect_deploy 2 ""
+SSH_ORIGINAL_COMMAND="$first"$'
+id' expect_deploy 2 ""
 expect_running "$second"
 pass "SHA no válido: no toca nada"

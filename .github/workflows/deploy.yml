@@ -45,25 +45,28 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Iniciar sesión en GHCR
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
-
       # ghcr.io/<propietario en minúsculas>/<imagen>:<sha>. La etiqueta source enlaza el paquete con el repositorio.
-      - name: Construir y publicar
+      - name: Construir
         env:
           IMAGE: ${{ matrix.image }}
           CONTEXT: ${{ matrix.context }}
           DOCKERFILE: ${{ matrix.dockerfile }}
         run: |
           ref="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/$IMAGE:$GITHUB_SHA"
+          echo "IMAGE_REF=$ref" >> "$GITHUB_ENV"
           docker build --pull --file "$DOCKERFILE" --tag "$ref" \
             --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
             --label "org.opencontainers.image.licenses=Apache-2.0" \
             "$CONTEXT"
-          docker push "$ref"
+
+      # La sesión se abre después de construir: mientras corren npm ci y dotnet restore, el runner no tiene credenciales.
+      - name: Publicar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE_REF"
 
       - name: Cerrar sesión en GHCR
         if: ${{ always() }}

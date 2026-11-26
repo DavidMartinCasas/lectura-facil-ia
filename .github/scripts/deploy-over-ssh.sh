@@ -18,6 +18,17 @@ sha=${1:?Indica el SHA que se despliega.}
 : "${DEPLOY_SSH_KEY:?Falta el secreto DEPLOY_SSH_KEY.}"
 : "${DEPLOY_SSH_KNOWN_HOSTS:?Falta el secreto DEPLOY_SSH_KNOWN_HOSTS.}"
 
+# Ni el host ni el usuario pueden empezar por "-": ssh los tomaría como opciones (por ejemplo, -oProxyCommand=…).
+readonly NAME_PATTERN='^[A-Za-z0-9._][A-Za-z0-9._-]*$'
+if [[ ! $DEPLOY_HOST =~ $NAME_PATTERN ]]; then
+  echo "::error::DEPLOY_HOST no es un nombre de host ni una IP válidos." >&2
+  exit 2
+fi
+if [[ ! $DEPLOY_USER =~ $NAME_PATTERN ]]; then
+  echo "::error::DEPLOY_USER no es un nombre de usuario válido." >&2
+  exit 2
+fi
+
 umask 077
 ssh_dir=$(mktemp -d "${RUNNER_TEMP:-/tmp}/deploy-ssh.XXXXXX")
 trap 'rm -rf "$ssh_dir"' EXIT
@@ -31,4 +42,4 @@ ssh -i "$ssh_dir/key" \
   -o UserKnownHostsFile="$ssh_dir/known_hosts" \
   -o ConnectTimeout=30 \
   -o ServerAliveInterval=30 \
-  "$DEPLOY_USER@$DEPLOY_HOST" "$sha"
+  -- "$DEPLOY_USER@$DEPLOY_HOST" "$sha"

@@ -19,8 +19,10 @@
 #                           (por defecto deploy/docker-compose.yml:deploy/docker-compose.prod.yml).
 #   DEPLOY_STATE_FILE       fichero con el SHA desplegado (por defecto deploy/.release).
 #   DEPLOY_HEALTH_TIMEOUT   segundos que se espera a /health (por defecto 180).
-#   DEPLOY_SYNC_REPO        true (por defecto) pone el repositorio en el commit desplegado; false lo deja como está.
+#   DEPLOY_SYNC_REPO        true (por defecto): solo despliega commits de DEPLOY_BRANCH y pone el repositorio en el
+#                           commit desplegado. false no toca git ni comprueba la rama (solo para pruebas).
 #   DEPLOY_GIT_REMOTE       remoto del que se descarga el commit (por defecto origin).
+#   DEPLOY_BRANCH           rama de la que tiene que ser el commit (por defecto main).
 #   BACKUP_*                se pasan a backup-postgres.sh.
 set -euo pipefail
 
@@ -34,6 +36,7 @@ state_file=${DEPLOY_STATE_FILE:-$repo_root/deploy/.release}
 health_timeout=${DEPLOY_HEALTH_TIMEOUT:-180}
 sync_repo=${DEPLOY_SYNC_REPO:-true}
 git_remote=${DEPLOY_GIT_REMOTE:-origin}
+deploy_branch=${DEPLOY_BRANCH:-main}
 compose_args=()
 
 log() { printf '[deploy] %s\n' "$*"; }
@@ -109,12 +112,26 @@ backup_database() {
   "$script_dir/backup-postgres.sh"
 }
 
+# Solo commits de la rama de despliegue: aunque alguien tuviera la clave del CI, no podría desplegar una rama ni un
+# commit suelto (con su docker-compose). Termina antes de tocar nada.
+check_on_branch() {
+  local sha=$1
+  [[ $sync_repo == true ]] || return 0
+  if ! git -C "$repo_root" fetch --quiet "$git_remote"     "+refs/heads/$deploy_branch:refs/remotes/$git_remote/$deploy_branch"; then
+    error "No se ha podido descargar $git_remote/$deploy_branch."
+    exit 1
+  fi
+  if ! git -C "$repo_root" merge-base --is-ancestor "$sha" "refs/remotes/$git_remote/$deploy_branch" 2>/dev/null; then
+    error "$sha no está en $deploy_branch: no se despliega."
+    exit 2
+  fi
+}
+
 sync_repository() {
   local sha=$1
   [[ $sync_repo == true ]] || return 0
   log "Ficheros de despliegue en el commit $sha."
-  git -C "$repo_root" fetch --quiet "$git_remote" || return 1
-  git -C "$repo_root" checkout --quiet --detach "$sha" || return 1
+  git -C "$repo_root" checkout --quiet --detach "$sha"
 }
 
 # Responde 200 a través del nginx de la web (el mismo camino que el proxy) y con la versión que se espera.
@@ -180,6 +197,7 @@ main() {
   load_compose_files
   take_lock
   previous=$(previous_release)
+  check_on_branch "$sha"
 
   log "Desplegando $sha (versión actual: ${previous:-ninguna})."
   backup_database "$sha"
