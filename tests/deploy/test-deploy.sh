@@ -22,6 +22,7 @@ readonly second=2222222222222222222222222222222222222222
 readonly broken=3333333333333333333333333333333333333333
 readonly missing=4444444444444444444444444444444444444444
 readonly unknown=5555555555555555555555555555555555555555
+readonly LOG_LINES_ON_FAILURE=50
 
 work_dir=$(mktemp -d)
 export COMPOSE_PROJECT_NAME=lf-deploy-test
@@ -32,20 +33,19 @@ export DEPLOY_STATE_FILE=$work_dir/release
 export DEPLOY_HEALTH_TIMEOUT=${DEPLOY_HEALTH_TIMEOUT:-120}
 export BACKUP_DIR=$work_dir/backups
 
+# Con la versión desplegada (o cualquiera, si aún no hay: down no la necesita).
 compose() {
-  IMAGE_TAG=$(cat "$DEPLOY_STATE_FILE") docker compose \
+  IMAGE_TAG=$(cat "$DEPLOY_STATE_FILE" 2>/dev/null || echo local) docker compose \
     -f "$repo_root/deploy/docker-compose.yml" -f "$repo_root/deploy/docker-compose.prod.yml" "$@"
 }
 
 clean_up() {
   local status=$?
-  if ((status != 0)) && [[ -f $DEPLOY_STATE_FILE ]]; then
+  if ((status != 0)); then
     compose ps -a || true
-    compose logs --no-color --tail 50 || true
+    compose logs --no-color --tail "$LOG_LINES_ON_FAILURE" || true
   fi
-  if [[ -f $DEPLOY_STATE_FILE ]]; then
-    compose down -v --remove-orphans >/dev/null 2>&1 || true
-  fi
+  compose down -v --remove-orphans >/dev/null 2>&1 || true
   docker rm -f "$registry_container" >/dev/null 2>&1 || true
   docker network rm "$PUBLIC_NETWORK" >/dev/null 2>&1 || true
   rm -rf "$work_dir"

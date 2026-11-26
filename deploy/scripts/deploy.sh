@@ -29,6 +29,7 @@ set -euo pipefail
 readonly SHA_PATTERN='^[0-9a-f]{40}$'
 readonly HEALTH_URL='http://127.0.0.1:8080/health'
 readonly HEALTH_INTERVAL_SECONDS=3
+readonly HEALTH_REQUEST_TIMEOUT_SECONDS=5
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo_root=$(CDPATH='' cd -- "$script_dir/../.." && pwd)
@@ -137,7 +138,7 @@ sync_repository() {
 # Responde 200 a través del nginx de la web (el mismo camino que el proxy) y con la versión que se espera.
 healthy() {
   local sha=$1 headers
-  headers=$(compose "$sha" exec -T web wget -q -S -T 5 -O - "$HEALTH_URL" 2>&1 >/dev/null) || return 1
+  headers=$(compose "$sha" exec -T web wget -q -S -T "$HEALTH_REQUEST_TIMEOUT_SECONDS" -O - "$HEALTH_URL" 2>&1 >/dev/null) || return 1
   printf '%s\n' "$headers" | tr -d '\r' | grep -Eqi "^[[:space:]]*x-app-version:[[:space:]]*${sha}[[:space:]]*$"
 }
 

@@ -413,13 +413,13 @@ En el servidor, su parte pública en `/home/lf-deploy/.ssh/authorized_keys` (dir
 sola línea:
 
 ```text
-restrict,from="100.64.0.0/10",command="/opt/docker/apps/lectura-facil/deploy/scripts/deploy.sh" ssh-ed25519 AAAA… github-actions lectura-facil
+restrict,from="100.64.0.0/10,fd7a:115c:a1e0::/48",command="/opt/docker/apps/lectura-facil/deploy/scripts/deploy.sh" ssh-ed25519 AAAA… github-actions lectura-facil
 ```
 
 - `command=` ejecuta siempre el script, pida lo que pida el cliente. El script solo acepta un SHA de 40 caracteres
   hexadecimales (le llega en `SSH_ORIGINAL_COMMAND`); cualquier otra cosa la rechaza sin tocar nada.
 - `restrict` quita la terminal, los reenvíos de puertos y de agente y X11.
-- `from=` solo acepta la clave desde la red de Tailscale (`100.64.0.0/10`).
+- `from=` solo acepta la clave desde las direcciones de Tailscale (`100.64.0.0/10` y, en IPv6, `fd7a:115c:a1e0::/48`).
 - El script solo despliega commits que estén en `main`: un SHA de otra rama o desconocido lo rechaza antes de tocar
   nada, aunque llegue con la clave de la CI.
 - **No actives Tailscale SSH en este servidor** (`tailscale set --ssh=false`) ni metas `tag:ci` en la sección `ssh` de
@@ -448,7 +448,9 @@ sudo -u lf-deploy docker login ghcr.io -u <tu-usuario-de-github>   # pega el tok
 
 Docker guarda el token en `/home/lf-deploy/.docker/config.json`, sin cifrar: ponle caducidad y nada más que ese permiso.
 
-Con la clave en su sitio, prueba el script a mano en el servidor con un commit ya publicado:
+**Primer despliegue, a mano y obligatorio.** Antes de activar `DEPLOY_ENABLED` (9.3), despliega una vez a mano un
+commit de `main` cuyas imágenes ya estén en GHCR (el workflow las publica aunque no despliegue). Así se crea
+`deploy/.release` y el primer despliegue automático tiene una versión a la que volver si falla:
 
 ```bash
 sudo -u lf-deploy /opt/docker/apps/lectura-facil/deploy/scripts/deploy.sh <sha-de-un-commit-de-main>
@@ -504,7 +506,7 @@ aprobar cada despliegue a mano, añade *Required reviewers*.
 | Environment `production` | `DEPLOY_SSH_KNOWN_HOSTS` | Secreto | La línea de `known_hosts` del servidor (abajo). Sin ella no se conecta. |
 | Environment `production` | `DEPLOY_HOST` | Variable | Nombre MagicDNS o IP de Tailscale del servidor. |
 | Environment `production` | `DEPLOY_USER` | Variable | `lf-deploy`. |
-| Environment `production` | `PUBLIC_URL` | Variable (opcional) | `https://<subdominio>`: el workflow comprueba también desde internet que `/health` da la versión nueva. |
+| Environment `production` | `PUBLIC_URL` | Variable (opcional) | `https://<subdominio>`: el workflow comprueba también desde internet que `/health` da la versión nueva. Es informativa: si falla, el job sale en rojo pero no vuelve atrás. |
 | Repositorio (*Actions → Variables*) | `DEPLOY_ENABLED` | Variable | `true`. Sin ella el workflow solo publica las imágenes (los forks no despliegan). |
 
 La línea de `known_hosts`, desde un equipo del tailnet, comparando la huella con la del servidor:
@@ -525,7 +527,7 @@ gh secret set DEPLOY_SSH_KNOWN_HOSTS --env production < known_hosts.lf
 gh variable set DEPLOY_HOST --env production --body "<host-tailscale>"
 gh variable set DEPLOY_USER --env production --body lf-deploy
 gh variable set PUBLIC_URL --env production --body "https://<subdominio>"
-gh variable set DEPLOY_ENABLED --body true
+gh variable set DEPLOY_ENABLED --body true   # después del primer despliegue a mano (9.1)
 ```
 
 Después, borra `lf-deploy-ci` de tu equipo: si hace falta otra, se genera de nuevo.

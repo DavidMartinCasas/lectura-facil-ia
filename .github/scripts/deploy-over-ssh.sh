@@ -20,6 +20,8 @@ sha=${1:?Indica el SHA que se despliega.}
 
 # Ni el host ni el usuario pueden empezar por "-": ssh los tomaría como opciones (por ejemplo, -oProxyCommand=…).
 readonly NAME_PATTERN='^[A-Za-z0-9._][A-Za-z0-9._-]*$'
+readonly CONNECT_TIMEOUT_SECONDS=30
+readonly KEEPALIVE_SECONDS=30
 if [[ ! $DEPLOY_HOST =~ $NAME_PATTERN ]]; then
   echo "::error::DEPLOY_HOST no es un nombre de host ni una IP válidos." >&2
   exit 2
@@ -40,6 +42,6 @@ ssh -i "$ssh_dir/key" \
   -o BatchMode=yes \
   -o StrictHostKeyChecking=yes \
   -o UserKnownHostsFile="$ssh_dir/known_hosts" \
-  -o ConnectTimeout=30 \
-  -o ServerAliveInterval=30 \
+  -o ConnectTimeout="$CONNECT_TIMEOUT_SECONDS" \
+  -o ServerAliveInterval="$KEEPALIVE_SECONDS" \
   -- "$DEPLOY_USER@$DEPLOY_HOST" "$sha"

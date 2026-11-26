@@ -169,9 +169,8 @@ jobs:
     name: Contenedores
     runs-on: ubuntu-24.04
     env:
-      # docker compose usa el compose base; con la capa de producción, COMPOSE_FILE=$PROD_COMPOSE_FILE.
+      # Compose base para build, logs y down; los scripts de .github/scripts nombran sus ficheros.
       COMPOSE_FILE: deploy/docker-compose.yml
-      PROD_COMPOSE_FILE: deploy/docker-compose.yml:deploy/docker-compose.prod.yml
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -191,55 +190,21 @@ jobs:
           /mnt/deploy/scripts/backup-postgres.sh /mnt/deploy/scripts/deploy.sh /mnt/deploy/postgres/initdb/10-roles.sh
           /mnt/tests/deploy/test-deploy.sh /mnt/.github/scripts/coverage-summary.sh
           /mnt/.github/scripts/deploy-over-ssh.sh /mnt/.github/scripts/check-version.sh
+          /mnt/.github/scripts/validate-compose.sh /mnt/.github/scripts/smoke-test.sh /mnt/.github/scripts/check-db-roles.sh
 
       - name: Validar docker-compose
-        run: |
-          cp deploy/.env.example deploy/.env
-          # Contraseñas con separadores y comillas: los roles se crean y la API arranca igual (credenciales escapadas).
-          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci;con=separadores/' deploy/.env
-          sed -i "s/^POSTGRES_OWNER_PASSWORD=.*/POSTGRES_OWNER_PASSWORD=ci-owner;o'reilly/" deploy/.env
-          sed -i 's/^POSTGRES_APP_PASSWORD=.*/POSTGRES_APP_PASSWORD=ci-app;con=separadores/' deploy/.env
-          docker compose config --quiet
-          COMPOSE_FILE=$PROD_COMPOSE_FILE docker compose config --quiet
-          # Producción no publica ningún puerto en el host.
-          published=$(COMPOSE_FILE=$PROD_COMPOSE_FILE docker compose config --format json | jq '[.services[] | select((.ports // []) | length > 0)] | length')
-          test "$published" = 0
+        run: .github/scripts/validate-compose.sh
 
       - name: Construir imágenes
         run: docker compose build
 
       # Criterio "Todo arranca con Docker Compose": /health a través de nginx y la página de inicio.
       - name: Prueba de humo
-        run: |
-          docker compose up -d --wait
-          for _ in $(seq 1 30); do
-            curl -fsS http://localhost:8080/health > health.json && break
-            sleep 2
-          done
-          test "$(cat health.json)" = '{"status":"Healthy"}'
-          curl -fsS http://localhost:8080/ | grep -q "<title>Lectura Fácil IA</title>"
-          curl -fsSI http://localhost:8080/ | grep -qi "^content-security-policy: default-src 'self'"
-          curl -fsSI http://localhost:8080/ | grep -qi "^x-content-type-options: nosniff"
+        run: .github/scripts/smoke-test.sh
 
       # Mínimo privilegio (US-10): las migraciones terminaron bien y la cuenta de la API solo puede tocar filas.
       - name: Roles de PostgreSQL
-        run: |
-          test "$(docker compose ps -a --format '{{.ExitCode}}' migrate)" = 0
-          as_app() {
-            docker compose exec -T postgres sh -c \
-              'PGPASSWORD="$POSTGRES_APP_PASSWORD" psql -h 127.0.0.1 -U "$POSTGRES_APP_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -tAc "$1"' \
-              sh "$1"
-          }
-          test "$(as_app "select rolsuper or rolcreatedb or rolcreaterole from pg_roles where rolname = current_user")" = f
-          test "$(as_app "select count(*) > 0 from \"__EFMigrationsHistory\"")" = t
-          if as_app "create table intruso (id int)"; then
-            echo "::error::La cuenta de la API puede crear tablas."
-            exit 1
-          fi
-          if as_app "drop table \"__EFMigrationsHistory\""; then
-            echo "::error::La cuenta de la API puede borrar tablas."
-            exit 1
-          fi
+        run: .github/scripts/check-db-roles.sh
 
       # US-19: deploy.sh contra un registro local con la capa de producción (despliegue, copia y vuelta atrás).
       - name: Script de despliegue

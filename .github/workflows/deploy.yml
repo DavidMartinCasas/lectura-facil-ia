@@ -12,7 +12,8 @@ on:
 # Sin permisos por defecto: cada job pide solo los suyos.
 permissions: {}
 
-# Un despliegue cada vez y en orden: el siguiente espera a que termine el anterior, sin cancelarlo.
+# Un despliegue cada vez, sin cancelar el que está en marcha. GitHub deja solo una ejecución en espera por grupo: si
+# llegan varias fusiones seguidas, se cancelan las intermedias y se despliega la más reciente.
 concurrency:
   group: deploy-production
   cancel-in-progress: false
@@ -33,6 +34,7 @@ jobs:
       packages: write
     strategy:
       matrix:
+        # Mismo contexto y Dockerfile que deploy/docker-compose.yml (la imagen que prueba la CI): cámbialos a la vez.
         include:
           - image: lectura-facil-api
             context: .
@@ -106,7 +108,8 @@ jobs:
           DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
         run: .github/scripts/deploy-over-ssh.sh "$GITHUB_SHA"
 
-      # Opcional: la misma comprobación desde internet, a través del proxy.
+      # Opcional e informativa: la misma comprobación desde internet, a través del proxy y la CDN. Si falla, el job sale
+      # en rojo pero no vuelve atrás (la vuelta atrás la decide deploy.sh con su comprobación dentro del servidor).
       - name: Comprobar la URL pública
         if: ${{ vars.PUBLIC_URL != '' }}
         env:

@@ -38,7 +38,7 @@ write_summary() {
     echo "| ${assembly:-desconocido} | $lines | $branches |"
   done
   echo
-  echo "Umbral: 80 % de líneas y de ramas en Domain y Application (AGENTS.md, sección 7)."
+  echo "Umbral de líneas y de ramas en Domain y Application: el de tests/Directory.Build.targets (AGENTS.md, sección 7)."
 }
 
 if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
