@@ -370,9 +370,9 @@ flowchart LR
     pr["Pull request"] --> ci["CI (ci.yml)<br/>build · tests · lint · e2e<br/>gitleaks · evaluación --dry-run"]
     ci -- "verde + fusión" --> main["push a main"]
     main --> ci2["CI otra vez<br/>(la llama deploy.yml)"]
-    ci2 --> pub["Imágenes en GHCR<br/>etiqueta = sha"]
+    ci2 --> pub["Imágenes en GHCR<br/>etiqueta = sha + digests"]
     pub --> ts["Runner en el tailnet<br/>nodo efímero tag:ci"]
-    ts -- "SSH, solo el puerto 22" --> vps["Servidor · deploy.sh sha"]
+    ts -- "SSH, solo el puerto 22" --> vps["Servidor · deploy.sh sha digests"]
     vps --> health{"/health 200 y<br/>X-App-Version = sha"}
     health -- "sí" --> ok["Desplegado"]
     health -- "no" --> back["Vuelve a la versión anterior<br/>y el workflow falla"]
@@ -382,11 +382,17 @@ flowchart LR
 |---|---|---|
 | CI | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | En cada PR y rama: build sin avisos, `dotnet format`, tests con cobertura (artefacto y resumen del job), paquetes vulnerables, lint, tests, e2e y build del front, `npm audit`, gitleaks, hadolint, shellcheck, actionlint, validación de compose, prueba de humo, roles de PostgreSQL, prueba de `deploy.sh` y evaluación `--dry-run`. |
 | Despliegue | [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) | Solo en push a `main` (nunca en PRs ni con código de forks), uno cada vez: CI → publicar → desplegar. Permisos mínimos por job: `packages: write` solo al publicar. |
-| Script del servidor | [`deploy/scripts/deploy.sh`](../deploy/scripts/deploy.sh) | Copia de la base, ficheros de `deploy/` en el commit, `pull`, `up -d` (`migrate` antes que la API), espera a `/health` con la versión y, si falla, vuelve a la anterior. |
+| Script del servidor | [`deploy/scripts/deploy.sh`](../deploy/scripts/deploy.sh) | Copia de la base, ficheros de `deploy/` en el commit, `pull` por digest, `up -d` (`migrate` antes que la API), espera a `/health` con la versión y, si falla, vuelve a la anterior. |
 | Dependencias | [`.github/dependabot.yml`](../.github/dependabot.yml) | PR semanales para NuGet, npm, imágenes Docker y acciones (que siguen fijadas por SHA). |
 
 Las imágenes son `ghcr.io/<propietario>/lectura-facil-api:<sha>` y `ghcr.io/<propietario>/lectura-facil-web:<sha>`,
 con `<propietario>` en minúsculas. No hay etiqueta `latest`: cada despliegue nombra exactamente qué versión corre.
+
+**Por digest, no solo por etiqueta.** En GHCR una etiqueta se puede volver a publicar con otra imagen (cualquier
+workflow con `packages: write` puede hacerlo). Por eso el job que publica anota el digest (`sha256:…`) de cada imagen y
+el servidor descarga `lectura-facil-api:<sha>@<digest>`: si alguien reescribiera la etiqueta, se seguiría desplegando
+exactamente la imagen que se construyó en `main`. Las variables `API_IMAGE_DIGEST` y `WEB_IMAGE_DIGEST` de
+`docker-compose.yml` las pone `deploy.sh`; vacías (en local o a mano), se usa la etiqueta.
 
 #### 9.1 Usuario de despliegue en el servidor
 
@@ -409,15 +415,37 @@ En tu equipo, una clave solo para la CI (sin frase de paso: la guarda GitHub):
 ssh-keygen -t ed25519 -N "" -C "github-actions lectura-facil" -f lf-deploy-ci
 ```
 
-En el servidor, su parte pública en `/home/lf-deploy/.ssh/authorized_keys` (directorio `700`, fichero `600`), en una
-sola línea:
+**El ejecutor, instalado fuera del repositorio.** La clave de la CI no ejecuta `deploy/scripts/deploy.sh` del
+repositorio, sino una copia en `/usr/local/bin/lectura-facil-deploy`, de root y solo de lectura para `lf-deploy`. El
+script pone el repositorio en el commit que despliega: si la clave apuntara al fichero del repositorio, el formato que
+acepta dependería de la última versión desplegada (una vuelta atrás a un commit antiguo dejaría un script que ya no
+entiende lo que envía el workflow). Instálalo desde `main`:
 
-```text
-restrict,from="100.64.0.0/10,fd7a:115c:a1e0::/48",command="/opt/docker/apps/lectura-facil/deploy/scripts/deploy.sh" ssh-ed25519 AAAA… github-actions lectura-facil
+```bash
+cd /opt/docker/apps/lectura-facil
+sudo -u lf-deploy git fetch --quiet origin main
+sudo -u lf-deploy git show origin/main:deploy/scripts/deploy.sh > /tmp/lectura-facil-deploy
+sudo install -o root -g root -m 755 /tmp/lectura-facil-deploy /usr/local/bin/lectura-facil-deploy
+rm /tmp/lectura-facil-deploy
 ```
 
-- `command=` ejecuta siempre el script, pida lo que pida el cliente. El script solo acepta un SHA de 40 caracteres
-  hexadecimales (le llega en `SSH_ORIGINAL_COMMAND`); cualquier otra cosa la rechaza sin tocar nada.
+**Actualízalo a mano** con esos mismos comandos cada vez que una PR cambie `deploy/scripts/deploy.sh`. Si cambia lo que
+envía el workflow (los argumentos), el despliegue automático de esa PR fallará con el ejecutor antiguo: antes de
+fusionarla, quita `DEPLOY_ENABLED` (9.3); después, instala el ejecutor nuevo, vuelve a poner `DEPLOY_ENABLED` y relanza
+el workflow (*Re-run all jobs*). Mientras el instalado no sea el de `main`, cada despliegue lo avisa en el log
+(`AVISO: … no es el deploy/scripts/deploy.sh de main`).
+
+En el servidor, la parte pública de la clave en `/home/lf-deploy/.ssh/authorized_keys` (directorio `700`, fichero
+`600`), en una sola línea:
+
+```text
+restrict,from="100.64.0.0/10,fd7a:115c:a1e0::/48",command="DEPLOY_REPO_DIR=/opt/docker/apps/lectura-facil /usr/local/bin/lectura-facil-deploy" ssh-ed25519 AAAA… github-actions lectura-facil
+```
+
+- `command=` ejecuta siempre el script, pida lo que pida el cliente. `DEPLOY_REPO_DIR` le dice dónde está el
+  repositorio. Por SSH, el script solo acepta
+  `<sha> <digest-api> <digest-web>` (40 caracteres hexadecimales y dos `sha256:` de 64; le llega en
+  `SSH_ORIGINAL_COMMAND`); cualquier otra cosa, también un SHA sin digests, la rechaza sin tocar nada.
 - `restrict` quita la terminal, los reenvíos de puertos y de agente y X11.
 - `from=` solo acepta la clave desde las direcciones de Tailscale (`100.64.0.0/10` y, en IPv6, `fd7a:115c:a1e0::/48`).
 - El script solo despliega commits que estén en `main`: un SHA de otra rama o desconocido lo rechaza antes de tocar
@@ -427,7 +455,8 @@ restrict,from="100.64.0.0/10,fd7a:115c:a1e0::/48",command="/opt/docker/apps/lect
   y `from=` dejarían de aplicarse.
 
 Como el script pone `deploy/` en el commit desplegado, el repositorio queda en `HEAD` separado (*detached*); es normal.
-El último SHA desplegado se guarda en `deploy/.release` (no se versiona) y es al que se vuelve si el siguiente falla.
+La última versión desplegada (SHA y digests) se guarda en `deploy/.release` (no se versiona) y es a la que se vuelve, por
+digest, si la siguiente falla.
 
 **`deploy/.env` en el servidor:**
 
@@ -435,8 +464,9 @@ El último SHA desplegado se guarda en `deploy/.release` (no se versiona) y es a
   imágenes publicadas en lugar de construirlas.
 - `OBSERVABILITY__RELEASE` vacía: la versión es la etiqueta de la imagen. Si tiene un valor, `deploy.sh` se niega a
   desplegar, porque `/health` nunca devolvería el SHA.
-- `IMAGE_TAG` lo pone `deploy.sh` en cada despliegue; el de `deploy/.env` solo cuenta en los comandos manuales. Para
-  usarlos con la versión desplegada: `export IMAGE_TAG=$(cat deploy/.release)`.
+- `IMAGE_TAG` lo pone `deploy.sh` en cada despliegue (y los digests, en `API_IMAGE_DIGEST` y `WEB_IMAGE_DIGEST`); el de
+  `deploy/.env` solo cuenta en los comandos manuales. Para usarlos con la versión desplegada:
+  `read -r IMAGE_TAG API_IMAGE_DIGEST WEB_IMAGE_DIGEST < deploy/.release; export IMAGE_TAG API_IMAGE_DIGEST WEB_IMAGE_DIGEST`.
 
 **Si los paquetes de GHCR son privados**, el usuario de despliegue tiene que iniciar sesión una vez. Lo más sencillo, al
 ser un proyecto abierto, es hacerlos públicos (*Package settings → Change visibility*). Si no, crea un token clásico
@@ -453,7 +483,7 @@ commit de `main` cuyas imágenes ya estén en GHCR (el workflow las publica aunq
 `deploy/.release` y el primer despliegue automático tiene una versión a la que volver si falla:
 
 ```bash
-sudo -u lf-deploy /opt/docker/apps/lectura-facil/deploy/scripts/deploy.sh <sha-de-un-commit-de-main>
+sudo -u lf-deploy env DEPLOY_REPO_DIR=/opt/docker/apps/lectura-facil lectura-facil-deploy <sha-de-un-commit-de-main>
 ```
 
 #### 9.2 Tailscale: la CI solo llega al SSH del servidor
@@ -562,14 +592,22 @@ Si una migración no puede ser compatible (renombrar o borrar una columna en uso
 copia** que `deploy.sh` hace antes de cada despliegue (`/var/backups/lectura-facil`, paso 7), con lo que se pierde lo
 escrito desde entonces. Indícalo en la PR de esa migración.
 
-Para volver a mano a una versión concreta ya publicada: `sudo -u lf-deploy deploy/scripts/deploy.sh <sha>`.
+Para volver a mano a una versión concreta ya publicada, con el ejecutor instalado (9.1):
+`sudo -u lf-deploy env DEPLOY_REPO_DIR=/opt/docker/apps/lectura-facil lectura-facil-deploy <sha>` (por etiqueta) o,
+mejor, con sus digests: `… lectura-facil-deploy <sha> <digest-api> <digest-web>`. Los digests de cada versión están en
+el log del job *Publicar imágenes* y en la página de cada paquete de GHCR.
+
+Volver atrás no cambia el ejecutor: sigue siendo el instalado, aunque el repositorio quede en un commit antiguo. Si ese
+commit es anterior al despliegue por digest, su `docker-compose.yml` no usa los digests y las imágenes se descargan por
+etiqueta.
 
 #### 9.6 Probar el script sin servidor
 
 [`tests/deploy/test-deploy.sh`](../tests/deploy/test-deploy.sh) monta un registro local que hace de GHCR y despliega el
-compose real con la capa de producción, en un proyecto y una red aparte. Prueba el primer despliegue, una actualización
-con copia de la base, una versión rota y una imagen que no existe (las dos vuelven a la anterior y fallan) y un SHA no
-válido. Lo ejecuta la CI; en local:
+compose real con la capa de producción, en un proyecto y una red aparte. Prueba que solo se aceptan commits de `main`,
+el primer despliegue, una actualización con copia de la base, una versión rota y una imagen que no existe (las dos
+vuelven a la anterior y fallan), un despliegue por digest con la etiqueta reescrita en el registro, un digest que no
+existe y versiones no válidas o sin digests por SSH. Lo ejecuta la CI; en local:
 
 ```bash
 cp deploy/.env.example deploy/.env          # si no lo tienes
@@ -587,6 +625,7 @@ tests/deploy/test-deploy.sh
 | El progreso no avanza hasta el final | El proxy guarda la respuesta en su búfer: comprueba que no reescribe `X-Accel-Buffering`. |
 | No se puede llamar a los modelos | Prueba desde el VPS con `curl` (paso 6) y revisa las ACLs de Tailscale. |
 | El job de despliegue no conecta por SSH | Si falla el `ping` de Tailscale, revisa el cliente OAuth y la regla `tag:ci → tag:lf-web:22`. Con `Host key verification failed`, `DEPLOY_SSH_KNOWN_HOSTS` no es la clave del servidor. |
+| El despliegue termina con `uso: deploy.sh …` o el log dice `AVISO: … no es el deploy/scripts/deploy.sh de main` | El ejecutor instalado (`/usr/local/bin/lectura-facil-deploy`) es anterior al de `main`: actualízalo (9.1) y relanza el workflow. |
 | `deploy.sh` falla en `pull` con `denied` o `not found` | Los paquetes son privados y `lf-deploy` no ha hecho `docker login` (9.1), o `IMAGE_REGISTRY` no es `ghcr.io/<propietario-en-minúsculas>/`. |
 | `deploy.sh` vuelve atrás porque `/health` no da la versión | `migrate` o la API no arrancan con la versión nueva: `docker compose logs migrate api`. Si `deploy/.env` tiene `OBSERVABILITY__RELEASE`, vacíala. |
 

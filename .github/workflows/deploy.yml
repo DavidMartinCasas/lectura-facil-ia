@@ -26,53 +26,27 @@ jobs:
       contents: read
 
   publish:
-    name: Publicar ${{ matrix.image }}
+    name: Publicar imágenes
     needs: ci
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
-    strategy:
-      matrix:
-        # Mismo contexto y Dockerfile que deploy/docker-compose.yml (la imagen que prueba la CI): cámbialos a la vez.
-        include:
-          - image: lectura-facil-api
-            context: .
-            dockerfile: src/LecturaFacil.Api/Dockerfile
-          - image: lectura-facil-web
-            context: src/LecturaFacil.Web
-            dockerfile: src/LecturaFacil.Web/Dockerfile
+    # Digests de lo publicado: el servidor descarga por digest, así que una etiqueta reescrita en el registro no cuenta.
+    outputs:
+      api_digest: ${{ steps.publish.outputs.api_digest }}
+      web_digest: ${{ steps.publish.outputs.web_digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      # ghcr.io/<propietario en minúsculas>/<imagen>:<sha>. La etiqueta source enlaza el paquete con el repositorio.
-      - name: Construir
-        env:
-          IMAGE: ${{ matrix.image }}
-          CONTEXT: ${{ matrix.context }}
-          DOCKERFILE: ${{ matrix.dockerfile }}
-        run: |
-          ref="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/$IMAGE:$GITHUB_SHA"
-          echo "IMAGE_REF=$ref" >> "$GITHUB_ENV"
-          docker build --pull --file "$DOCKERFILE" --tag "$ref" \
-            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
-            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
-            --label "org.opencontainers.image.licenses=Apache-2.0" \
-            "$CONTEXT"
-
-      # La sesión se abre después de construir: mientras corren npm ci y dotnet restore, el runner no tiene credenciales.
-      - name: Publicar
+      # ghcr.io/<propietario en minúsculas>/lectura-facil-{api,web}:<sha>. Inicia sesión después de construir.
+      - name: Construir y publicar
+        id: publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
-          docker push "$IMAGE_REF"
-
-      - name: Cerrar sesión en GHCR
-        if: ${{ always() }}
-        run: docker logout ghcr.io
+        run: .github/scripts/publish-images.sh
 
   deploy:
     name: Desplegar en el servidor
@@ -99,14 +73,16 @@ jobs:
           tags: tag:ci
           ping: ${{ vars.DEPLOY_HOST }}
 
-      # En el servidor: copia de la base, pull, up -d y /health con esta versión; si falla, vuelve a la anterior.
+      # En el servidor: copia de la base, pull por digest, up -d y /health con esta versión; si falla, vuelve a la anterior.
       - name: Desplegar por SSH
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
           DEPLOY_USER: ${{ vars.DEPLOY_USER }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
-        run: .github/scripts/deploy-over-ssh.sh "$GITHUB_SHA"
+          API_DIGEST: ${{ needs.publish.outputs.api_digest }}
+          WEB_DIGEST: ${{ needs.publish.outputs.web_digest }}
+        run: .github/scripts/deploy-over-ssh.sh "$GITHUB_SHA" "$API_DIGEST" "$WEB_DIGEST"
 
       # Opcional e informativa: la misma comprobación desde internet, a través del proxy y la CDN. Si falla, el job sale
       # en rojo pero no vuelve atrás (la vuelta atrás la decide deploy.sh con su comprobación dentro del servidor).
