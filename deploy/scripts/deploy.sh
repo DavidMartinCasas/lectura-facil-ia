@@ -17,7 +17,13 @@
 # Las migraciones no se deshacen: la versión anterior debe funcionar con el esquema nuevo (migraciones compatibles
 # hacia atrás). Si no, volver atrás exige restaurar la copia que se hace al empezar.
 #
+# En el servidor, la clave de la CI no ejecuta este fichero del repositorio sino una copia instalada fuera de él
+# (DEPLOY_REPO_DIR apunta al repositorio): así el checkout de una versión, o la vuelta a una anterior, no cambia el
+# script que atiende el siguiente despliegue. La copia se actualiza a mano (docs/despliegue.md, 9.1); si no es la de
+# DEPLOY_BRANCH, el script lo avisa en cada despliegue.
+#
 # Variables opcionales:
+#   DEPLOY_REPO_DIR         raíz del repositorio (por defecto, la que contiene este script: ../..).
 #   DEPLOY_COMPOSE_FILES    ficheros de compose separados por ':', relativos a la raíz del repositorio
 #                           (por defecto deploy/docker-compose.yml:deploy/docker-compose.prod.yml).
 #   DEPLOY_STATE_FILE       fichero con la versión desplegada, SHA y digests (por defecto deploy/.release).
@@ -36,7 +42,8 @@ readonly HEALTH_INTERVAL_SECONDS=3
 readonly HEALTH_REQUEST_TIMEOUT_SECONDS=5
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-repo_root=$(CDPATH='' cd -- "$script_dir/../.." && pwd)
+runner=$script_dir/$(basename -- "${BASH_SOURCE[0]}")
+repo_root=$(CDPATH='' cd -- "${DEPLOY_REPO_DIR:-$script_dir/../..}" && pwd)
 state_file=${DEPLOY_STATE_FILE:-$repo_root/deploy/.release}
 health_timeout=${DEPLOY_HEALTH_TIMEOUT:-180}
 sync_repo=${DEPLOY_SYNC_REPO:-true}
@@ -45,6 +52,7 @@ deploy_branch=${DEPLOY_BRANCH:-main}
 compose_args=()
 
 log() { printf '[deploy] %s\n' "$*"; }
+warn() { printf '[deploy] AVISO: %s\n' "$*" >&2; }
 error() { printf '[deploy] ERROR: %s\n' "$*" >&2; }
 
 usage() {
@@ -70,6 +78,10 @@ requested_release() {
 sha_of() { printf '%s' "${1%% *}"; }
 
 check_settings() {
+  if [[ ! -d $repo_root/deploy ]]; then
+    error "$repo_root no es el repositorio de Lectura Fácil: revisa DEPLOY_REPO_DIR."
+    exit 2
+  fi
   case $health_timeout in
     '' | *[!0-9]*) error "DEPLOY_HEALTH_TIMEOUT debe ser un número de segundos."; exit 2 ;;
   esac
@@ -126,7 +138,7 @@ backup_database() {
     return 0
   fi
   log "Copia de seguridad de la base de datos."
-  "$script_dir/backup-postgres.sh"
+  "$repo_root/deploy/scripts/backup-postgres.sh"
 }
 
 # Solo commits de la rama de despliegue: aunque alguien tuviera la clave del CI, no podría desplegar una rama ni un
@@ -139,9 +151,19 @@ check_on_branch() {
     error "No se ha podido descargar $git_remote/$deploy_branch."
     exit 1
   fi
+  check_runner
   if ! git -C "$repo_root" merge-base --is-ancestor "$sha" "refs/remotes/$git_remote/$deploy_branch" 2>/dev/null; then
     error "$sha no está en $deploy_branch: no se despliega."
     exit 2
+  fi
+}
+
+# El script que corre no cambia con el checkout (es la copia instalada): si no es el de la rama de despliegue, lo avisa
+# para que se actualice a mano. Por ejemplo, cuando una PR cambia el formato que envía el workflow.
+check_runner() {
+  if ! git -C "$repo_root" show "refs/remotes/$git_remote/$deploy_branch:deploy/scripts/deploy.sh" 2>/dev/null \
+    | cmp -s - "$runner"; then
+    warn "$runner no es el deploy/scripts/deploy.sh de $deploy_branch: actualízalo (docs/despliegue.md, 9.1)."
   fi
 }
 
