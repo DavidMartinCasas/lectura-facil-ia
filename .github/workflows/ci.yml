@@ -1,17 +1,20 @@
 # SPDX-License-Identifier: Apache-2.0
+# Controles de calidad y seguridad (US-19). Si alguno falla, la PR no se puede fusionar (protección de main en
+# docs/despliegue.md). En main no se lanza solo: lo llama deploy.yml antes de publicar y desplegar.
 name: CI
 
 on:
-  push:
-    branches: ['**']
   pull_request:
+  push:
+    branches-ignore: [main]
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   backend:
@@ -38,6 +41,19 @@ jobs:
       # Incluye Testcontainers (PostgreSQL) y el umbral de cobertura del 80 % en Domain y Application.
       - name: Tests
         run: dotnet test --no-build
+
+      - name: Resumen de cobertura
+        if: ${{ !cancelled() }}
+        run: .github/scripts/coverage-summary.sh TestResults
+
+      - name: Informes de cobertura
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cobertura
+          path: TestResults/coverage.cobertura*.xml
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Paquetes vulnerables
         run: |
@@ -71,6 +87,70 @@ jobs:
       - name: Auditoría de dependencias
         run: npm audit --omit=dev --audit-level=high
 
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: src/LecturaFacil.Web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: src/LecturaFacil.Web/package-lock.json
+
+      - run: npm ci
+      # Los perfiles de escritorio y móvil usan Chromium, en la versión que fija package-lock.json.
+      - name: Navegador de Playwright
+        run: npx playwright install --with-deps chromium
+      # Simulan la API en el navegador: no necesitan backend ni LLM.
+      - run: npm run e2e
+
+  evals:
+    name: Evaluación (--dry-run)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      # Proveedor falso con los textos de ejemplo: ni modelos ni claves.
+      - name: Evaluación simulada
+        run: dotnet run --project evals/LecturaFacil.Evals -- --dry-run
+
+      - name: Informe de la evaluación
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: evaluacion-dry-run
+          path: evals/resultados/*-dry-run/
+          if-no-files-found: warn
+          retention-days: 14
+
+  workflows:
+    name: Workflows (actionlint)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # La imagen incluye shellcheck, que revisa también los run: de los workflows.
+      - name: actionlint
+        run: >
+          docker run --rm -v "${{ github.workspace }}:/repo:ro" --workdir /repo
+          rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+          -color
+
   secrets:
     name: Secretos (gitleaks)
     runs-on: ubuntu-24.04
@@ -89,8 +169,8 @@ jobs:
     name: Contenedores
     runs-on: ubuntu-24.04
     env:
-      BASE: -f deploy/docker-compose.yml
-      PROD: -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml
+      # Compose base para build, logs y down; los scripts de .github/scripts nombran sus ficheros.
+      COMPOSE_FILE: deploy/docker-compose.yml
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -105,63 +185,35 @@ jobs:
 
       - name: Lint de scripts (shellcheck)
         run: >
-          docker run --rm -v "${{ github.workspace }}/deploy:/mnt:ro"
+          docker run --rm -v "${{ github.workspace }}:/mnt:ro"
           koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
-          /mnt/scripts/backup-postgres.sh /mnt/postgres/initdb/10-roles.sh
+          /mnt/deploy/scripts/backup-postgres.sh /mnt/deploy/scripts/deploy.sh /mnt/deploy/postgres/initdb/10-roles.sh
+          /mnt/tests/deploy/test-deploy.sh /mnt/.github/scripts/coverage-summary.sh
+          /mnt/.github/scripts/deploy-over-ssh.sh /mnt/.github/scripts/check-version.sh
+          /mnt/.github/scripts/validate-compose.sh /mnt/.github/scripts/smoke-test.sh /mnt/.github/scripts/check-db-roles.sh
 
       - name: Validar docker-compose
-        run: |
-          cp deploy/.env.example deploy/.env
-          # Contraseñas con separadores y comillas: los roles se crean y la API arranca igual (credenciales escapadas).
-          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci;con=separadores/' deploy/.env
-          sed -i "s/^POSTGRES_OWNER_PASSWORD=.*/POSTGRES_OWNER_PASSWORD=ci-owner;o'reilly/" deploy/.env
-          sed -i 's/^POSTGRES_APP_PASSWORD=.*/POSTGRES_APP_PASSWORD=ci-app;con=separadores/' deploy/.env
-          docker compose $BASE config --quiet
-          docker compose $PROD config --quiet
-          # Producción no publica ningún puerto en el host.
-          published=$(docker compose $PROD config --format json | jq '[.services[] | select((.ports // []) | length > 0)] | length')
-          test "$published" = 0
+        run: .github/scripts/validate-compose.sh
 
       - name: Construir imágenes
-        run: docker compose $BASE build
+        run: docker compose build
 
       # Criterio "Todo arranca con Docker Compose": /health a través de nginx y la página de inicio.
       - name: Prueba de humo
-        run: |
-          docker compose $BASE up -d --wait
-          for i in $(seq 1 30); do
-            curl -fsS http://localhost:8080/health > health.json && break
-            sleep 2
-          done
-          test "$(cat health.json)" = '{"status":"Healthy"}'
-          curl -fsS http://localhost:8080/ | grep -q "<title>Lectura Fácil IA</title>"
-          curl -fsSI http://localhost:8080/ | grep -qi "^content-security-policy: default-src 'self'"
-          curl -fsSI http://localhost:8080/ | grep -qi "^x-content-type-options: nosniff"
+        run: .github/scripts/smoke-test.sh
 
       # Mínimo privilegio (US-10): las migraciones terminaron bien y la cuenta de la API solo puede tocar filas.
       - name: Roles de PostgreSQL
-        run: |
-          test "$(docker compose $BASE ps -a --format '{{.ExitCode}}' migrate)" = 0
-          as_app() {
-            docker compose $BASE exec -T postgres sh -c \
-              'PGPASSWORD="$POSTGRES_APP_PASSWORD" psql -h 127.0.0.1 -U "$POSTGRES_APP_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -tAc "$1"' \
-              sh "$1"
-          }
-          test "$(as_app "select rolsuper or rolcreatedb or rolcreaterole from pg_roles where rolname = current_user")" = f
-          test "$(as_app "select count(*) > 0 from \"__EFMigrationsHistory\"")" = t
-          if as_app "create table intruso (id int)"; then
-            echo "::error::La cuenta de la API puede crear tablas."
-            exit 1
-          fi
-          if as_app "drop table \"__EFMigrationsHistory\""; then
-            echo "::error::La cuenta de la API puede borrar tablas."
-            exit 1
-          fi
+        run: .github/scripts/check-db-roles.sh
+
+      # US-19: deploy.sh contra un registro local con la capa de producción (despliegue, copia y vuelta atrás).
+      - name: Script de despliegue
+        run: tests/deploy/test-deploy.sh
 
       - name: Logs si falla
         if: failure()
-        run: docker compose $BASE logs --no-color
+        run: docker compose logs --no-color
 
       - name: Parar
         if: always()
-        run: docker compose $BASE down -v
+        run: docker compose down -v

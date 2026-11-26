@@ -14,7 +14,8 @@ name: lectura-facil
 
 # Lo común a la API y a su paso de migraciones: la misma imagen y el mismo endurecimiento.
 x-api: &api
-  image: lectura-facil-api:${IMAGE_TAG:-local}
+  # IMAGE_REGISTRY: prefijo del registro con barra final (vacío = imágenes construidas aquí). Ver docs/despliegue.md.
+  image: ${IMAGE_REGISTRY:-}lectura-facil-api:${IMAGE_TAG:-local}
   build:
     context: ..
     dockerfile: src/LecturaFacil.Api/Dockerfile
@@ -90,6 +91,9 @@ services:
       Database__Password: ${POSTGRES_APP_PASSWORD:?Define POSTGRES_APP_PASSWORD en deploy/.env}
       # Las migraciones las aplica el servicio "migrate": el rol de la API no puede cambiar el esquema.
       Database__ApplyMigrationsOnStartup: "false"
+      # Versión de /health (cabecera X-App-Version) y de Sentry: la de deploy/.env o, si no hay, la etiqueta de la imagen
+      # (el SHA del commit en el despliegue automático). Vacía = la versión con la que se compiló la API.
+      OBSERVABILITY__RELEASE: ${OBSERVABILITY__RELEASE:-${IMAGE_TAG:-}}
     depends_on:
       postgres:
         condition: service_healthy
@@ -101,7 +105,7 @@ services:
     restart: unless-stopped
 
   web:
-    image: lectura-facil-web:${IMAGE_TAG:-local}
+    image: ${IMAGE_REGISTRY:-}lectura-facil-web:${IMAGE_TAG:-local}
     build:
       context: ../src/LecturaFacil.Web
     ports:

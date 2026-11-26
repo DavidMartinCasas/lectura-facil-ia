@@ -357,6 +357,226 @@ docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml up
 Para poder volver atrás, construye cada versión con su etiqueta (`IMAGE_TAG=<versión>` en `deploy/.env`). Si algo falla,
 vuelve a la etiqueta anterior y `up -d` sin `--build`. Una migración ya aplicada no se deshace sola: restaura la copia.
 
+Con el despliegue automático (paso 9) no se construye nada en el servidor: `deploy.sh` hace todo esto solo.
+
+### 9. Despliegue automático (CI/CD)
+
+Con esto configurado, cada PR fusionada en `main` se despliega sola: la CI completa, las imágenes en GitHub Container
+Registry (GHCR) con la etiqueta del commit y el despliegue en el servidor, que vuelve a la versión anterior si la nueva
+no arranca. Sin configurarlo, el workflow solo publica las imágenes y el despliegue sigue siendo manual (paso 8).
+
+```mermaid
+flowchart LR
+    pr["Pull request"] --> ci["CI (ci.yml)<br/>build · tests · lint · e2e<br/>gitleaks · evaluación --dry-run"]
+    ci -- "verde + fusión" --> main["push a main"]
+    main --> ci2["CI otra vez<br/>(la llama deploy.yml)"]
+    ci2 --> pub["Imágenes en GHCR<br/>etiqueta = sha"]
+    pub --> ts["Runner en el tailnet<br/>nodo efímero tag:ci"]
+    ts -- "SSH, solo el puerto 22" --> vps["Servidor · deploy.sh sha"]
+    vps --> health{"/health 200 y<br/>X-App-Version = sha"}
+    health -- "sí" --> ok["Desplegado"]
+    health -- "no" --> back["Vuelve a la versión anterior<br/>y el workflow falla"]
+```
+
+| Pieza | Fichero | Qué hace |
+|---|---|---|
+| CI | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | En cada PR y rama: build sin avisos, `dotnet format`, tests con cobertura (artefacto y resumen del job), paquetes vulnerables, lint, tests, e2e y build del front, `npm audit`, gitleaks, hadolint, shellcheck, actionlint, validación de compose, prueba de humo, roles de PostgreSQL, prueba de `deploy.sh` y evaluación `--dry-run`. |
+| Despliegue | [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) | Solo en push a `main` (nunca en PRs ni con código de forks), uno cada vez: CI → publicar → desplegar. Permisos mínimos por job: `packages: write` solo al publicar. |
+| Script del servidor | [`deploy/scripts/deploy.sh`](../deploy/scripts/deploy.sh) | Copia de la base, ficheros de `deploy/` en el commit, `pull`, `up -d` (`migrate` antes que la API), espera a `/health` con la versión y, si falla, vuelve a la anterior. |
+| Dependencias | [`.github/dependabot.yml`](../.github/dependabot.yml) | PR semanales para NuGet, npm, imágenes Docker y acciones (que siguen fijadas por SHA). |
+
+Las imágenes son `ghcr.io/<propietario>/lectura-facil-api:<sha>` y `ghcr.io/<propietario>/lectura-facil-web:<sha>`,
+con `<propietario>` en minúsculas. No hay etiqueta `latest`: cada despliegue nombra exactamente qué versión corre.
+
+#### 9.1 Usuario de despliegue en el servidor
+
+Un usuario propio cuya clave SSH **solo puede ejecutar `deploy.sh`**. Como lanza `docker`, el grupo `docker` le da en la
+práctica permisos de root: por eso su clave no admite nada más que el script.
+
+```bash
+sudo adduser --disabled-password --gecos "" lf-deploy
+sudo usermod -aG docker lf-deploy
+sudo chown -R lf-deploy: /opt/docker/apps/lectura-facil     # el repositorio y deploy/.env pasan a ser suyos
+sudo install -d -o lf-deploy -g lf-deploy -m 700 /var/backups/lectura-facil
+```
+
+Pon `User=lf-deploy` en el servicio de copias del paso 7, para que el temporizador y el despliegue escriban en la misma
+carpeta. A partir de aquí, los comandos manuales en el repositorio se lanzan como ese usuario (`sudo -u lf-deploy …`).
+
+En tu equipo, una clave solo para la CI (sin frase de paso: la guarda GitHub):
+
+```bash
+ssh-keygen -t ed25519 -N "" -C "github-actions lectura-facil" -f lf-deploy-ci
+```
+
+En el servidor, su parte pública en `/home/lf-deploy/.ssh/authorized_keys` (directorio `700`, fichero `600`), en una
+sola línea:
+
+```text
+restrict,from="100.64.0.0/10,fd7a:115c:a1e0::/48",command="/opt/docker/apps/lectura-facil/deploy/scripts/deploy.sh" ssh-ed25519 AAAA… github-actions lectura-facil
+```
+
+- `command=` ejecuta siempre el script, pida lo que pida el cliente. El script solo acepta un SHA de 40 caracteres
+  hexadecimales (le llega en `SSH_ORIGINAL_COMMAND`); cualquier otra cosa la rechaza sin tocar nada.
+- `restrict` quita la terminal, los reenvíos de puertos y de agente y X11.
+- `from=` solo acepta la clave desde las direcciones de Tailscale (`100.64.0.0/10` y, en IPv6, `fd7a:115c:a1e0::/48`).
+- El script solo despliega commits que estén en `main`: un SHA de otra rama o desconocido lo rechaza antes de tocar
+  nada, aunque llegue con la clave de la CI.
+- **No actives Tailscale SSH en este servidor** (`tailscale set --ssh=false`) ni metas `tag:ci` en la sección `ssh` de
+  la política: Tailscale SSH atiende el puerto 22 del tailnet sin pasar por `authorized_keys`, y `command=`, `restrict`
+  y `from=` dejarían de aplicarse.
+
+Como el script pone `deploy/` en el commit desplegado, el repositorio queda en `HEAD` separado (*detached*); es normal.
+El último SHA desplegado se guarda en `deploy/.release` (no se versiona) y es al que se vuelve si el siguiente falla.
+
+**`deploy/.env` en el servidor:**
+
+- `IMAGE_REGISTRY=ghcr.io/<propietario-en-minúsculas>/` (con la barra final). Así `docker compose` descarga las
+  imágenes publicadas en lugar de construirlas.
+- `OBSERVABILITY__RELEASE` vacía: la versión es la etiqueta de la imagen. Si tiene un valor, `deploy.sh` se niega a
+  desplegar, porque `/health` nunca devolvería el SHA.
+- `IMAGE_TAG` lo pone `deploy.sh` en cada despliegue; el de `deploy/.env` solo cuenta en los comandos manuales. Para
+  usarlos con la versión desplegada: `export IMAGE_TAG=$(cat deploy/.release)`.
+
+**Si los paquetes de GHCR son privados**, el usuario de despliegue tiene que iniciar sesión una vez. Lo más sencillo, al
+ser un proyecto abierto, es hacerlos públicos (*Package settings → Change visibility*). Si no, crea un token clásico
+solo con el permiso `read:packages` y, en el servidor:
+
+```bash
+sudo -u lf-deploy docker login ghcr.io -u <tu-usuario-de-github>   # pega el token cuando lo pida
+```
+
+Docker guarda el token en `/home/lf-deploy/.docker/config.json`, sin cifrar: ponle caducidad y nada más que ese permiso.
+
+**Primer despliegue, a mano y obligatorio.** Antes de activar `DEPLOY_ENABLED` (9.3), despliega una vez a mano un
+commit de `main` cuyas imágenes ya estén en GHCR (el workflow las publica aunque no despliegue). Así se crea
+`deploy/.release` y el primer despliegue automático tiene una versión a la que volver si falla:
+
+```bash
+sudo -u lf-deploy /opt/docker/apps/lectura-facil/deploy/scripts/deploy.sh <sha-de-un-commit-de-main>
+```
+
+#### 9.2 Tailscale: la CI solo llega al SSH del servidor
+
+El runner de GitHub entra en el tailnet como un **nodo efímero** con la etiqueta `tag:ci`, que desaparece al acabar el
+job. Necesita:
+
+1. **Un cliente OAuth** en la consola de Tailscale (*Settings → Trust credentials → OAuth client*) con el permiso
+   `auth_keys` de escritura y la etiqueta `tag:ci`. Su ID y su secreto van a GitHub (9.3).
+2. **La regla de acceso** `tag:ci → tag:lf-web:22`, y nada más. Junto a lo del paso 2:
+
+```jsonc
+{
+  "tagOwners": {
+    "tag:ci": ["autogroup:admin"]
+    // … tag:lf-web y tag:ia, como en el paso 2
+  },
+  "grants": [
+    // … las reglas del paso 2
+    // La CI solo puede abrir SSH en el servidor de la aplicación.
+    { "src": ["tag:ci"], "dst": ["tag:lf-web"], "ip": ["tcp:22"] }
+  ],
+  "tests": [
+    {
+      "src": "tag:ci",
+      "accept": ["tag:lf-web:22"],
+      "deny": ["tag:lf-web:8080", "tag:ia:22", "tag:ia:<puerto-de-los-modelos>"]
+    }
+  ]
+}
+```
+
+El firewall del servidor ya deja entrar el 22 por `tailscale0` (paso 1). Con esta regla, un nodo `tag:ci` no llega ni a
+los modelos ni a tus equipos, aunque alguien consiguiera ejecutar código en el runner.
+
+Alternativa sin secreto guardado: la [federación de identidad](https://tailscale.com/kb/1581/workload-identity-federation)
+de Tailscale con el OIDC de GitHub. En `deploy.yml`, cambia `oauth-secret` por `audience` y da al job
+`id-token: write`.
+
+#### 9.3 GitHub: environment, secretos y variables
+
+En *Settings → Environments*, crea `production` y, en *Deployment branches and tags*, deja **solo `main`**. Si quieres
+aprobar cada despliegue a mano, añade *Required reviewers*.
+
+| Dónde | Nombre | Tipo | Valor |
+|---|---|---|---|
+| Environment `production` | `TS_OAUTH_CLIENT_ID` | Secreto | ID del cliente OAuth de Tailscale (9.2). |
+| Environment `production` | `TS_OAUTH_SECRET` | Secreto | Su secreto. |
+| Environment `production` | `DEPLOY_SSH_KEY` | Secreto | La clave privada `lf-deploy-ci` (el fichero entero). |
+| Environment `production` | `DEPLOY_SSH_KNOWN_HOSTS` | Secreto | La línea de `known_hosts` del servidor (abajo). Sin ella no se conecta. |
+| Environment `production` | `DEPLOY_HOST` | Variable | Nombre MagicDNS o IP de Tailscale del servidor. |
+| Environment `production` | `DEPLOY_USER` | Variable | `lf-deploy`. |
+| Environment `production` | `PUBLIC_URL` | Variable (opcional) | `https://<subdominio>`: el workflow comprueba también desde internet que `/health` da la versión nueva. Es informativa: si falla, el job sale en rojo pero no vuelve atrás. |
+| Repositorio (*Actions → Variables*) | `DEPLOY_ENABLED` | Variable | `true`. Sin ella el workflow solo publica las imágenes (los forks no despliegan). |
+
+La línea de `known_hosts`, desde un equipo del tailnet, comparando la huella con la del servidor:
+
+```bash
+ssh-keyscan -t ed25519 <host-tailscale> 2>/dev/null > known_hosts.lf
+ssh-keygen -lf known_hosts.lf                                                   # en tu equipo
+ssh <admin>@<host-tailscale> ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub   # debe coincidir
+```
+
+Con la CLI de GitHub (los secretos se leen de un fichero o se piden: no quedan en el historial de la shell):
+
+```bash
+gh secret set TS_OAUTH_CLIENT_ID --env production
+gh secret set TS_OAUTH_SECRET --env production
+gh secret set DEPLOY_SSH_KEY --env production < lf-deploy-ci
+gh secret set DEPLOY_SSH_KNOWN_HOSTS --env production < known_hosts.lf
+gh variable set DEPLOY_HOST --env production --body "<host-tailscale>"
+gh variable set DEPLOY_USER --env production --body lf-deploy
+gh variable set PUBLIC_URL --env production --body "https://<subdominio>"
+gh variable set DEPLOY_ENABLED --body true   # después del primer despliegue a mano (9.1)
+```
+
+Después, borra `lf-deploy-ci` de tu equipo: si hace falta otra, se genera de nuevo.
+
+En *Settings → Actions → General*, deja *Workflow permissions* en **Read repository contents**: cada job pide los permisos
+que necesita.
+
+#### 9.4 Protección de la rama `main`
+
+En *Settings → Rules → Rulesets → New branch ruleset*, para la rama por defecto:
+
+- **Require a pull request before merging.**
+- **Require status checks to pass**, con los jobs de la CI: `Backend (.NET)`, `Frontend (Angular)`, `E2E (Playwright)`,
+  `Evaluación (--dry-run)`, `Workflows (actionlint)`, `Secretos (gitleaks)` y `Contenedores`. Así, si algo falla, la PR
+  no se puede fusionar.
+- **Block force pushes** y **Restrict deletions**.
+
+Como el despliegue solo sale de `main` y a `main` solo se llega por PR con la CI en verde, nada sin revisar llega al
+servidor.
+
+#### 9.5 Migraciones y vuelta atrás
+
+`deploy.sh` vuelve a las imágenes anteriores, pero **no deshace las migraciones** que ya aplicó `migrate`. Para que la
+vuelta atrás funcione, cada migración tiene que ser **compatible hacia atrás**: la versión anterior de la API debe
+seguir funcionando con el esquema nuevo. En la práctica, en dos despliegues:
+
+1. Añadir (columnas que admiten nulos o tienen valor por defecto, tablas nuevas) sin quitar nada que use la versión que
+   corre.
+2. Quitar lo que ya no se usa en un despliegue posterior, cuando la versión anterior ya no lo necesita.
+
+Si una migración no puede ser compatible (renombrar o borrar una columna en uso), volver atrás exige **restaurar la
+copia** que `deploy.sh` hace antes de cada despliegue (`/var/backups/lectura-facil`, paso 7), con lo que se pierde lo
+escrito desde entonces. Indícalo en la PR de esa migración.
+
+Para volver a mano a una versión concreta ya publicada: `sudo -u lf-deploy deploy/scripts/deploy.sh <sha>`.
+
+#### 9.6 Probar el script sin servidor
+
+[`tests/deploy/test-deploy.sh`](../tests/deploy/test-deploy.sh) monta un registro local que hace de GHCR y despliega el
+compose real con la capa de producción, en un proyecto y una red aparte. Prueba el primer despliegue, una actualización
+con copia de la base, una versión rota y una imagen que no existe (las dos vuelven a la anterior y fallan) y un SHA no
+válido. Lo ejecuta la CI; en local:
+
+```bash
+cp deploy/.env.example deploy/.env          # si no lo tienes
+docker compose -f deploy/docker-compose.yml build
+tests/deploy/test-deploy.sh
+```
+
 ### Problemas frecuentes
 
 | Síntoma | Causa probable |
@@ -366,6 +586,9 @@ vuelve a la etiqueta anterior y `up -d` sin `--build`. Una migración ya aplicad
 | La API no arranca y el log nombra una opción | Falta o no es válida en `deploy/.env` (el log dice cuál, nunca su valor). |
 | El progreso no avanza hasta el final | El proxy guarda la respuesta en su búfer: comprueba que no reescribe `X-Accel-Buffering`. |
 | No se puede llamar a los modelos | Prueba desde el VPS con `curl` (paso 6) y revisa las ACLs de Tailscale. |
+| El job de despliegue no conecta por SSH | Si falla el `ping` de Tailscale, revisa el cliente OAuth y la regla `tag:ci → tag:lf-web:22`. Con `Host key verification failed`, `DEPLOY_SSH_KNOWN_HOSTS` no es la clave del servidor. |
+| `deploy.sh` falla en `pull` con `denied` o `not found` | Los paquetes son privados y `lf-deploy` no ha hecho `docker login` (9.1), o `IMAGE_REGISTRY` no es `ghcr.io/<propietario-en-minúsculas>/`. |
+| `deploy.sh` vuelve atrás porque `/health` no da la versión | `migrate` o la API no arrancan con la versión nueva: `docker compose logs migrate api`. Si `deploy/.env` tiene `OBSERVABILITY__RELEASE`, vacíala. |
 
 ### Instalaciones anteriores a los roles
 

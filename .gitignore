@@ -6,6 +6,10 @@
 *.user
 appsettings.*.local.json
 
+# Despliegue: versión desplegada y su cerrojo (deploy/scripts/deploy.sh)
+deploy/.release
+deploy/.release.*
+
 # .NET
 bin/
 obj/
