@@ -43,7 +43,7 @@ Diseño completo: `docs/TFM-Lectura-Facil.md`. Backlog: `docs/backlog/`.
 | Observabilidad | Serilog (JSON) + Sentry |
 | Contenedores | Docker y Docker Compose |
 
-**Librerías prohibidas** (licencias comerciales o con restricciones para quien use el proyecto): **MediatR** (v13+), **AutoMapper** (v15+), **FluentAssertions** (v8+), **QuestPDF**, **PrimeNG** (v22+, licencia comercial PrimeUI). Los casos de uso son clases simples inyectadas y el mapeo se hace a mano.
+**Librerías prohibidas** (licencias comerciales o con restricciones para quien use el proyecto): **MediatR** (v13+), **AutoMapper** (v15+), **FluentAssertions** (v8+), **QuestPDF**, **PrimeNG** (v22+, licencia comercial PrimeUI), **PDFsharp/MigraDoc** (v6.5+, AGPL-3.0: se queda en la 6.2.4, MIT). Los casos de uso son clases simples inyectadas y el mapeo se hace a mano.
 
 **Nueva dependencia = justificación.** No añadas paquetes que no pida la historia. Si crees que hace falta uno, explícalo en el plan y espera confirmación.
 

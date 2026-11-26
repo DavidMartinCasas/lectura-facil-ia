@@ -18,7 +18,7 @@
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="PdfPig" Version="0.1.16" />
     <!-- 6.2.x es MIT. Desde la 6.5.0 el paquete se publica con licencia AGPL-3.0: no subir sin revisar la licencia. -->
-    <PackageVersion Include="PDFsharp-MigraDoc" Version="6.5.0" />
+    <PackageVersion Include="PDFsharp-MigraDoc" Version="6.2.4" />
     <PackageVersion Include="Sentry.AspNetCore" Version="7.0.1" />
     <PackageVersion Include="Serilog.AspNetCore" Version="11.0.0" />
     <!-- Transitiva de PDFsharp: la 8.0.1 que pide tiene vulnerabilidades conocidas (GHSA-846f-f764-76mx). -->
